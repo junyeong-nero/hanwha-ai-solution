@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>달빛한화 · Peer Link</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --paper:#FBF8F1; --ink:#242833; --sub:#7C8090; --line:#E9E2D3;
+ --gold:#D9A544; --glow:#F37321; --indigo:#5A64A8; --band:#E4E8F4;
+ --serif:'Gowun Batang','Nanum Myeongjo','Apple SD Gothic Neo',serif;
+ --sans:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+ --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.dawn{background:linear-gradient(180deg,var(--band) 0%,#EFEFF3 46%,var(--paper) 100%);
+ padding:38px 20px 30px;position:relative;overflow:hidden}
+.dawn::after{content:'';position:absolute;left:50%;top:-160px;width:760px;height:520px;
+ transform:translateX(-50%);background:radial-gradient(circle,rgba(243,115,33,.13),transparent 62%);pointer-events:none}
+.hero{max-width:880px;margin:0 auto;display:flex;gap:28px;align-items:center;position:relative;z-index:1;flex-wrap:wrap}
+.hero .moonbox{flex:none}
+.hero h1{font-family:var(--serif);font-size:27px;font-weight:400;line-height:1.45;letter-spacing:-.3px}
+.hero .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--glow);margin-bottom:9px}
+.hero p{font-size:13px;line-height:1.85;color:#5C6070;margin-top:11px;max-width:54ch}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px 56px}
+.tabs{display:flex;border-bottom:1px solid var(--line);margin:22px 0 26px;overflow-x:auto;scrollbar-width:thin}
+.tab{flex:1;min-width:132px;background:none;border:0;border-bottom:2px solid transparent;
+ padding:13px 8px;cursor:pointer;text-align:left;font-family:inherit;color:var(--sub);transition:.16s;white-space:nowrap}
+.tab b{display:block;font-family:var(--serif);font-size:14.5px;font-weight:700}
+.tab em{display:block;font-style:normal;font-size:11px;margin-top:3px;opacity:.85}
+.tab.on{color:var(--ink);border-bottom-color:var(--gold)}
+.tab:hover{color:var(--ink)}
+.tab .bdg{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--glow);
+ vertical-align:middle;margin-left:5px;opacity:0;transition:.3s}
+.tab .bdg.on{opacity:1}
+.pane{display:none;animation:rise .34s cubic-bezier(.2,.7,.3,1)}
+.pane.on{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.lead{font-size:14px;line-height:1.85;color:#505462;margin-bottom:20px}
+.lead b{font-weight:700;color:var(--ink)}
+h2.t{font-family:var(--serif);font-size:19px;font-weight:700;margin:26px 0 9px;line-height:1.5}
+h2.t:first-child{margin-top:0}
+.seg{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.seg button{flex:1;min-width:104px;padding:10px 8px;font-size:12.5px;font-family:inherit;cursor:pointer;
+ border:1px solid var(--line);background:#fff;border-radius:8px;color:var(--sub);transition:.16s}
+.seg button.on{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.sky{background:linear-gradient(170deg,#EEF0F7,#FAF7F0);border:1px solid var(--line);
+ border-radius:14px;padding:10px;margin-bottom:14px}
+.sky svg{width:100%;height:auto;display:block}
+.edge{stroke:var(--indigo);transition:.25s}
+.edge.hot{stroke:var(--glow);opacity:.95!important;stroke-width:2.2!important}
+.node circle{transition:.2s;cursor:pointer}
+.node text{font-size:9.5px;fill:var(--sub);font-family:var(--sans);pointer-events:none}
+.node.sel circle{fill:var(--glow);r:8}
+.node.sel text{fill:var(--ink);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:9px;margin-bottom:14px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:13px}
+.sv{font-family:var(--serif);font-size:23px;font-weight:700;letter-spacing:-.4px}
+.sv em{font-style:normal;font-size:13px;color:var(--sub)}
+.sv.ac{color:var(--glow)}.sv.wn{color:#C8523B}
+.sl{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.5}
+.note{font-size:12.5px;color:#5C6070;padding-left:12px;border-left:2px solid var(--gold);margin-bottom:18px;line-height:1.75}
+.gapbox{border:1px solid var(--line);background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.gapbox .h{font-family:var(--serif);font-size:15px;font-weight:700;margin-bottom:6px}
+.gapbox .p{font-size:12.5px;color:var(--sub);line-height:1.7;margin-bottom:11px}
+.gaprow{font-family:var(--mono);font-size:11.5px;color:#5C6070;padding:7px 0;border-top:1px dashed var(--line)}
+.gaprow.filled{color:var(--glow)}
+.callout{background:#FFF6EC;border-radius:12px;padding:16px 18px;font-size:13.5px;line-height:1.8;color:#5A4534}
+.callout b{color:var(--glow)}
+.ctl{border:1px solid var(--line);background:#fff;border-radius:12px;padding:17px;margin-bottom:14px}
+.ch{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px;font-size:12.5px;color:var(--sub);gap:10px}
+.ch b{font-family:var(--serif);font-size:15px;color:var(--ink)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{width:44px;height:40px;border:1px solid var(--line);background:#fff;border-radius:9px;
+ font-family:var(--serif);font-size:15px;font-weight:700;color:var(--sub);cursor:pointer;transition:.16s}
+.pill.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.hint{font-size:11.5px;color:var(--sub);line-height:1.7;margin-top:11px}
+.sl2{margin-bottom:13px}
+.sh{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+.sl2 input{width:100%;accent-color:var(--gold);cursor:pointer}
+.sd{font-size:10.5px;color:var(--sub);margin-top:3px}
+.glist{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px;margin-top:16px}
+.gcard{border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px;position:relative}
+.gcard.fresh{border-color:var(--gold);box-shadow:0 0 0 3px rgba(217,165,68,.13)}
+.gh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.gno{font-family:var(--serif);font-size:14px;font-weight:700}
+.gmeta{font-family:var(--mono);font-size:10px;color:var(--sub)}
+.mem{font-size:12.5px;line-height:1.55;margin-bottom:7px}
+.mem .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
+.mem b{font-weight:700}
+.mem .sub{font-size:10.5px;color:var(--sub);margin-left:5px}
+.mem .tg{display:block;font-size:10px;color:#A5A8B4;margin-left:13px}
+.why{background:#FAF7EF;border-radius:9px;padding:10px 12px;font-size:11.5px;line-height:1.7;color:#5C5040;margin:10px 0}
+.why .fresh{color:var(--glow);font-weight:700;display:block;margin-top:5px}
+.mini{width:100%;padding:8px;border:1px solid var(--line);background:#fff;border-radius:8px;
+ font-family:inherit;font-size:11.5px;color:var(--sub);cursor:pointer;transition:.16s}
+.mini:hover{border-color:var(--gold);color:var(--gold)}
+.picker{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;
+ font-family:inherit;font-size:12px;cursor:pointer;color:var(--ink);transition:.16s}
+.chip em{font-style:normal;font-size:10px;opacity:.55;margin-left:5px}
+.chip.on{color:#fff;border-color:transparent;background:var(--ink)}
+.chip.on em{opacity:.85}
+.chem{display:flex;gap:18px;align-items:center;background:#fff;border:1px solid var(--line);
+ border-radius:12px;padding:15px 18px;margin-bottom:14px}
+.cnum{font-family:var(--serif);font-size:33px;font-weight:700;color:var(--gold);line-height:1}
+.ccap{font-size:10px;color:var(--sub);margin-top:4px;text-align:center}
+.ctype{font-family:var(--serif);font-size:15px;font-weight:700;margin-bottom:4px}
+.cmeta{font-size:11.5px;color:var(--sub);margin-bottom:8px}
+.bar{height:5px;background:#EDE7DA;border-radius:3px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--gold);border-radius:3px;transition:width .45s}
+.cta{width:100%;padding:13px;background:var(--ink);color:var(--paper);border:0;border-radius:10px;
+ font-family:var(--serif);font-size:15px;font-weight:700;cursor:pointer;transition:.16s}
+.cta:hover:not(:disabled){background:var(--glow)}
+.cta:disabled{opacity:.32;cursor:not-allowed}
+.cta.line{background:#fff;color:var(--ink);border:1px solid var(--line);font-size:14px}
+.cta.line:hover:not(:disabled){background:#fff;border-color:var(--gold);color:var(--gold)}
+.row2{display:flex;gap:9px}.row2>*{flex:1}
+.kit{border:1px solid var(--ink);border-radius:13px;margin-top:16px;overflow:hidden;background:#fff}
+.kh{background:var(--ink);color:var(--paper);padding:12px 18px;display:flex;justify-content:space-between;align-items:baseline}
+.kh span{font-family:var(--serif);font-size:14px;font-weight:700}
+.kh b{font-family:var(--mono);font-size:10.5px;font-weight:400;opacity:.72}
+.ks{padding:15px 18px;border-bottom:1px solid var(--line)}
+.ks:last-child{border-bottom:0}
+.ks h4{font-size:11.5px;color:var(--glow);margin-bottom:8px}
+.ks ul,.ks ol{padding-left:17px}
+.ks li{font-size:13.5px;line-height:1.85;color:#454A58}
+.ks p{font-size:13.5px;color:#454A58}
+.vote{display:block;width:100%;text-align:left;position:relative;overflow:hidden;cursor:pointer;
+ border:1px solid var(--line);background:#fff;border-radius:10px;padding:0;margin-bottom:8px;font-family:inherit}
+.vote .fill{position:absolute;inset:0;background:rgba(217,165,68,.14);transition:width .4s}
+.vote.mine{border-color:var(--gold)}
+.vote.win{border-color:var(--glow);box-shadow:0 0 0 2px rgba(243,115,33,.12)}
+.vote .in{position:relative;padding:12px 14px}
+.vt{font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.vt span{font-family:var(--mono);font-size:10px;color:var(--sub);white-space:nowrap}
+.vd{font-size:11.5px;color:var(--sub);line-height:1.65;margin-top:4px}
+details{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff}
+summary{font-size:12px;color:var(--sub);cursor:pointer;font-weight:600}
+pre{white-space:pre-wrap;font-family:var(--mono);font-size:11px;line-height:1.7;color:#454A58;
+ background:#FAF7F0;padding:12px;border-radius:8px;margin-top:10px}
+.ft{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:#A5A8B4;line-height:1.75}
+
+/* ── 베이즈 ── */
+.bayes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:11px;margin-top:14px}
+.bcard{border:1px solid var(--line);background:#fff;border-radius:12px;padding:14px 15px}
+.bcard .bh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.bcard .bl{font-size:12.5px;font-weight:700}
+.bcard .bn{font-family:var(--mono);font-size:10px;color:var(--sub)}
+.bcard svg{width:100%;height:64px;display:block;margin:9px 0 5px}
+.bcurve{fill:rgba(217,165,68,.2);stroke:var(--gold);stroke-width:1.6}
+.bprior{fill:none;stroke:#C9CEDE;stroke-width:1.2;stroke-dasharray:3 3}
+.bmean{stroke:var(--glow);stroke-width:1.4}
+.bstat{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--sub)}
+.bstat b{color:var(--ink);font-weight:700}
+.wbar{display:flex;height:26px;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin-top:8px}
+.wbar div{display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;
+ font-family:var(--mono);transition:width .5s;white-space:nowrap;overflow:hidden}
+.accbox{border:1px solid var(--line);background:#fff;border-radius:12px;padding:15px 17px;margin-top:12px}
+.accbox svg{width:100%;height:88px;display:block;margin-top:10px}
+.aline{fill:none;stroke:var(--glow);stroke-width:2}
+.adot{fill:var(--glow)}
+.agrid{stroke:#EDE9DE;stroke-width:1}
+
+/* ── 배정/수락 ── */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.split{grid-template-columns:1fr}}
+.invite{border:1px solid var(--gold);background:#fff;border-radius:13px;overflow:hidden}
+.ivh{background:linear-gradient(120deg,#FFF6EC,#FDF0E0);padding:14px 17px;border-bottom:1px solid var(--line)}
+.ivh .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--glow)}
+.ivh .t2{font-family:var(--serif);font-size:17px;font-weight:700;margin-top:6px}
+.ivh .m{font-family:var(--mono);font-size:11px;color:var(--sub);margin-top:5px}
+.ivb{padding:15px 17px}
+.slot{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F2EEE4;font-size:12.5px}
+.slot:last-of-type{border-bottom:0}
+.slot .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.slot .who{flex:1;line-height:1.5}
+.slot .who em{font-style:normal;font-size:10.5px;color:var(--sub);display:block;margin-top:2px}
+.tagx{font-family:var(--mono);font-size:9.5px;padding:3px 7px;border-radius:5px;background:#F1EFE8;color:var(--sub);white-space:nowrap}
+.tagx.y{background:rgba(243,115,33,.13);color:var(--glow)}
+.tagx.w{background:#EFF1F8;color:var(--indigo)}
+.feed{border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px 17px}
+.fitem{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F4F1E9;animation:rise .3s}
+.fitem:last-child{border-bottom:0}
+.fi{width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+ font-size:11px;color:#fff;font-weight:700}
+.ft2{flex:1;font-size:12.5px;line-height:1.6}
+.ft2 em{font-style:normal;display:block;font-family:var(--mono);font-size:10px;color:#A5A8B4;margin-top:3px}
+.waitl{background:#F7F5EE;border-radius:9px;padding:11px 13px;margin-top:11px;font-size:11.5px;color:#5C6070;line-height:1.7}
+
+/* ── 채팅 ── */
+.chatwrap{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+@media(max-width:760px){.chatwrap{grid-template-columns:1fr}}
+.chat{border:1px solid var(--line);background:#fff;border-radius:13px;display:flex;flex-direction:column;height:520px}
+.chead{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.chead b{font-family:var(--serif);font-size:14px}
+.chead span{font-family:var(--mono);font-size:10px;color:var(--sub)}
+.cbody{flex:1;overflow-y:auto;padding:14px 16px;background:#FCFAF5}
+.msg{display:flex;gap:9px;margin-bottom:13px;animation:rise .3s}
+.msg .av{width:27px;height:27px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+ font-size:10.5px;color:#fff;font-weight:700}
+.msg .bd{max-width:78%}
+.msg .nm2{font-size:10.5px;color:var(--sub);margin-bottom:3px}
+.msg .bub{background:#fff;border:1px solid var(--line);border-radius:3px 11px 11px 11px;
+ padding:9px 12px;font-size:12.5px;line-height:1.65}
+.msg.me{flex-direction:row-reverse}
+.msg.me .bd{text-align:right}
+.msg.me .bub{background:var(--ink);color:var(--paper);border-color:var(--ink);border-radius:11px 3px 11px 11px;text-align:left}
+.msg.ai .bub{background:#FFF7EC;border-color:#F3D9B4}
+.msg.ai .nm2{color:var(--glow);font-weight:700}
+.msg.sys{justify-content:center}
+.msg.sys .bub{background:#F1EFE8;border:0;font-size:11px;color:var(--sub);border-radius:20px;padding:6px 13px}
+.pcard{border:1px solid var(--gold);border-radius:10px;background:#fff;padding:11px 13px;margin-top:8px}
+.pcard .ph{font-family:var(--mono);font-size:9.5px;color:var(--glow);letter-spacing:.1em}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:9px;padding:8px 0;border-top:1px dashed var(--line);font-size:12px;cursor:pointer}
+.prow:hover{color:var(--glow)}
+.prow b{font-family:var(--mono);font-size:10.5px;color:var(--sub);font-weight:400}
+.prow.on{color:var(--glow);font-weight:700}
+.cfoot{padding:11px 14px;border-top:1px solid var(--line);display:flex;gap:7px;flex-wrap:wrap}
+.qs{border:1px solid var(--line);background:#fff;border-radius:16px;padding:7px 12px;font-size:11.5px;
+ font-family:inherit;cursor:pointer;color:var(--sub);transition:.16s}
+.qs:hover{border-color:var(--gold);color:var(--gold)}
+.qs:disabled{opacity:.35;cursor:default}
+.side{display:flex;flex-direction:column;gap:12px}
+.panel{border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px 16px}
+.panel .ph2{font-family:var(--serif);font-size:14px;font-weight:700;margin-bottom:4px}
+.panel .pp{font-size:11.5px;color:var(--sub);line-height:1.7;margin-bottom:10px}
+.pref{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #F4F1E9;font-size:12px;animation:rise .3s}
+.pref .src{font-family:var(--mono);font-size:9.5px;color:#A5A8B4;display:block;margin-top:3px}
+.pref .x{border:0;background:none;color:#C3C6D0;cursor:pointer;font-size:14px;padding:0 3px}
+.pref .x:hover{color:#C8523B}
+.pref.gone{opacity:.3;text-decoration:line-through}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.photos div{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;
+ font-size:9.5px;color:#fff;text-align:center;line-height:1.4;padding:5px}
+.stars{display:flex;gap:5px;margin:10px 0}
+.star{font-size:23px;cursor:pointer;color:#DDD8CA;transition:.14s;line-height:1}
+.star.on{color:var(--gold)}
+.rtags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.okbox{background:#FFF6EC;border-radius:10px;padding:13px 15px;font-size:12.5px;line-height:1.75;color:#5A4534;margin-top:11px}
+.okbox b{color:var(--glow)}
+
+/* ── 내 기록 ── */
+.mecard{border:1px solid var(--line);background:#fff;border-radius:13px;padding:18px;margin-bottom:14px}
+.mehead{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.meav{width:50px;height:50px;border-radius:50%;background:var(--indigo);color:#fff;display:flex;
+ align-items:center;justify-content:center;font-family:var(--serif);font-size:19px;font-weight:700;flex:none}
+.mename{font-family:var(--serif);font-size:19px;font-weight:700}
+.memeta{font-family:var(--mono);font-size:11px;color:var(--sub);margin-top:4px}
+.msec{margin-top:18px}
+.msec .ml{font-family:var(--mono);font-size:10px;letter-spacing:.13em;color:var(--sub);margin-bottom:9px}
+.rulel{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F4F1E9}
+.rulel:last-child{border-bottom:0}
+.rulel p{font-size:12.5px}
+.rulel small{display:block;color:var(--sub);font-size:11px;margin-top:3px;line-height:1.55}
+.fx{font-family:var(--mono);font-size:9px;color:var(--glow);border:1px solid rgba(243,115,33,.4);padding:3px 7px;border-radius:5px;white-space:nowrap}
+.hist{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #F4F1E9}
+.hist:last-child{border-bottom:0}
+.hno{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--gold);flex:none;width:52px}
+.hbd{flex:1}
+.hco{font-size:12.5px;line-height:1.6}
+.hrv{font-size:11.5px;color:#5C6070;margin-top:7px;padding-left:10px;border-left:2px solid var(--gold);line-height:1.7}
+.hstar{font-family:var(--mono);font-size:10px;color:var(--gold);margin-top:6px}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px}
+.tocb{border:1px solid var(--line);background:#fff;border-radius:11px;padding:13px 15px;cursor:pointer;
+ text-align:left;font-family:inherit;transition:.16s}
+.tocb:hover{border-color:var(--gold)}
+.tocb b{display:block;font-family:var(--serif);font-size:13.5px;font-weight:700;margin-bottom:4px}
+.tocb span{font-size:11px;color:var(--sub);line-height:1.6}
+/* ── 달 채우기 ── */
+.moonstage{display:flex;flex-direction:column;align-items:center;padding:26px 10px 20px}
+.bigmoon{position:relative;display:flex;align-items:center;justify-content:center}
+.bigmoon::before{content:'';position:absolute;width:250px;height:250px;border-radius:50%;
+ background:radial-gradient(circle,rgba(243,115,33,.16),transparent 62%)}
+.bigmoon svg{position:relative}
+.phaseN{font-family:var(--serif);font-size:21px;font-weight:700;margin-top:16px}
+.phaseS{font-family:var(--mono);font-size:11.5px;color:var(--sub);margin-top:6px}
+.moongrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(94px,1fr));gap:10px}
+.mg{border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 8px 11px;text-align:center}
+.mg.dark{background:#FAF8F2;border-color:#EDE6D6}
+.mg.full{border-color:var(--gold);box-shadow:0 0 0 2px rgba(217,165,68,.12)}
+.mg .nm3{font-size:11px;margin-top:8px;line-height:1.4}
+.mg .cnt{font-family:var(--mono);font-size:10px;color:var(--sub);margin-top:3px}
+/* ── 채팅 입력 ── */
+.cin{display:flex;gap:7px;padding:10px 12px;border-top:1px solid var(--line);background:#fff}
+.cin input{flex:1;border:1px solid var(--line);border-radius:18px;padding:9px 14px;font-family:inherit;
+ font-size:12.5px;outline:none;color:var(--ink)}
+.cin input:focus{border-color:var(--gold)}
+.cin button{border:0;background:var(--ink);color:var(--paper);border-radius:18px;padding:0 16px;
+ font-family:inherit;font-size:12.5px;cursor:pointer}
+.cin button:hover{background:var(--glow)}
+.typing{font-size:11px;color:var(--sub);padding:0 16px 8px;font-style:italic}
+/* ── 편집 가능한 칩 ── */
+.chip .del{margin-left:8px;opacity:.35;font-size:10.5px}
+.chip .del:hover{opacity:1}
+.chipadd{border:1px dashed var(--gold);color:var(--gold);background:#fff;font-weight:700}
+.addrow{display:flex;gap:6px;margin-top:9px}
+.addrow input{flex:1;border:1px solid var(--line);border-radius:18px;padding:8px 14px;font-size:12px;
+ font-family:inherit;outline:none;color:var(--ink)}
+.addrow input:focus{border-color:var(--gold)}
+.addrow button{border:0;background:var(--gold);color:#fff;border-radius:18px;padding:0 16px;font-size:12px;
+ cursor:pointer;font-family:inherit}
+.saved{font-family:var(--mono);font-size:11px;color:var(--glow);opacity:0;transition:.3s}
+.saved.on{opacity:1}
+.myrule{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F4F1E9}
+.myrule p{font-size:12.5px}
+.myrule .del2{border:0;background:none;color:#C3C6D0;cursor:pointer;font-size:14px}
+.myrule .del2:hover{color:#C8523B}
+@media(max-width:600px){.hero{gap:18px}.hero h1{font-size:22px}.glist{grid-template-columns:1fr}
+ .chem{flex-direction:column;align-items:flex-start;gap:12px}.chem>div:last-child{width:100%}}
+</style>
+</head>
+<body>
+
+<div class="dawn">
+  <div class="hero">
+    <div class="moonbox" id="heroMoon"></div>
+    <div>
+      <div class="k">달빛한화 · PEER LINK</div>
+      <h1>입사 때 가득 찼던 달이<br>배치 6개월이면 그믐까지 기웁니다</h1>
+      <p>달빛한화는 그 달을 다시 채우는 일입니다. 동기 마흔여덟 명 중 몇 명과 실제로 앉아 봤는지가 유일한 지표예요.
+      첫 회차의 매칭은 부정확합니다. 만남의 결과를 관측할수록 AI가 사후확률을 갱신합니다.</p>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-t="0"><b>내 달</b><em>동기를 얼마나 만났나</em></button>
+  <button class="tab" data-t="1"><b>AI 매칭</b><em>관측하며 배운다</em></button>
+  <button class="tab" data-t="2"><b>배정 · 수락</b><em>수락과 대기<i class="bdg" id="bdg2"></i></em></button>
+  <button class="tab" data-t="3"><b>테이블 준비</b><em>주제와 장소</em></button>
+  <button class="tab" data-t="4"><b>채팅</b><em>AI가 듣고 배운다<i class="bdg" id="bdg4"></i></em></button>
+  <button class="tab" data-t="5"><b>내 기록</b><em>나의 취향과 원칙</em></button>
+</nav>
+
+<!-- ============ 0. 성좌도 ============ -->
+<section class="pane on" id="p0">
+  <p class="lead">입사 동기는 <b>마흔여덟 명</b>입니다. 그중 몇 명과 실제로 마주 앉아 봤는지가 이 앱의 유일한 지표예요.
+  만난 만큼 달이 찹니다. 시점을 옮겨 보세요.</p>
+  <div class="seg" id="stageBtns"></div>
+  <div class="sky moonstage" id="moonStage"></div>
+  <div class="stats" id="netStats"></div>
+  <p class="note" id="stageNote"></p>
+
+  <h2 class="t">계열사별로 나눠 본 내 달</h2>
+  <p class="hint" style="margin:-4px 0 12px">동기가 어느 계열사에 있든 고르게 만나야 전체 달이 찹니다.
+  어두운 달이 다음 회차의 우선 배정 대상입니다.</p>
+  <div class="moongrid" id="moonGrid"></div>
+
+  <h2 class="t">열두 달 동안 만난 동기 수</h2>
+  <div class="accbox"><svg viewBox="0 0 420 110" id="trend"></svg></div>
+
+  <div class="callout" style="margin-top:16px" id="introNote"></div>
+</section>
+
+<!-- ============ 1. AI 매칭 ============ -->
+<section class="pane" id="p1">
+  <p class="lead">첫 회차의 매칭은 <b>아무것도 모르는 상태</b>에서 시작합니다.
+  어떤 조건이 좋은 만남을 만드는지 가정하지 않고, 균등분포에서 출발해 만남의 결과로만 배웁니다.</p>
+
+  <div class="ctl">
+    <div class="ch"><span>학습 진행</span><b id="roundLabel">0회차 · 관측 0건</b></div>
+    <div class="row2">
+      <button class="cta" id="stepBtn">회차 진행 (한 달)</button>
+      <button class="cta line" id="jump12">12개월 돌리기</button>
+    </div>
+    <p class="hint">한 회차에 열네 쌍이 만나고, 각 쌍이 만족했는지 여부가 관측됩니다.
+    관측이 들어올 때마다 각 특성의 베타분포가 사전에서 사후로 갱신됩니다. — Beta(α,β) → Beta(α+만족, β+아쉬움)</p>
+  </div>
+
+  <div class="bayes" id="bayes"></div>
+
+  <div class="accbox">
+    <div class="ch" style="margin-bottom:0"><span>순위 정확도 — 잘 맞은 만남을 아쉬운 만남보다 높게 매긴 비율</span><b id="accNow">—</b></div>
+    <svg viewBox="0 0 420 100" id="accChart"></svg>
+    <p class="hint">학습 전에는 정확히 50%, 곧 동전 던지기입니다. 관측이 쌓이면서 사후분포가 좁아지고 예측이 붙습니다. 이 데모의 이론 상한은 71% 부근입니다.</p>
+  </div>
+
+  <h2 class="t">학습된 가중치</h2>
+  <p class="hint" style="margin-top:0">사람이 정한 값이 아니라 관측에서 나온 값입니다. 아래 막대가 실제 편성에 그대로 들어갑니다.</p>
+  <div class="wbar" id="wbar"></div>
+  <div class="callout" id="gapNote" style="margin-top:12px"></div>
+
+  <div class="ctl" style="margin-top:14px">
+    <div class="ch"><span>편성 방식</span><b id="modeLabel">학습된 가중치 사용</b></div>
+    <div class="seg" id="wMode">
+      <button class="on" data-m="ai">AI 학습 가중치</button>
+      <button data-m="manual">직접 조정</button>
+    </div>
+    <div id="sliders"></div>
+    <div class="ch" style="margin:14px 0 9px"><span>테이블 인원</span><b id="sizeLabel"></b></div>
+    <div class="pills" id="sizePills"></div>
+  </div>
+
+  <div class="stats" id="matchStats"></div>
+  <div class="glist" id="groups"></div>
+
+  <details>
+    <summary>베이즈 갱신식과 예측 방식 보기</summary>
+    <pre id="mathView"></pre>
+  </details>
+</section>
+
+<!-- ============ 2. 배정 · 수락 ============ -->
+<section class="pane" id="p2">
+  <p class="lead">테이블이 편성되면 곧바로 확정하지 않습니다. 전원이 수락해야 열리고,
+  <b>수락하지 않으면 거절이 아니라 대기</b>로 넘어갑니다. 빈자리는 대기 순번이 채웁니다.
+  만나기 전까지 상대의 이름은 가려집니다. 보이는 것은 계열사와 연차뿐이에요.</p>
+
+  <div class="split">
+    <div class="invite">
+      <div class="ivh">
+        <div class="k">TABLE № 17 · 배정 알림</div>
+        <div class="t2" id="ivTitle">9월 2일 (수) 19:00</div>
+        <div class="m" id="ivMeta">서울역 인근 · 5인 · 5개 계열사</div>
+      </div>
+      <div class="ivb">
+        <div id="slots"></div>
+        <div class="why" style="margin:12px 0 0" id="ivWhy"></div>
+        <div class="waitl" id="waitBox"></div>
+        <div id="ivActions" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div class="feed">
+      <div class="ch"><span>실시간 알림</span><b id="feedWho"></b></div>
+      <div id="feedList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. 테이블 준비 ============ -->
+<section class="pane" id="p3">
+  <p class="lead">참석자는 이미 정해져 있습니다. 남은 건 <b>“만나서 무슨 얘기를 하지”</b>예요.
+  주제를 먼저 정하면, 정해진 주제에 맞는 장소 후보가 자동으로 올라옵니다.</p>
+
+  <div class="ctl">
+    <div class="ch"><span>AI가 배정한 참석자</span><b id="selCount"></b></div>
+    <div id="roster"></div>
+    <div class="why" style="margin:12px 0 0" id="rosterWhy"></div>
+    <p class="hint">참석자는 고르는 것이 아니라 배정받습니다. 학습된 가중치, 각자가 저장한 선호,
+    아직 어두운 계열사 순서를 함께 보고 AI가 다섯 자리를 채웁니다.
+    누구를 부를지 사람이 고르기 시작하면 결국 아는 사람만 다시 부르게 됩니다.</p>
+    <button class="cta line" id="reassign" style="margin-top:12px">AI에게 다시 편성 요청</button>
+  </div>
+  <div id="chemBox"></div>
+  <button class="cta" id="genBtn">Talk Kit 만들기</button>
+  <div id="kitBox"></div>
+
+  <div class="ctl" style="margin-top:20px">
+    <div class="ch"><span>1단계 · 오늘 할 이야기</span><b id="voteState">투표 전</b></div>
+    <div class="seg" id="modeBtns">
+      <button class="on" data-m="work">일 얘기로</button>
+      <button data-m="life">일 얘기 말고</button>
+    </div>
+    <div id="deck"></div>
+    <button class="cta line" id="closeVote" style="margin-top:6px">투표 마감하고 주제 확정</button>
+  </div>
+
+  <div id="placeStage"></div>
+
+  <details>
+    <summary>실제 서비스에 적용되는 LLM 프롬프트 설계 보기</summary>
+    <pre id="promptView"></pre>
+  </details>
+</section>
+
+<!-- ============ 4. 채팅 ============ -->
+<section class="pane" id="p4">
+  <p class="lead">확정된 테이블에는 채팅방이 열립니다. 달빛 AI가 같이 들어가 있고,
+  <b>따로 설문을 받지 않습니다.</b> 오가는 대화에서 선호를 읽어 다음 매칭에 씁니다.</p>
+
+  <div class="chatwrap">
+    <div class="chat">
+      <div class="chead"><b>테이블 № 17</b><span id="chatMeta"></span></div>
+      <div class="cbody" id="cbody"></div>
+      <div class="typing" id="typing" style="display:none">달빛 AI가 입력 중…</div>
+      <div class="cfoot" id="cfoot"></div>
+      <div class="cin">
+        <input id="chatIn" placeholder="직접 입력해 보세요 — 예: 목요일 을지로 7시 어때요?" autocomplete="off">
+        <button id="chatSend">보내기</button>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <div class="ph2">대화에서 읽은 선호</div>
+        <p class="pp">설문 없이 쌓인 항목입니다. 틀린 건 지우세요. 지우면 다음 매칭에서 빠집니다.</p>
+        <div id="prefList"><p class="pp" style="margin:0">아직 읽은 것이 없습니다.</p></div>
+      </div>
+      <div class="panel">
+        <div class="ph2">모임 기록</div>
+        <p class="pp">계열사 문화지원비로 1인 2만원까지 처리됩니다. 사진과 영수증을 여기 올리면 정산과 기록이 함께 끝납니다.</p>
+        <div id="photoBox"><p class="pp" style="margin:0">만남 후 활성화됩니다.</p></div>
+      </div>
+      <div class="panel" id="ratePanel">
+        <div class="ph2">만남 평가</div>
+        <p class="pp">만남이 끝나면 30초 평가를 받습니다. 이 한 건이 앞의 베타분포에 관측으로 들어갑니다.</p>
+        <div id="rateBox"><p class="pp" style="margin:0">만남 후 활성화됩니다.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. 내 기록 ============ -->
+<section class="pane" id="p5">
+  <p class="lead">내가 어떤 취향을 가졌고, 어떤 이야기를 할 수 있고, 어디로 움직이기 편한지.
+  그리고 <b>내가 동의한 원칙</b>이 무엇인지 한 화면에 둡니다.</p>
+
+  <div class="mecard">
+    <div class="mehead">
+      <div class="meav">이</div>
+      <div>
+        <div class="mename">이정현</div>
+        <div class="memeta">한화투자증권 · 사원 1년차 · 여의도 근무<br>테이블 3회 참석 · 6개 계열사와 만남 · 평균 평가 4.3</div>
+      </div>
+    </div>
+
+    <div class="msec"><div class="ml">일 얘기라면 이런 것 — 내가 꺼낼 수 있는 주제</div>
+      <div class="picker" id="mt1"></div>
+      <div class="addrow" id="ar1" style="display:none"><input placeholder="예: 해외 결제 실무"><button>추가</button></div></div>
+    <div class="msec"><div class="ml">일 얘기 말고라면</div>
+      <div class="picker" id="mt2"></div>
+      <div class="addrow" id="ar2" style="display:none"><input placeholder="예: 클라이밍"><button>추가</button></div></div>
+    <div class="msec"><div class="ml">움직이기 편한 곳</div>
+      <div class="picker" id="mt3"></div>
+      <div class="addrow" id="ar3" style="display:none"><input placeholder="예: 을지로"><button>추가</button></div></div>
+    <div class="msec"><div class="ml">AI가 대화에서 읽은 것</div><div id="mePrefs"></div></div>
+    <div class="msec" style="display:flex;justify-content:space-between;align-items:center;gap:14px">
+      <button class="cta line" id="saveMe" style="max-width:210px">내 기록 저장</button>
+      <span class="saved" id="savedMsg"></span>
+    </div>
+  </div>
+
+  <div class="mecard">
+    <div class="ml" style="font-family:var(--mono);font-size:10px;letter-spacing:.13em;color:var(--sub);margin-bottom:11px">내가 동의한 원칙</div>
+    <div class="rulel"><p>사원끼리만 앉습니다<small>직급이 섞이면 하고 싶은 말을 못 합니다</small></p><span class="fx">고정</span></div>
+    <div class="rulel"><p>한 테이블에 한 계열사 한 명<small>같은 회사 둘이 앉으면 둘이서만 이야기합니다</small></p><span class="fx">고정</span></div>
+    <div class="rulel"><p>아직 안 이어진 계열사 쌍 우선<small>취향보다 이 조건이 먼저 적용됩니다</small></p><span class="fx">고정</span></div>
+    <div class="rulel"><p>평가는 개인에게 공개되지 않습니다<small>집계로만 모델에 들어가고, 누가 몇 점을 줬는지는 아무도 못 봅니다</small></p><span class="fx">고정</span></div>
+    <div class="rulel"><p>대화 분석 사용<small>끄면 선호 학습이 멈추고 초기 설문 값만 씁니다</small></p>
+      <button class="chip on" id="aiToggle">켜짐</button></div>
+    <div id="myRules"></div>
+    <div class="addrow"><input id="ruleIn" placeholder="내가 지키고 싶은 원칙 추가 — 예: 첫 만남은 저녁보다 점심"><button id="ruleAdd">추가</button></div>
+    <p class="hint">고정 원칙은 전원에게 동일하게 적용됩니다. 아래에 직접 추가한 원칙은 내 매칭에만 반영되고, 저장하면 다음에도 유지됩니다.</p>
+  </div>
+
+  <h2 class="t">내가 앉았던 테이블</h2>
+  <div class="mecard" id="histBox"></div>
+
+  <h2 class="t">바로 가기</h2>
+  <div class="toc">
+    <button class="tocb" data-go="0"><b>내 달 채우기</b><span>동기 마흔여덟 명 중 몇 명을 만났는지</span></button>
+    <button class="tocb" data-go="1"><b>운영 화면 · AI 매칭</b><span>학습 상태와 이번 달 편성</span></button>
+    <button class="tocb" data-go="2"><b>배정 현황</b><span>수락 · 대기 상태와 알림</span></button>
+    <button class="tocb" data-go="4"><b>테이블 후기</b><span>남은 기록과 사진</span></button>
+  </div>
+</section>
+
+<footer class="ft">프로필은 데모용 가상 데이터입니다. 실제 운영 시 본인이 입력한 항목과 본인이 동의한 대화 분석 결과만 사용하며,
+인사평가 데이터와 연동하지 않습니다. 평가는 개인 단위로 공개되지 않고 모델 학습용 집계로만 쓰입니다.
+고립 신호는 개인을 특정하지 않고 기수 단위로만 리포팅합니다.</footer>
+</div>
+
+<script>
+/* ================= 데이터 ================= */
+var CO=[
+ {n:"한화에어로스페이스",s:"에어로스페이스",c:"#F37321"},
+ {n:"한화시스템",s:"시스템",c:"#2E6FD9"},
+ {n:"한화솔루션",s:"솔루션",c:"#17A67C"},
+ {n:"한화생명",s:"생명",c:"#8B5CF6"},
+ {n:"한화오션",s:"오션",c:"#E0417B"},
+ {n:"한화호텔앤드리조트",s:"호텔앤드리조트",c:"#D9A21B"},
+ {n:"한화투자증권",s:"투자증권",c:"#3AA9B8"},
+ {n:"한화비전",s:"비전",c:"#7A6BD1"}];
+var REG=["대전","서울","판교","여수","거제","인천"];
+var INT=["러닝","등산","헬스","축구","테니스","클라이밍","커피","맛집탐방","요리","베이킹",
+ "사진","영화","음악","전시관람","코딩","주식투자","독서","외국어","보드게임","여행"];
+var ACT=["운동","식사","스터디","문화","여행"];
+var MAJ=["기계","전자","화공","산업","컴퓨터","재료","경영","경제","통계","항공우주"];
+var SUR=["김","이","박","최","정","강","조","윤","장","임","한","오","서","신","권","황"];
+var GIV=["민준","서연","도윤","지우","예준","하은","시우","수아","지호","서윤","준혁","채원",
+ "건우","다연","우진","소율","현우","지안","준서","유나","태호","가은","성민","혜인"];
+
+function rng(a){return function(){a|=0;a=(a+0x6d2b79f5)|0;var t=Math.imul(a^(a>>>15),1|a);
+ t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+var P=(function(){var r=rng(20260901),pk=function(x){return x[Math.floor(r()*x.length)]},o=[],u={};
+ for(var i=0;i<48;i++){var nm,g=0;do{nm=pk(SUR)+pk(GIV);g++}while(u[nm]&&g<80);u[nm]=1;
+  var s={};while(Object.keys(s).length<3+Math.floor(r()*2))s[pk(INT)]=1;
+  o.push({id:i,name:nm,co:Math.floor(r()*8),region:pk(REG),major:pk(MAJ),
+   interests:Object.keys(s),act:pk(ACT)})}
+ return o})();
+
+function key(a,b){return Math.min(a,b)+"-"+Math.max(a,b)}
+var ALL=[];for(var i=0;i<8;i++)for(var j=i+1;j<8;j++)ALL.push([i,j]);
+
+/* 시점별 연결 상태 */
+var DRIFT=[[0,1],[0,7],[1,7],[0,4],[1,4],[4,7],[3,6],[0,2],[2,5],[5,6],[3,5]];
+var A3=[[2,6],[0,3],[1,2],[6,7],[3,4]];
+var A6=[[0,5],[1,3],[2,7],[4,5],[5,7]];
+var A12=[[0,6],[1,5],[2,3],[2,4],[3,7],[4,6]];
+var ONBOARD=ALL.filter(function(p){var k=key(p[0],p[1]);return k!=="5-7"&&k!=="4-6"&&k!=="2-6"});
+var M3=DRIFT.concat(A3), M6=M3.concat(A6), M12=M6.concat(A12);
+var SET={onboard:ONBOARD,drift:DRIFT,m3:M3,m6:M6,m12:M12};
+var STAGES=[
+ {k:"onboard",l:"연수 종료",n:"여섯 주를 같이 지내며 동기 대부분과 마주 앉아 봤습니다. 달은 거의 가득 차 있습니다."},
+ {k:"drift",l:"배치 6개월 (도입 전)",n:"연락이 이어지는 동기는 손에 꼽습니다. 대부분 같은 사업장이거나 같은 부서예요. 달은 초승달까지 기울었습니다."},
+ {k:"m3",l:"달빛한화 3개월",n:"세 번의 테이블을 거쳤습니다. 달이 눈에 띄게 두꺼워졌습니다."},
+ {k:"m6",l:"달빛한화 6개월",n:"절반을 넘겼습니다. 가장 어두웠던 계열사 쪽이 먼저 밝아졌습니다."},
+ {k:"m12",l:"달빛한화 12개월",n:"연수 직후에 다시 가까워졌습니다. 다른 점은, 이번에는 다시 만날 이유가 남아 있다는 것입니다."}];
+var stage="drift";
+/* 동기 규모와 시점별 만남 비율 */
+var COHORT=[0,0,0,0,0,0,0,0];P.forEach(function(x){COHORT[x.co]++});
+var TOTAL=P.length;
+var FRAC={
+ onboard:[.90,.90,.85,.90,.85,.85,.95,.85],
+ drift:  [.15,.15,.10,.30,.05,.10,.60,.05],
+ m3:     [.35,.30,.30,.45,.20,.25,.75,.20],
+ m6:     [.55,.55,.50,.65,.45,.50,.85,.45],
+ m12:    [.85,.90,.85,.90,.80,.85,1.0,.80]};
+function metAt(k){return COHORT.map(function(n,i){return Math.min(n,Math.round(n*FRAC[k][i]))})}
+function metSum(k){return metAt(k).reduce(function(a,b){return a+b},0)}
+var PHASE=[[.04,"삭","아직 보이지 않는 달"],[.20,"초승달","가늘게 걸린 달"],[.42,"상현달","반쯤 차오른 달"],
+ [.66,"열흘달","반을 넘긴 달"],[.88,"열사흘달","보름을 앞둔 달"],[1.01,"보름달","가득 찬 달"]];
+function phaseOf(f){for(var i=0;i<PHASE.length;i++)if(f<PHASE[i][0])return PHASE[i];return PHASE[5]}
+var GAPSET=DRIFT.reduce(function(m,p){m[key(p[0],p[1])]=1;return m},{});
+function isGap(a,b){return a!==b&&!GAPSET[key(a,b)]}
+
+/* ================= 달 ================= */
+function moon(f,size){
+ var R=62,rx=Math.abs(1-2*f)*R,sw=f>.5?1:0,id="m"+Math.random().toString(36).slice(2,7);
+ return '<svg width="'+size+'" height="'+size+'" viewBox="-72 -72 144 144">'
+ +'<defs><radialGradient id="g'+id+'" cx="38%" cy="30%">'
+ +'<stop offset="0%" stop-color="#FFFCF2"/><stop offset="100%" stop-color="#EBD3A0"/></radialGradient>'
+ +'<clipPath id="c'+id+'"><circle r="62"/></clipPath></defs>'
+ +'<circle r="66" fill="#F3D9A8" opacity=".22"/><circle r="62" fill="url(#g'+id+')"/>'
+ +'<g clip-path="url(#c'+id+')" fill="#D5B87E" opacity=".4">'
+ +'<circle cx="-22" cy="-20" r="11"/><circle cx="14" cy="10" r="16"/>'
+ +'<circle cx="-8" cy="34" r="7"/><circle cx="30" cy="-28" r="6"/></g>'
+ +(f>=.99?"":'<path d="M0 -'+R+' A'+R+' '+R+' 0 0 0 0 '+R+' A'+rx.toFixed(1)+' '+R+' 0 0 '+sw+' 0 -'+R+' Z" fill="#DDE1EE" opacity=".93"/>')
+ +'</svg>'}
+
+/* ================= 성좌도 ================= */
+function stat(v,l,c){return '<div class="stat"><div class="sv '+(c||"")+'">'+v+'</div><div class="sl">'+l+'</div></div>'}
+function drawStage(){
+ var met=metAt(stage),sum=met.reduce(function(a,b){return a+b},0),f=sum/TOTAL,ph=phaseOf(f);
+ document.getElementById("heroMoon").innerHTML=moon(f,124);
+ document.getElementById("moonStage").innerHTML=
+  '<div class="bigmoon">'+moon(f,190)+'</div>'
+  +'<div class="phaseN">'+ph[1]+' · '+ph[2]+'</div>'
+  +'<div class="phaseS">동기 '+TOTAL+'명 중 '+sum+'명을 만났습니다 · '+Math.round(f*100)+'%</div>';
+ var dark=met.map(function(m,i){return{i:i,r:COHORT[i]?m/COHORT[i]:0}})
+   .sort(function(a,b){return a.r-b.r})[0];
+ document.getElementById("netStats").innerHTML=
+  stat(sum+'<em>/'+TOTAL+'</em>',"만난 동기")+
+  stat(ph[1],"지금의 달","ac")+
+  stat(TOTAL-sum,"아직 못 만난 동기",(TOTAL-sum)>30?"wn":"")+
+  stat(CO[dark.i].s,"가장 어두운 쪽",dark.r<.2?"wn":"");
+ document.getElementById("stageNote").textContent=STAGES.filter(function(x){return x.k===stage})[0].n;
+ document.getElementById("moonGrid").innerHTML=CO.map(function(c,i){
+  var r=COHORT[i]?met[i]/COHORT[i]:0;
+  return '<div class="mg'+(r<.25?" dark":r>=.85?" full":"")+'">'+moon(r,56)
+   +'<div class="nm3">'+c.s+'</div><div class="cnt">'+met[i]+'/'+COHORT[i]+'명</div></div>'}).join("");
+ document.querySelectorAll("#stageBtns button").forEach(function(b){b.classList.toggle("on",b.dataset.k===stage)});
+ document.getElementById("introNote").innerHTML=
+  "<b>기회가 없는 게 아니라 유지할 장치가 없습니다.</b> 연수원에서는 동기 "+TOTAL+"명 중 "+metSum("onboard")
+  +"명을 만납니다. 배치 6개월이면 "+metSum("drift")+"명으로 줄어듭니다. 사람이 변한 게 아니라, 다시 만날 이유가 사라진 것입니다.";
+ drawTrend();
+}
+document.getElementById("stageBtns").innerHTML=STAGES.map(function(x){
+ return '<button data-k="'+x.k+'">'+x.l+'</button>'}).join("");
+document.querySelectorAll("#stageBtns button").forEach(function(b){
+ b.onclick=function(){stage=b.dataset.k;drawStage()}});
+
+function drawTrend(){
+ var pts=[{l:"연수 종료",k:"onboard"},{l:"배치 6개월",k:"drift"},{l:"3개월",k:"m3"},{l:"6개월",k:"m6"},{l:"12개월",k:"m12"}]
+  .map(function(x){return{l:x.l,v:metSum(x.k),k:x.k}});
+ var W2=420,H2=110,L=34,Rr=14,T=12,B=26,s2="";
+ for(var g=0;g<=2;g++){var y=T+(H2-T-B)*g/2;s2+='<line class="agrid" x1="'+L+'" y1="'+y+'" x2="'+(W2-Rr)+'" y2="'+y+'"/>'}
+ var X=function(i){return L+(W2-L-Rr)*i/(pts.length-1)},Y=function(v){return T+(H2-T-B)*(1-v/TOTAL)};
+ var d=pts.map(function(p,i){return(i?"L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1)}).join(" ");
+ s2+='<path class="aline" d="'+d+'"/>';
+ pts.forEach(function(p,i){
+  var cur=p.k===stage;
+  s2+='<circle class="adot" cx="'+X(i).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="'+(cur?5:3.2)+'"/>'
+   +'<text x="'+X(i).toFixed(1)+'" y="'+(Y(p.v)-10).toFixed(1)+'" text-anchor="middle" font-size="10" font-family="ui-monospace" fill="#F37321">'+p.v+'</text>'
+   +'<text x="'+X(i).toFixed(1)+'" y="'+(H2-8)+'" text-anchor="middle" font-size="9.5" fill="'+(cur?"#242833":"#7C8090")+'">'+p.l+'</text>'});
+ s2+='<text x="2" y="'+(Y(TOTAL)+4)+'" font-size="9" fill="#A5A8B4">'+TOTAL+'명</text>';
+ document.getElementById("trend").innerHTML=s2;
+}
+
+/* ================= 베이즈 학습 ================= */
+var FEAT=[
+ {k:"interest",l:"관심사 2개 이상 겹침",p:.82,pr:.42,a:1,b:1},
+ {k:"geo",l:"근무지 이동 30분 이내",p:.74,pr:.46,a:1,b:1},
+ {k:"activity",l:"선호 활동 유형 일치",p:.66,pr:.38,a:1,b:1},
+ {k:"diversity",l:"사업군이 서로 다름",p:.61,pr:.55,a:1,b:1},
+ {k:"gap",l:"처음 이어지는 계열사 쌍",p:.52,pr:.30,a:1,b:1}];
+var P0=.5, GAPMIN=25, round=0, obs=0, accHist=[], srand=rng(4242);
+function lg(x){return Math.log(x/(1-x))}
+function sg(z){return 1/(1+Math.exp(-z))}
+function pmean(F){return F.a/(F.a+F.b)}
+function psd(F){var a=F.a,b=F.b;return Math.sqrt(a*b/((a+b)*(a+b)*(a+b+1)))}
+/* 나이브 베이즈: 기저 로그오즈에 특성별 로그오즈 증분을 더한다 */
+function scoreWith(f,u){var z=lg(P0);
+ f.forEach(function(v,j){if(v)z+=lg(u[j])-lg(P0)});return sg(z)}
+function predict(f){return scoreWith(f,FEAT.map(pmean))}
+var TEST=(function(){var t=[],r=rng(999),TR=FEAT.map(function(F){return F.p});
+ for(var i=0;i<240;i++){var f=FEAT.map(function(F){return r()<F.pr?1:0});
+  t.push({f:f,y:r()<scoreWith(f,TR)?1:0})}return t})();
+/* 순위 정확도: 만족한 만남을 아쉬운 만남보다 높게 매긴 비율 */
+function accuracy(){var pos=[],neg=[];
+ TEST.forEach(function(t){(t.y?pos:neg).push(predict(t.f))});
+ if(!pos.length||!neg.length)return .5;
+ var s=0;pos.forEach(function(p){neg.forEach(function(n){s+=p>n?1:(p===n?.5:0)})});
+ return s/(pos.length*neg.length)}
+function stepRound(n){
+ n=n||1;
+ for(var r2=0;r2<n;r2++){
+  FEAT.forEach(function(F){
+   var m=Math.max(1,Math.round(14*F.pr)),s=0;
+   for(var i=0;i<m;i++)if(srand()<F.p)s++;
+   F.a+=s;F.b+=m-s});
+  obs+=14;round++;accHist.push(accuracy());
+ }
+ renderBayes();renderMatch();
+}
+function betaPath(a,b,w,h){
+ var N=48,vals=[],mx=0;
+ for(var i=0;i<=N;i++){var x=i/N,v=Math.pow(x,a-1)*Math.pow(1-x,b-1);
+  if(!isFinite(v))v=0;vals.push(v);if(v>mx)mx=v}
+ if(mx<=0)mx=1;
+ return vals.map(function(v,i){return(i?"L":"M")+(i/N*w).toFixed(1)+" "+(h-v/mx*(h-3)).toFixed(1)}).join(" ")
+  +" L"+w+" "+h+" L0 "+h+" Z";
+}
+function renderBayes(){
+ document.getElementById("roundLabel").textContent=round+"회차 · 관측 "+obs.toLocaleString()+"건";
+ document.getElementById("bayes").innerHTML=FEAT.map(function(F){
+  var m=pmean(F),s=psd(F),lo=Math.max(0,m-1.96*s),hi=Math.min(1,m+1.96*s);
+  var w=210,h=64;
+  return '<div class="bcard"><div class="bh"><span class="bl">'+F.l+'</span>'
+  +'<span class="bn">n='+(F.a+F.b-2)+'</span></div>'
+  +'<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'
+  +'<path class="bprior" d="M0 '+(h-3)+' L'+w+' '+(h-3)+'"/>'
+  +'<path class="bcurve" d="'+betaPath(F.a,F.b,w,h)+'"/>'
+  +'<line class="bmean" x1="'+(m*w).toFixed(1)+'" y1="0" x2="'+(m*w).toFixed(1)+'" y2="'+h+'"/></svg>'
+  +'<div class="bstat"><span>사후평균 <b>'+(m*100).toFixed(1)+'%</b></span>'
+  +'<span>95% 구간 '+(lo*100).toFixed(0)+'–'+(hi*100).toFixed(0)+'</span></div></div>'}).join("");
+ var A=accHist.length?accHist[accHist.length-1]:0;
+ document.getElementById("accNow").textContent=accHist.length?(A*100).toFixed(1)+"%":"관측 전";
+ drawAcc();
+ var lw=learnedW(),tot=0;for(var k in lw)tot+=lw[k];
+ document.getElementById("wbar").innerHTML=FEAT.map(function(F,i){
+  var pc=tot?lw[F.k]/tot*100:20;
+  return '<div style="width:'+pc.toFixed(1)+'%;background:'+["#D9A544","#F37321","#5A64A8","#17A67C","#8B5CF6"][i]+'">'
+  +(pc>13?F.l.slice(0,6)+" "+Math.round(pc):"")+'</div>'}).join("");
+ var gm=pmean(FEAT[4]);
+ document.getElementById("gapNote").innerHTML=round===0
+  ? "아직 관측이 없어 다섯 항목이 같은 비중입니다. <b>회차를 진행해 보세요.</b>"
+  : "학습이 진행될수록 <b>‘처음 이어지는 계열사 쌍’</b>의 만족 기여도는 "+(gm*100).toFixed(0)+"%로, "
+   +"기저 50%와 거의 차이가 없는 곳에 수렴합니다. 처음 보는 회사 사람과의 자리가 실제로 덜 편하기 때문입니다. "
+   +"만족도만 최적화하면 AI는 안전한 조합을 반복하고 성좌도의 빈 선은 영원히 남습니다. "
+   +"그래서 이 항목만 학습 결과와 무관하게 <b>하한 "+GAPMIN+"</b>을 걸어 둡니다. 조직의 목적은 학습 결과보다 앞섭니다.";
+ var lw=learnedW();
+ document.getElementById("mathView").textContent=
+"[1] 사전분포 — 아무 가정 없이 시작한다\n"
++"  특성 k를 가진 쌍이 만족할 확률 θk ~ Beta(αk, βk),  αk = βk = 1\n"
++"  Beta(1,1)은 균등분포다. 0%도 100%도 똑같이 그럴듯하다고 본다.\n\n"
++"[2] 갱신 — 만남 결과를 관측할 때마다\n"
++"  αk ← αk + (만족한 수),   βk ← βk + (아쉬웠던 수)\n"
++"  사후평균 E[θk] = αk / (αk+βk)\n"
++"  사후분산 Var[θk] = αβ / ((α+β)²(α+β+1))   ← 관측이 쌓일수록 좁아진다\n\n"
++"[3] 예측 — 나이브 베이즈로 결합한다\n"
++"  logit P̂(만족|S) = logit(P₀) + Σ_{k∈S} [ logit(E[θk]) − logit(P₀) ]\n"
++"  단순 평균이 아니라 로그오즈를 더한다. 좋은 조건이 겹칠수록 확률이 가파르게 오른다.\n"
++"  P₀ = 0.5 이므로 학습 전에는 모든 조합의 점수가 같다 → 순위 정확도 50%\n\n"
++"[4] 가중치 — 사람이 정하지 않는다\n"
++"  wk ∝ max(0, E[θk] − P₀),  Σwk = 100\n\n"
++"[5] 단, 하나는 학습에 맡기지 않는다\n"
++"  '처음 이어지는 쌍'은 만족도 기여가 거의 0으로 수렴한다. 처음 보는 회사 사람과의\n"
++"  자리가 실제로 덜 편하기 때문이다. 만족도만 최적화하면 AI는 안전한 조합을 반복하고\n"
++"  성좌도의 빈 선은 영원히 남는다. 그래서 이 항만 하한 "+GAPMIN+"을 제약으로 건다.\n"
++"  w_gap ← max(w_gap, "+GAPMIN+")   ← 조직 목적은 학습 결과보다 우선한다\n\n"
++"현재 상태: "+round+"회차 · 관측 "+obs+"건 · 순위 정확도 "+(A*100).toFixed(1)+"%\n"
++FEAT.map(function(F){return "  "+F.l+" : E[θ]="+(pmean(F)*100).toFixed(1)+"%  n="+(F.a+F.b-2)+"  w="+lw[F.k]}).join("\n");
+}
+function drawAcc(){
+ var W2=420,H2=100,L=32,Rr=12,T=10,B=20,s="";
+ for(var g=0;g<=2;g++){var y=T+(H2-T-B)*g/2;s+='<line class="agrid" x1="'+L+'" y1="'+y+'" x2="'+(W2-Rr)+'" y2="'+y+'"/>'}
+ s+='<text x="2" y="'+(T+4)+'" font-size="9" fill="#A5A8B4">100%</text>'
+  +'<text x="4" y="'+(H2-B+4)+'" font-size="9" fill="#A5A8B4">50%</text>';
+ if(accHist.length<1){s+='<text x="'+(W2/2)+'" y="'+(H2/2)+'" text-anchor="middle" font-size="11" fill="#B8BCC8">회차를 진행하면 그려집니다</text>';
+  document.getElementById("accChart").innerHTML=s;return}
+ var N=Math.max(accHist.length-1,1);
+ var X=function(i){return L+(W2-L-Rr)*i/Math.max(N,11)},Y=function(v){return T+(H2-T-B)*(1-(v-.5)/.5)};
+ var d=accHist.map(function(v,i){return(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)}).join(" ");
+ s+='<path class="aline" d="'+d+'"/>';
+ accHist.forEach(function(v,i){s+='<circle class="adot" cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="2.6"/>'});
+ var last=accHist.length-1;
+ s+='<text x="'+X(last).toFixed(1)+'" y="'+(Y(accHist[last])-8).toFixed(1)+'" text-anchor="middle" font-size="10" font-family="ui-monospace" fill="#F37321">'+(accHist[last]*100).toFixed(0)+'%</text>'
+  +'<text x="'+L+'" y="'+(H2-6)+'" font-size="9" fill="#7C8090">1회차</text>'
+  +'<text x="'+(W2-Rr)+'" y="'+(H2-6)+'" text-anchor="end" font-size="9" fill="#7C8090">12회차</text>';
+ document.getElementById("accChart").innerHTML=s;
+}
+function learnedW(){var o={},t=0;
+ FEAT.forEach(function(F){var d=Math.max(0,pmean(F)-P0);o[F.k]=d;t+=d});
+ if(t<=0){FEAT.forEach(function(F){o[F.k]=20});return o}
+ FEAT.forEach(function(F){o[F.k]=Math.round(o[F.k]/t*100)});
+ /* 만족도만 최적화하면 빈 선이 영원히 안 채워진다 — 조직 목적을 제약으로 건다 */
+ if(round>0&&o.gap<GAPMIN){
+  var need=GAPMIN-o.gap,rest=100-o.gap;
+  ["interest","geo","activity","diversity"].forEach(function(k){
+   o[k]=Math.max(0,Math.round(o[k]-need*o[k]/rest))});
+  o.gap=GAPMIN}
+ return o}
+document.getElementById("stepBtn").onclick=function(){if(round<24)stepRound(1)};
+document.getElementById("jump12").onclick=function(){stepRound(Math.max(0,12-round)||1)};
+
+/* ================= 매칭 ================= */
+var GEO={대전:{대전:1,서울:.6,판교:.65,여수:.3,거제:.25,인천:.5},서울:{서울:1,판교:.9,인천:.8,대전:.6,여수:.2,거제:.15},
+ 판교:{판교:1,서울:.9,인천:.7,대전:.65,여수:.2,거제:.2},여수:{여수:1,거제:.55,대전:.3,서울:.2,판교:.2,인천:.15},
+ 거제:{거제:1,여수:.55,대전:.25,서울:.15,판교:.2,인천:.15},인천:{인천:1,서울:.8,판교:.7,대전:.5,여수:.15,거제:.15}};
+var wmode="ai";
+var MANUAL={interest:30,activity:15,diversity:15,gap:25,geo:15};
+function curW(){if(wmode==="manual")return MANUAL;
+ if(round===0)return{interest:20,activity:20,diversity:20,gap:20,geo:20};
+ return learnedW()}
+function pair(a,b,w){
+ var sh=a.interests.filter(function(x){return b.interests.indexOf(x)>-1});
+ var uni={};a.interests.concat(b.interests).forEach(function(x){uni[x]=1});
+ var si=sh.length/Object.keys(uni).length, sa=a.act===b.act?1:0;
+ var dv=a.co===b.co?0:1, gp=isGap(a.co,b.co)?1:0;
+ var pg=(GEO[a.region]||{})[b.region]||.3;
+ var d=(w.interest+w.activity+w.diversity+w.gap+w.geo)||1;
+ return{total:(w.interest*si+w.activity*sa+w.diversity*dv+w.gap*gp+w.geo*pg)/d,shared:sh}}
+function makeGroups(size,w){var pool=P.slice(),gs=[];
+ while(pool.length>=2){var take=Math.min(size,pool.length),g=[pool.shift()];
+  while(g.length<take&&pool.length){var bi=0,bv=-1;
+   for(var i=0;i<pool.length;i++){var s=0;
+    for(var j=0;j<g.length;j++)s+=pair(g[j],pool[i],w).total;
+    s/=g.length;if(s>bv){bv=s;bi=i}}
+   g.push(pool.splice(bi,1)[0])}
+  gs.push(g)}
+ if(pool.length===1&&gs.length)gs[gs.length-1].push(pool[0]);
+ return gs}
+function coh(g,w){if(g.length<2)return 0;var s=0,c=0;
+ for(var i=0;i<g.length;i++)for(var j=i+1;j<g.length;j++){s+=pair(g[i],g[j],w).total;c++}return s/c}
+function cosn(g){var m={};g.forEach(function(p){m[p.co]=1});return Object.keys(m).length}
+/* 편성된 그룹에서 베이즈 모델이 쓰는 특성 벡터를 뽑는다 */
+function groupFeat(g){
+ var sh={},geo=0,act={},c=0;
+ for(var i=0;i<g.length;i++)for(var j=i+1;j<g.length;j++){
+  pair(g[i],g[j],curW()).shared.forEach(function(t){sh[t]=1});
+  geo+=(GEO[g[i].region]||{})[g[j].region]||.3;c++}
+ g.forEach(function(p){act[p.act]=(act[p.act]||0)+1});
+ var actMax=Math.max.apply(null,Object.keys(act).map(function(k){return act[k]}));
+ return[ Object.keys(sh).length>=2?1:0,
+         c&&geo/c>=.7?1:0,
+         actMax>=2?1:0,
+         cosn(g)===g.length?1:0,
+         freshPairs(g).length?1:0 ]}
+function freshPairs(g){var out=[],seen={};
+ for(var i=0;i<g.length;i++)for(var j=i+1;j<g.length;j++){
+  var a=g[i].co,b=g[j].co,k=key(a,b);
+  if(isGap(a,b)&&!seen[k]){seen[k]=1;out.push([a,b])}}
+ return out}
+var SL={2:"1:1 · 커피챗",3:"3인 · 가벼운 자리",4:"2:2 · 소규모",5:"5인 · 액티비티",
+ 6:"3:3 · 표준 테이블",7:"7인 · 확장",8:"4:4 · 대규모"};
+var size=5;
+var WD=[["interest","관심사 유사도"],["activity","선호 활동 일치"],["diversity","계열사 다양성"],
+ ["gap","빈 선 우선"],["geo","근무지 접근성"]];
+document.getElementById("sizePills").innerHTML=[2,3,4,5,6,7,8].map(function(n){
+ return '<button class="pill" data-n="'+n+'">'+n+'</button>'}).join("");
+document.querySelectorAll("#sizePills .pill").forEach(function(b){
+ b.onclick=function(){size=+b.dataset.n;renderMatch()}});
+document.querySelectorAll("#wMode button").forEach(function(b){
+ b.onclick=function(){wmode=b.dataset.m;
+  document.querySelectorAll("#wMode button").forEach(function(x){x.classList.toggle("on",x===b)});
+  renderMatch()}});
+function renderSliders(){
+ var w=curW(),dis=wmode==="ai";
+ document.getElementById("modeLabel").textContent=dis
+  ?(round===0?"학습 전 · 전부 동일 가중":"학습된 가중치 사용")
+  :"직접 조정";
+ document.getElementById("sliders").innerHTML=WD.map(function(d){
+  return '<div class="sl2"><div class="sh"><span>'+d[1]+'</span><b>'+w[d[0]]+'</b></div>'+
+  '<input type="range" min="0" max="50" value="'+w[d[0]]+'" data-k="'+d[0]+'"'+(dis?" disabled":"")+'></div>'}).join("");
+ if(!dis)document.querySelectorAll("#sliders input").forEach(function(i){
+  i.oninput=function(){MANUAL[i.dataset.k]=+i.value;renderMatch()}});
+}
+function renderMatch(){
+ document.getElementById("sizeLabel").textContent=size+"인 · "+SL[size];
+ document.querySelectorAll("#sizePills .pill").forEach(function(b){b.classList.toggle("on",+b.dataset.n===size)});
+ renderSliders();
+ var W=curW(),gs=makeGroups(size,W);
+ var newp={};gs.forEach(function(g){freshPairs(g).forEach(function(p){newp[key(p[0],p[1])]=1})});
+ var ac=gs.reduce(function(s,g){return s+coh(g,W)},0)/gs.length;
+ var ad=gs.reduce(function(s,g){return s+cosn(g)/g.length},0)/gs.length;
+ document.getElementById("matchStats").innerHTML=
+  stat(gs.length,"편성 테이블 수")+stat(Math.round(ac*100)+'<em>%</em>',"평균 결속도")+
+  stat(Math.round(ad*100)+'<em>%</em>',"계열사 다양성")+
+  stat(Object.keys(newp).length,"새로 이어지는 쌍","ac");
+ document.getElementById("groups").innerHTML=gs.slice(0,6).map(function(g,i){
+  var fp=freshPairs(g),shared={};
+  for(var a=0;a<g.length;a++)for(var b=a+1;b<g.length;b++)
+   pair(g[a],g[b],W).shared.forEach(function(t){shared[t]=(shared[t]||0)+1});
+  var top=Object.keys(shared).sort(function(x,y){return shared[y]-shared[x]}).slice(0,2);
+  var pf=Math.round(predict(groupFeat(g))*100);
+  return '<div class="gcard'+(fp.length?" fresh":"")+'">'
+  +'<div class="gh"><span class="gno">테이블 '+(i+1)+'</span>'
+  +'<span class="gmeta">'+(round?"예측 만족 "+pf+"%":"예측 불가 · 학습 전")+'</span></div>'
+  +g.map(function(p){return '<div class="mem"><span class="dot" style="background:'+CO[p.co].c+'"></span>'
+   +'<b>'+CO[p.co].s+'</b><span class="sub">'+mask(p.name)+' · '+p.region+'</span>'
+   +'<span class="tg">'+p.interests.slice(0,3).join(" · ")+'</span></div>'}).join("")
+  +'<div class="why">왜 이 조합인가 — '
+  +(top.length?top.join(", ")+"이(가) 겹치고 ":"")+cosn(g)+'개 계열사가 섞였습니다.'
+  +(fp.length?'<span class="fresh">처음 이어지는 선 · '+fp.map(function(p){
+     return CO[p[0]].s+" × "+CO[p[1]].s}).join(" / ")+'</span>':"")
+  +'</div>'
+  +'<button class="mini" data-ids="'+g.map(function(p){return p.id}).join(",")+'">이 테이블 준비하기</button></div>'}).join("");
+ document.querySelectorAll(".mini").forEach(function(b){
+  b.onclick=function(){SEL=b.dataset.ids.split(",").map(function(i){return P[+i]});KIT=null;renderTalk();go(3)}});
+}
+
+/* ================= 배정 · 수락 ================= */
+var MEMBERS=[
+ {n:"이정현",co:6,role:"사원 1년차 · 여의도",me:true,st:"pending"},
+ {n:"정하람",co:2,role:"사원 2년차 · 판교",st:"in"},
+ {n:"강민서",co:0,role:"사원 3년차 · 창원",st:"in"},
+ {n:"오유진",co:3,role:"사원 2년차 · 여의도",st:"pending"},
+ {n:"서지호",co:1,role:"사원 1년차 · 상암",st:"wait"}];
+var WAITING=[{n:"문가온",co:5,role:"사원 2년차 · 서울"},{n:"한소율",co:7,role:"사원 1년차 · 판교"}];
+var FEED=[
+ {who:"정하람",co:2,t:"테이블 № 17을 수락했습니다",tm:"2일 전 21:04"},
+ {who:"강민서",co:0,t:"테이블 № 17을 수락했습니다",tm:"2일 전 22:37"},
+ {who:"달빛 AI",co:-1,t:"서지호님이 24시간 내 응답하지 않아 대기로 전환되었습니다",tm:"어제 09:00"},
+ {who:"달빛 AI",co:-1,t:"대기 1순위 문가온님에게 자리 제안이 발송되었습니다",tm:"어제 09:01"}];
+var asWho=0;
+function avatarC(co){return co<0?"#F37321":CO[co].c}
+function renderInvite(){
+ var me=MEMBERS[asWho];
+ document.getElementById("feedWho").textContent="내 화면 기준";
+ document.getElementById("slots").innerHTML=MEMBERS.map(function(m){
+  var lab=m.st==="in"?"수락":m.st==="wait"?"대기 전환":"응답 전";
+  var cl=m.st==="in"?"y":m.st==="wait"?"w":"";
+  return '<div class="slot"><span class="dot" style="background:'+CO[m.co].c+'"></span>'
+  +'<span class="who">'+CO[m.co].n+(m===me?' <b style="color:#F37321">· '+m.n+' (본인)</b>':"")
+  +'<em>'+(m===me?m.n:mask(m.n))+" · "+m.role+'</em></span>'
+  +'<span class="tagx '+cl+'">'+lab+'</span></div>'}).join("");
+ var inN=MEMBERS.filter(function(m){return m.st==="in"}).length;
+ document.getElementById("ivMeta").textContent="서울역 인근 · 5인 · 5개 계열사 · "+inN+"명 수락";
+ document.getElementById("ivWhy").innerHTML="왜 이 조합인가 — 다섯 명 모두 AI 활용을 관심 주제로 골랐고 부서가 하나도 겹치지 않습니다."
+  +'<span class="fresh">처음 이어지는 선 · 투자증권 × 시스템</span>';
+ document.getElementById("waitBox").innerHTML="<b>대기 순번</b><br>"
+  +WAITING.map(function(w,i){return(i+1)+"순위 "+CO[w.co].s+" "+mask(w.n)+" ("+w.role+")"}).join("<br>")
+  +"<br><span style='color:#A5A8B4'>수락하지 않아도 불이익은 없습니다. 대기로 넘어가면 다음 회차에서 우선 배정됩니다."
+  +" 이름은 실제로 만난 뒤에 공개됩니다.</span>";
+ var act=document.getElementById("ivActions");
+ if(me.st==="in")act.innerHTML='<button class="cta" disabled>수락함 · 채팅방이 열렸습니다</button>'
+   +'<button class="cta line" style="margin-top:8px" onclick="go(4)">채팅방으로 이동</button>';
+ else if(me.st==="wait")act.innerHTML='<button class="cta line" disabled>대기 상태 · 다음 회차 우선 배정</button>';
+ else act.innerHTML='<div class="row2"><button class="cta" id="acceptBtn">수락하기</button>'
+   +'<button class="cta line" id="waitBtn">이번엔 대기로</button></div>';
+ var ab=document.getElementById("acceptBtn"),wb=document.getElementById("waitBtn");
+ if(ab)ab.onclick=function(){setSt(asWho,"in");
+  FEED.unshift({who:me.n,co:me.co,t:"테이블 № 17을 수락했습니다",tm:"방금"});
+  if(MEMBERS.filter(function(m){return m.st==="in"}).length>=3)
+   FEED.unshift({who:"달빛 AI",co:-1,t:"테이블 № 17이 확정되었습니다. 채팅방이 열렸습니다",tm:"방금"});
+  document.getElementById("bdg4").classList.add("on");
+  renderInvite()};
+ if(wb)wb.onclick=function(){setSt(asWho,"wait");
+  FEED.unshift({who:me.n,co:me.co,t:"이번 회차를 대기로 전환했습니다",tm:"방금"});
+  FEED.unshift({who:"달빛 AI",co:-1,t:"대기 1순위 "+WAITING[0].n+"님에게 자리가 제안되었습니다",tm:"방금"});
+  renderInvite()};
+ document.getElementById("feedList").innerHTML=FEED.map(function(f){
+  var nm=f.co<0?f.who:(f.who===me.n&&me.me?f.who:CO[f.co].s+" "+mask(f.who));
+  return '<div class="fitem"><span class="fi" style="background:'+avatarC(f.co)+'">'
+  +(f.co<0?"AI":CO[f.co].s.charAt(0))+'</span><span class="ft2"><b>'+nm+'</b>님 — '+f.t
+  +'<em>'+f.tm+'</em></span></div>'}).join("");
+}
+function setSt(i,s){MEMBERS[i].st=s}
+document.getElementById("bdg2").classList.add("on");
+
+/* ================= 테이블 준비 ================= */
+var SEL=null,KIT=null;
+function chem(m){if(m.length<2)return null;var s=0,c=0,sh={};
+ for(var i=0;i<m.length;i++)for(var j=i+1;j<m.length;j++){
+  var r=pair(m[i],m[j],curW());s+=r.total;c++;
+  r.shared.forEach(function(t){sh[t]=(sh[t]||0)+1})}
+ var sc=Math.round(s/c*100),af=cosn(m);
+ var ty=sc>=52?"첫 만남부터 말이 끊기지 않을 조합":sc>=38?"초반 5분만 넘기면 잘 풀릴 조합":
+  af===m.length?"공통점은 적지만 배울 게 많은 조합":"아이스브레이커가 꼭 필요한 조합";
+ return{score:sc,type:ty,affs:af,shared:Object.keys(sh).sort(function(a,b){return sh[b]-sh[a]})}}
+function genKit(m,c){
+ var reg={},act={},maj={};m.forEach(function(p){reg[p.region]=1;act[p.act]=1;maj[p.major]=1});
+ var R=Object.keys(reg),A2=Object.keys(act),M=Object.keys(maj),pts=[];
+ if(c.shared.length)pts.push(c.shared.slice(0,2).join(", ")+"에 함께 관심이 있습니다");
+ if(M.length<m.length)pts.push(M.slice(0,2).join("·")+" 전공이 겹칩니다");
+ pts.push(c.affs+"개 계열사에서 모인 조합입니다");
+ pts.push(R.length===1?"전원 "+R[0]+" 근무라 만나기 수월합니다":R.slice(0,2).join("·")+" 등으로 근무지가 나뉘어 있습니다");
+ var ice=["우리 회사 제품 중 ‘이걸 우리가 만든다고?’ 싶었던 것",
+  "입사 후 가장 당황했던 사내 용어 하나씩","다른 계열사에서 제일 부러운 복지 한 가지",
+  "연수원에서 가장 기억에 남는 순간","입사 전 상상했던 업무와 가장 달랐던 점",
+  "우리 팀이 이번 주에 실제로 AI를 쓴 방식"];
+ var st=(m.length+c.score)%4;
+ var AA={운동:"러닝 또는 클라이밍",식사:"맛집 한 곳 순회",스터디:"관심 분야 짧은 스터디",문화:"전시 관람",여행:"근교 당일 나들이"};
+ return{points:pts.slice(0,3),ice:[ice[st],ice[(st+1)%6],ice[(st+2)%6]],
+  activity:R[0]+" 인근 "+AA[A2[0]]+" 후 식사 · "+m.length+"인 기준 두 시간"}}
+function mask(n){return n.charAt(0)+"○".repeat(Math.max(1,n.length-1))}
+var GIDX=0;
+function renderTalk(){
+ document.getElementById("selCount").textContent=SEL.length+"명 · "+cosn(SEL)+"개 계열사";
+ document.getElementById("roster").innerHTML=SEL.map(function(p){
+  return '<div class="slot"><span class="dot" style="background:'+CO[p.co].c+'"></span>'
+  +'<span class="who">'+CO[p.co].n+'<em>'+mask(p.name)+' · 사원 · '+p.region+' 근무 · '
+  +p.interests.slice(0,3).join(" · ")+'</em></span>'
+  +'<span class="tagx">만남 전 비공개</span></div>'}).join("");
+ var W=curW(),fp=freshPairs(SEL),shared={};
+ for(var a=0;a<SEL.length;a++)for(var b=a+1;b<SEL.length;b++)
+  pair(SEL[a],SEL[b],W).shared.forEach(function(t){shared[t]=(shared[t]||0)+1});
+ var top=Object.keys(shared).sort(function(x,y){return shared[y]-shared[x]}).slice(0,2);
+ document.getElementById("rosterWhy").innerHTML="AI가 이 다섯을 고른 이유 — "
+  +(top.length?"<b>"+top.join(", ")+"</b>이(가) 겹치고 ":"")+cosn(SEL)+"개 계열사가 섞였습니다."
+  +(round?" 예측 만족도 "+Math.round(predict(groupFeat(SEL))*100)+"%.":" 아직 학습 전이라 예측값은 없습니다.")
+  +(fp.length?'<span class="fresh">처음 이어지는 선 · '+fp.map(function(x){
+    return CO[x[0]].s+" × "+CO[x[1]].s}).join(" / ")+'</span>':"");
+ var c=chem(SEL);
+ document.getElementById("chemBox").innerHTML=c?
+  '<div class="chem"><div><div class="cnum">'+c.score+'</div><div class="ccap">케미 스코어</div></div>'
+  +'<div style="flex:1;min-width:0"><div class="ctype">'+c.type+'</div>'
+  +'<div class="cmeta">'+c.affs+'개 계열사 · 공통 관심사 '+c.shared.length+'개'
+  +(c.shared.length?" ("+c.shared.slice(0,3).join(", ")+")":"")+'</div>'
+  +'<div class="bar"><span style="width:'+c.score+'%"></span></div></div></div>':"";
+ document.getElementById("genBtn").disabled=SEL.length<2;
+ document.getElementById("kitBox").innerHTML=KIT?
+  '<div class="kit"><div class="kh"><span>Talk Kit</span><b>'+SEL.length+'인 · '
+  +Object.keys(SEL.reduce(function(m,s){m[s.region]=1;return m},{})).join("/")+'</b></div>'
+  +'<div class="ks"><h4>공통점</h4><ul>'+KIT.points.map(function(x){return "<li>"+x+"</li>"}).join("")+'</ul></div>'
+  +'<div class="ks"><h4>아이스브레이커</h4><ol>'+KIT.ice.map(function(x){return "<li>"+x+"</li>"}).join("")+'</ol></div>'
+  +'<div class="ks"><h4>추천 활동</h4><p>'+KIT.activity+'</p></div></div>':"";
+ document.getElementById("promptView").textContent=
+"[System] 한화그룹 계열사 교류 테이블의 대화를 설계하는 도우미.\n\n[User] 아래 "+SEL.length+"명이 처음 만납니다.\n"
++SEL.map(function(p,i){return "- 참석자"+(i+1)+" / "+CO[p.co].n+" / "+p.region+" / "+p.major+" 전공 / 관심사: "+p.interests.join(",")+" / 선호활동: "+p.act}).join("\n")
++"\n\n다음 JSON만 출력. 설명·백틱 금지.\n{\n  \"commonPoints\": [\"구체적 공통점 3개, 각 25자 이내\"],\n  \"icebreakers\": [\"회사 생활 맥락의 가벼운 질문 3개, 각 35자 이내\"],\n  \"activity\": \"인원·지역에 맞는 추천 활동 1개, 40자 이내\"\n}\n\n[제약] 외모·나이·연애·결혼·가족 소재 금지. 업무와 관심사 중심.\n[제약] 실명을 쓰지 말 것. 만나기 전까지 참석자는 계열사와 연차로만 지칭한다."}
+document.getElementById("reassign").onclick=function(){
+ var b=this;b.textContent="다시 편성하는 중…";b.disabled=true;
+ setTimeout(function(){
+  var gs=makeGroups(size,curW());GIDX=(GIDX+1)%gs.length;
+  SEL=gs[GIDX];KIT=null;renderTalk();
+  b.textContent="AI에게 다시 편성 요청";b.disabled=false},480)};
+document.getElementById("genBtn").onclick=function(){
+ var b=this;b.textContent="만드는 중…";b.disabled=true;
+ setTimeout(function(){KIT=genKit(SEL,chem(SEL));b.textContent="Talk Kit 만들기";renderTalk()},420)};
+
+/* ── 주제 투표 → 장소 투표 ── */
+var TOPICS={work:[
+ {t:"우리 회사는 이 일을 이렇게 합니다",d:"각자 자기 업무를 5분씩 설명하기.",v:3},
+ {t:"계열사끼리 물어보고 싶었던 것",d:"평소 궁금했지만 물어볼 사람이 없던 것 하나씩.",v:1},
+ {t:"AI, 우리 팀은 어디까지 쓰나",d:"실제로 돌리고 있는 것만. 도입 계획 말고 이번 주에 쓴 것.",v:4}],
+life:[
+ {t:"근처 밥집 다섯 곳 순회 시작",d:"매달 한 곳씩. 다음 테이블이 이어서 갑니다.",v:2},
+ {t:"각자 회사 굿즈 하나씩",d:"가져와서 바꾸기. 계열사 굿즈가 왜 다 다르게 생겼는지 알게 됩니다.",v:1},
+ {t:"퇴근하고 40분, 같이 걷기",d:"술 없이. 걸으면서 하는 얘기가 앉아서 하는 얘기보다 편합니다.",v:2}]};
+var PLACES={
+ "퇴근하고 40분, 같이 걷기":[
+  {t:"서울로7017 → 남산 둘레길",d:"서울역 바로 앞에서 시작. 전원 이동 20분 이내.",v:2,m:"평균 이동 18분"},
+  {t:"청계천 광교~황학교",d:"완전 평지. 비 와도 우산 쓰고 걸을 만합니다.",v:1,m:"평균 이동 24분"},
+  {t:"여의도 한강공원",d:"두 분 근무지가 여의도라 절반은 걸어서 옵니다.",v:1,m:"평균 이동 27분"}],
+ "AI, 우리 팀은 어디까지 쓰나":[
+  {t:"서울역 회의실 (한화빌딩 3층)",d:"화면 띄우고 실제 프롬프트를 같이 볼 수 있습니다.",v:3,m:"평균 이동 19분"},
+  {t:"공유오피스 · 을지로",d:"노트북 작업하기 편하고 늦게까지 가능합니다.",v:1,m:"평균 이동 22분"},
+  {t:"판교 사옥 라운지",d:"판교 근무 두 분에게 유리하지만 나머지가 멉니다.",v:0,m:"평균 이동 41분"}],
+ "_default":[
+  {t:"서울역 인근",d:"참석자 다섯 명의 이동시간 합이 가장 짧은 지점입니다.",v:3,m:"평균 이동 19분"},
+  {t:"광화문 · 시청",d:"식당 선택지가 넓습니다.",v:2,m:"평균 이동 23분"},
+  {t:"강남역",d:"두 분이 40분 이상 걸립니다.",v:0,m:"평균 이동 34분"}]};
+var mode="work",voted=null,fixedTopic=null,placeVoted=null,fixedPlace=null;
+document.querySelectorAll("#modeBtns button").forEach(function(b){
+ b.onclick=function(){mode=b.dataset.m;
+  document.querySelectorAll("#modeBtns button").forEach(function(x){x.classList.toggle("on",x===b)});
+  renderDeck()}});
+function renderDeck(){
+ var L=TOPICS[mode],mx=Math.max.apply(null,L.map(function(r){return r.v}));
+ document.getElementById("deck").innerHTML=L.map(function(r,i){
+  var mine=voted&&voted.k===mode&&voted.i===i;
+  var win=fixedTopic===r.t;
+  return '<button class="vote'+(mine?" mine":"")+(win?" win":"")+'" data-i="'+i+'"'+(fixedTopic?" disabled":"")+'>'
+  +'<div class="fill" style="width:'+(r.v/6*100)+'%"></div><div class="in">'
+  +'<div class="vt">'+r.t+'<span>'+r.v+"표"+(win?" · 확정":r.v===mx?" · 1위":"")+'</span></div>'
+  +'<div class="vd">'+r.d+'</div></div></button>'}).join("");
+ if(!fixedTopic)document.querySelectorAll("#deck .vote").forEach(function(b){
+  b.onclick=function(){var i=+b.dataset.i;
+   if(voted)TOPICS[voted.k][voted.i].v--;
+   TOPICS[mode][i].v++;voted={k:mode,i:i};
+   document.getElementById("voteState").textContent="투표 완료";renderDeck()}});
+}
+document.getElementById("closeVote").onclick=function(){
+ var L=TOPICS[mode],mx=-1,pick=null;
+ L.forEach(function(r){if(r.v>mx){mx=r.v;pick=r.t}});
+ fixedTopic=pick;document.getElementById("voteState").textContent="주제 확정";
+ this.disabled=true;this.textContent="주제가 확정되었습니다";
+ renderDeck();renderPlace();
+ document.getElementById("placeStage").scrollIntoView({behavior:"smooth",block:"nearest"});
+};
+function placeList(){return PLACES[fixedTopic]||PLACES._default}
+function renderPlace(){
+ if(!fixedTopic){document.getElementById("placeStage").innerHTML="";return}
+ var L=placeList(),mx=Math.max.apply(null,L.map(function(r){return r.v}));
+ document.getElementById("placeStage").innerHTML=
+ '<div class="ctl" style="margin-top:14px;border-color:'+(fixedPlace?"#D9A544":"#E9E2D3")+'">'
+ +'<div class="ch"><span>2단계 · 어디서 만날까</span><b>'+(fixedPlace?"장소 확정":"장소 투표 중")+'</b></div>'
+ +'<div class="why" style="margin:0 0 12px">확정된 주제 <b>'+fixedTopic+'</b>에 맞춰 후보가 자동으로 올라왔습니다. '
+ +'참석자 다섯 명의 근무지에서 이동시간 합이 짧은 순입니다.</div>'
+ +'<div id="pdeck"></div>'
+ +(fixedPlace?'<div class="kit" style="margin-top:14px"><div class="kh"><span>테이블 № 17 확정</span><b>9월 2일 (수) 19:00</b></div>'
+   +'<div class="ks"><h4>주제</h4><p>'+fixedTopic+'</p></div>'
+   +'<div class="ks"><h4>장소</h4><p>'+fixedPlace+'</p></div>'
+   +'<div class="ks"><h4>지원</h4><p>계열사 문화지원비 1인 2만원 · 영수증은 채팅방에 올리면 자동 정산됩니다.</p></div></div>'
+   +'<button class="cta line" style="margin-top:10px" onclick="go(4)">채팅방 열기</button>'
+  :'<button class="cta line" id="closePlace" style="margin-top:6px">투표 마감하고 장소 확정</button>')
+ +'</div>';
+ document.getElementById("pdeck").innerHTML=L.map(function(r,i){
+  var mine=placeVoted===i,win=fixedPlace===r.t;
+  return '<button class="vote'+(mine?" mine":"")+(win?" win":"")+'" data-i="'+i+'"'+(fixedPlace?" disabled":"")+'>'
+  +'<div class="fill" style="width:'+(r.v/6*100)+'%"></div><div class="in">'
+  +'<div class="vt">'+r.t+'<span>'+r.v+"표"+(win?" · 확정":r.v===mx?" · 1위":"")+'</span></div>'
+  +'<div class="vd">'+r.d+' · '+r.m+'</div></div></button>'}).join("");
+ if(!fixedPlace){
+  document.querySelectorAll("#pdeck .vote").forEach(function(b){
+   b.onclick=function(){var i=+b.dataset.i;
+    if(placeVoted!==null)L[placeVoted].v--;
+    L[i].v++;placeVoted=i;renderPlace()}});
+  document.getElementById("closePlace").onclick=function(){
+   var mx2=-1,pk=null;L.forEach(function(r){if(r.v>mx2){mx2=r.v;pk=r.t}});
+   fixedPlace=pk;renderPlace();
+   document.getElementById("bdg4").classList.add("on")};
+ }
+}
+
+/* ================= 채팅 ================= */
+var CHAT=[
+ {k:"sys",t:"테이블 № 17 채팅방이 열렸습니다. 만나기 전에 시간과 장소를 정해주세요."},
+ {k:"ai",n:"달빛 AI",t:"안녕하세요. 확정된 주제는 “퇴근하고 40분, 같이 걷기”입니다. 다섯 분 근무지를 보니 서울역 일대가 이동시간 합이 가장 짧습니다. 후보 세 곳 올려둘게요.",card:"place"},
+ {k:"p",n:"정하람",co:2,t:"저는 판교라 서울역까지 20분이면 갑니다. 좋아요."},
+ {k:"p",n:"강민서",co:0,t:"저 그날 창원에서 올라가는 일정이라 서울역이 딱 맞습니다."},
+ {k:"me",n:"이정현",co:6,t:"저도 좋아요. 끝나고 밥은 가볍게 먹었으면 해요. 매운 건 잘 못 먹어서요.",
+  learn:[{t:"매운 음식 선호 낮음",s:"이정현 발화에서 추출"},{t:"가벼운 식사 선호",s:"이정현 발화에서 추출"}]},
+ {k:"p",n:"오유진",co:3,t:"저는 술 없는 모임이 훨씬 편해요. 걷는 거 좋습니다.",
+  learn:[{t:"무알콜 모임 선호",s:"오유진 발화에서 추출"}]},
+ {k:"ai",n:"달빛 AI",t:"두 분이 술 없는 자리를 선호하셔서 저녁은 국수·샐러드 계열로 잡았습니다. 계열사 문화지원비로 1인 2만원까지 처리되니 영수증만 여기 올려주세요.",
+  learn:[{t:"야외 활동 선호 (실내 회식보다)",s:"대화 흐름에서 추출"}]},
+ {k:"p",n:"서지호",co:1,t:"수요일도 괜찮은데 목요일이면 더 확실합니다. 수요일은 정기회의가 늦게 끝날 때가 있어요.",
+  learn:[{t:"목요일 저녁 가능 · 수요일 불확실",s:"서지호 발화에서 추출"}]},
+ {k:"ai",n:"달빛 AI",t:"서지호님 일정을 반영해 9월 3일 목요일 19시로 옮길까요? 나머지 네 분은 목요일도 비어 있습니다.",card:"day"},
+ {k:"sys",t:"9월 3일 (목) 19:00 · 서울로7017 → 남산 둘레길로 확정되었습니다."},
+ {k:"sys",t:"— 만남이 끝났습니다 · 이제 서로의 이름이 공개됩니다 —",after:true},
+ {k:"p",n:"정하람",co:2,t:"오늘 좋았습니다. 사진 몇 장 올릴게요.",photos:true},
+ {k:"ai",n:"달빛 AI",t:"영수증 확인했습니다. 5인 · 94,000원 중 100,000원 한도 내라 전액 처리됩니다. 마지막으로 30초만 평가해주세요.",rate:true}
+];
+var ci=0,PREFS=[],photoOn=false,rateOn=false,stars=0,rtags={},EXTRA=[];
+function shown(){return CHAT.slice(0,ci).concat(EXTRA)}
+var REVEAL_AT=(function(){for(var i=0;i<CHAT.length;i++)if(CHAT[i].after)return i+1;return 99})();
+function revealed(){return ci>=REVEAL_AT}
+var ROLE={이정현:"사원 1년차 · 여의도",정하람:"사원 2년차 · 판교",강민서:"사원 3년차 · 창원",
+ 오유진:"사원 2년차 · 여의도",서지호:"사원 1년차 · 상암"};
+/* 만나기 전에는 계열사와 연차만 보인다 */
+function chatName(m){
+ if(m.k==="ai")return "달빛 AI";
+ if(m.k==="me")return m.n+" (나)";
+ return revealed()? m.n+" · "+CO[m.co].s
+  : CO[m.co].n+" · "+(ROLE[m.n]||"사원")+" · "+mask(m.n);
+}
+function chatAv(m){
+ if(m.k==="ai")return "AI";
+ if(m.k==="me"||revealed())return m.n.charAt(0);
+ return CO[m.co].s.charAt(0);
+}
+function renderChat(){
+ var s2="";
+ shown().forEach(function(m){
+  if(m.k==="sys"){s2+='<div class="msg sys"><div class="bub">'+m.t+'</div></div>';return}
+  var cls=m.k==="me"?"msg me":m.k==="ai"?"msg ai":"msg";
+  var col=m.k==="ai"?"#F37321":CO[m.co].c;
+  s2+='<div class="'+cls+'"><span class="av" style="background:'+col+'">'+chatAv(m)+'</span>'
+   +'<div class="bd"><div class="nm2">'+chatName(m)+'</div>'
+   +'<div class="bub">'+m.t
+   +(m.card==="place"?placeCard():"")
+   +(m.card==="day"?dayCard():"")
+   +'</div></div></div>'});
+ document.getElementById("cbody").innerHTML=s2;
+ document.getElementById("chatMeta").innerHTML=revealed()
+  ? '5명 · 이름 공개됨'
+  : '5명 · <span style="color:#F37321">만남 전까지 익명</span>';
+ var el=document.getElementById("cbody");el.scrollTop=el.scrollHeight;
+ var f=document.getElementById("cfoot");
+ if(ci>=CHAT.length)f.innerHTML='<button class="qs" disabled>대본이 끝났습니다 · 아래에 직접 입력해 보세요</button>'
+   +'<button class="qs" onclick="go(5)">내 기록에서 보기</button>';
+ else{
+  var nx=CHAT[ci];
+  f.innerHTML='<button class="qs" id="nextMsg">'
+   +(nx.k==="me"?"내 메시지 보내기":nx.k==="ai"?"달빛 AI 응답 보기":nx.k==="sys"?"다음":nx.n+"님 메시지")+'</button>'
+   +'<button class="qs" id="allMsg">끝까지 재생</button>';
+  document.getElementById("nextMsg").onclick=function(){adv(1)};
+  document.getElementById("allMsg").onclick=function(){adv(CHAT.length-ci)};
+ }
+ renderPrefs();renderPhotos();renderRate();
+}
+
+/* ── 입력한 문장에서 선호를 뽑는 규칙 ── */
+var NEG=/안 |안돼|안 돼|못|싫|없|빼|말고|어렵|힘들|불편|피하/;
+var EX=[
+ {re:/맵|매운|매워/,f:function(){return{p:"매운 음식 선호 낮음",r:"매운 메뉴는 후보에서 빼겠습니다."}}},
+ {re:/술|소주|맥주|음주|반주|한 ?잔/,f:function(t){return NEG.test(t)
+   ?{p:"무알콜 모임 선호",r:"술 없는 자리로 잡을게요."}
+   :{p:"가벼운 반주 괜찮음",r:"반주 한 잔 정도는 넣어두겠습니다."}}},
+ {re:/걷|산책|러닝|뛰|등산|야외|바깥/,f:function(){return{p:"야외 활동 선호",r:"걷는 코스를 우선으로 보겠습니다."}}},
+ {re:/조용|시끄|소란/,f:function(){return{p:"조용한 장소 선호",r:"조용한 곳으로 찾아볼게요."}}},
+ {re:/채식|비건|샐러드/,f:function(){return{p:"채식 옵션 필요",r:"채식 메뉴가 있는 곳으로 고르겠습니다."}}},
+ {re:/고기|삼겹|치킨|구이/,f:function(t){return NEG.test(t)?null:{p:"고기 메뉴 선호",r:"고기 메뉴도 후보에 넣을게요."}}},
+ {re:/커피|카페|디저트/,f:function(){return{p:"카페 자리 선호",r:"카페에서 시작하는 안도 만들어두겠습니다."}}},
+ {re:/일찍|이른|여섯시/,f:function(){return{p:"이른 저녁 선호",r:"시작을 조금 당겨 보겠습니다."}}},
+ {re:/늦|야근/,f:function(){return{p:"늦은 시작 필요",r:"시작 시간을 뒤로 미뤄 후보를 다시 뽑을게요."}}},
+ {re:/점심|런치/,f:function(){return{p:"점심 시간대 선호",r:"점심 자리로도 잡을 수 있습니다."}}},
+ {re:/주말|토요일|일요일/,f:function(t){return NEG.test(t)
+   ?{p:"주말 모임 어려움",r:"평일로만 잡겠습니다."}:{p:"주말 모임 가능",r:"주말 후보도 열어두겠습니다."}}}];
+var DAYS=["월","화","수","목","금","토","일"];
+var SPOTS=["여의도","판교","서울역","강남","상암","광화문","성수","을지로","시청","종로","잠실","마곡"];
+function extract(t){
+ var out=[];
+ EX.forEach(function(r){if(r.re.test(t)){var v=r.f(t);if(v)out.push(v)}});
+ DAYS.forEach(function(d){
+  if(new RegExp(d+"요일").test(t))out.push(NEG.test(t)
+   ?{p:d+"요일 어려움",r:d+"요일은 빼겠습니다."}:{p:d+"요일 가능",r:d+"요일을 후보에 넣을게요."})});
+ SPOTS.forEach(function(g){
+  if(t.indexOf(g)>-1)out.push({p:g+" 접근 편함",r:g+" 근처로 후보를 다시 계산하겠습니다."})});
+ var hm=t.match(/(\d{1,2})\s?시/);
+ if(hm)out.push({p:hm[1]+"시 시작 선호",r:hm[1]+"시로 맞춰볼게요."});
+ var seen={};
+ return out.filter(function(o){if(seen[o.p])return false;seen[o.p]=1;return true}).slice(0,3);
+}
+function aiReply(found){
+ if(!found.length)return "메모해뒀습니다. 시간·장소·메뉴 중 편한 쪽을 적어주시면 다섯 분 일정과 근무지를 다시 계산해 후보를 뽑겠습니다.";
+ return found.map(function(f){return f.r}).join(" ")
+  +" 방금 대화에서 ‘"+found.map(function(f){return f.p}).join("’, ‘")
+  +"’을(를) 읽었습니다. 오른쪽 목록에 넣어뒀고, 틀렸으면 지우시면 다음 매칭에서 빠집니다.";
+}
+function esc(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function sendMsg(){
+ var inp=document.getElementById("chatIn"),t=(inp.value||"").trim();
+ if(!t)return;
+ inp.value="";
+ EXTRA.push({k:"me",n:"이정현",co:6,t:esc(t)});
+ var found=extract(t);
+ found.forEach(function(f){PREFS.push({t:f.p,s:"내 발화에서 추출",on:true})});
+ renderChat();
+ var ty=document.getElementById("typing");ty.style.display="block";
+ setTimeout(function(){
+  ty.style.display="none";
+  EXTRA.push({k:"ai",n:"달빛 AI",t:aiReply(found)});
+  renderChat();
+ },750);
+}
+document.getElementById("chatSend").onclick=sendMsg;
+document.getElementById("chatIn").addEventListener("keydown",function(e){if(e.key==="Enter")sendMsg()});
+function adv(n){
+ for(var i=0;i<n&&ci<CHAT.length;i++){
+  var m=CHAT[ci];ci++;
+  if(m.learn)m.learn.forEach(function(L){PREFS.push({t:L.t,s:L.s,on:true})});
+  if(m.photos)photoOn=true;
+  if(m.rate)rateOn=true;
+ }
+ renderChat();
+}
+function placeCard(){
+ var L=PLACES["퇴근하고 40분, 같이 걷기"];
+ return '<div class="pcard"><div class="ph">장소 후보 · 이동시간 합 기준</div>'
+ +L.map(function(r){return '<div class="prow'+(fixedPlace===r.t?" on":"")+'"><span>'+r.t+'</span><b>'+r.m+'</b></div>'}).join("")
+ +'</div>'}
+function dayCard(){
+ return '<div class="pcard"><div class="ph">날짜 조정 제안</div>'
+ +'<div class="prow"><span>9월 2일 (수) 19:00</span><b>4명 가능</b></div>'
+ +'<div class="prow on"><span>9월 3일 (목) 19:00</span><b>5명 가능</b></div></div>'}
+function renderPrefs(){
+ var box=document.getElementById("prefList");
+ if(!PREFS.length){box.innerHTML='<p class="pp" style="margin:0">아직 읽은 것이 없습니다.</p>';renderMePrefs();return}
+ box.innerHTML=PREFS.map(function(p,i){
+  return '<div class="pref'+(p.on?"":" gone")+'"><span style="flex:1">'+p.t
+  +'<span class="src">'+p.s+'</span></span>'
+  +'<button class="x" data-i="'+i+'" title="이 항목 삭제">✕</button></div>'}).join("");
+ box.querySelectorAll(".x").forEach(function(b){
+  b.onclick=function(){PREFS[+b.dataset.i].on=!PREFS[+b.dataset.i].on;renderPrefs()}});
+ renderMePrefs();
+}
+function renderMePrefs(){
+ var box=document.getElementById("mePrefs");if(!box)return;
+ var live=PREFS.filter(function(p){return p.on});
+ box.innerHTML=live.length?live.map(function(p){
+  return '<div class="pref"><span style="flex:1">'+p.t+'<span class="src">'+p.s+'</span></span></div>'}).join("")
+  :'<p class="hint" style="margin:0">채팅 탭에서 대화를 진행하면 여기에 쌓입니다. 설문은 따로 받지 않습니다.</p>';
+}
+function renderPhotos(){
+ var box=document.getElementById("photoBox");
+ if(!photoOn){box.innerHTML='<p class="pp" style="margin:0">만남 후 활성화됩니다.</p>';return}
+ box.innerHTML='<div class="photos">'
+ +'<div style="background:linear-gradient(140deg,#F37321,#D9A544)">서울로7017<br>출발</div>'
+ +'<div style="background:linear-gradient(140deg,#5A64A8,#8B5CF6)">남산<br>야경</div>'
+ +'<div style="background:linear-gradient(140deg,#17A67C,#3AA9B8)">뒤풀이<br>국수</div></div>'
+ +'<div class="okbox" style="margin-top:10px">영수증 1건 확인 · <b>94,000원 전액 지원</b> 처리 완료.<br>'
+ +'사진과 한 줄 후기는 사내 기록으로 남고, 참석자가 원하면 비공개로 돌릴 수 있습니다.</div>';
+}
+var RT=["대화가 잘 통했다","업무에 도움이 됐다","다시 만나고 싶다","초반이 어색했다","이동이 멀었다"];
+function renderRate(){
+ var box=document.getElementById("rateBox");
+ if(!rateOn){box.innerHTML='<p class="pp" style="margin:0">만남 후 활성화됩니다.</p>';return}
+ if(rateOn==="done"){
+  box.innerHTML='<div class="okbox"><b>평가 1건이 반영되었습니다.</b><br>'
+  +'이 만남이 가진 특성 — 관심사 겹침, 근무지 인접, 처음 이어지는 쌍 — 각각의 베타분포에 성공 관측으로 들어갔습니다. '
+  +'AI 매칭 탭의 n 값이 올라간 것을 확인할 수 있습니다.</div>'
+  +'<button class="cta line" style="margin-top:10px" onclick="go(1)">학습 상태 보러 가기</button>';
+  return}
+ box.innerHTML='<div class="stars">'+[1,2,3,4,5].map(function(n){
+  return '<span class="star'+(n<=stars?" on":"")+'" data-n="'+n+'">★</span>'}).join("")+'</div>'
+ +'<div class="rtags">'+RT.map(function(t,i){
+  return '<button class="chip'+(rtags[i]?" on":"")+'" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'
+ +'<button class="cta" id="rateSend"'+(stars?"":" disabled")+'>평가 보내기</button>';
+ box.querySelectorAll(".star").forEach(function(s){s.onclick=function(){stars=+s.dataset.n;renderRate()}});
+ box.querySelectorAll(".rtags .chip").forEach(function(c){
+  c.onclick=function(){rtags[+c.dataset.i]=!rtags[+c.dataset.i];renderRate()}});
+ var rs=document.getElementById("rateSend");
+ if(rs)rs.onclick=function(){
+  var good=stars>=4?1:0;
+  ["interest","geo","gap"].forEach(function(k){
+   FEAT.forEach(function(F){if(F.k===k){F.a+=good;F.b+=1-good}})});
+  obs++;if(accHist.length)accHist[accHist.length-1]=accuracy();
+  rateOn="done";renderBayes();renderMatch();renderRate();
+ };
+}
+
+/* ================= 내 기록 ================= */
+var ME={
+ t1:[{t:"재무제표 읽는 법",on:false},{t:"엑셀·자동화",on:true},{t:"파생상품",on:true},
+     {t:"AI 활용",on:true},{t:"IR·홍보",on:false},{t:"신사업 기획",on:false},{t:"해외 결제 실무",on:true}],
+ t2:[{t:"러닝",on:true},{t:"위스키",on:true},{t:"전시관람",on:true},{t:"야구",on:false},
+     {t:"캠핑",on:false},{t:"사진",on:false},{t:"보드게임",on:false}],
+ t3:[{t:"여의도",on:true},{t:"서울역",on:true},{t:"판교",on:false},{t:"강남",on:false},
+     {t:"성수",on:false},{t:"상암",on:false},{t:"광화문",on:true}],
+ rules:[{t:"첫 만남은 저녁보다 점심이 편합니다",on:true}],
+ ai:true
+};
+var STOREKEY="peerlink:me:v1";
+function flash(msg,ok){
+ var t=document.getElementById("savedMsg");if(!t)return;
+ t.textContent=msg;t.style.color=ok?"#F37321":"#A5A8B4";t.classList.add("on");
+ setTimeout(function(){t.classList.remove("on")},2600);
+}
+function saveMe(){
+ var payload=JSON.stringify(ME);
+ try{
+  if(window.storage&&window.storage.set){
+   window.storage.set(STOREKEY,payload)
+    .then(function(){flash("저장되었습니다 · 다음에도 유지됩니다",true)})
+    .catch(function(){flash("이번 세션에만 유지됩니다",false)});
+   return}
+ }catch(e){}
+ flash("이번 세션에만 유지됩니다",false);
+}
+function loadMe(cb){
+ try{
+  if(window.storage&&window.storage.get){
+   window.storage.get(STOREKEY).then(function(r){
+    if(r&&r.value){try{var o=JSON.parse(r.value);if(o&&o.t1&&o.t2&&o.t3)ME=o}catch(e){}}
+    cb()}).catch(function(){cb()});
+   return}
+ }catch(e){}
+ cb();
+}
+function renderList(id,arrKey){
+ var arr=ME[arrKey],box=document.getElementById(id);
+ box.innerHTML=arr.map(function(x,i){
+  return '<button class="chip'+(x.on?" on":"")+'" data-i="'+i+'">'+x.t
+   +'<span class="del" data-d="'+i+'" title="목록에서 삭제">✕</span></button>'}).join("")
+  +'<button class="chip chipadd" data-add="1">＋ 추가</button>';
+ box.querySelectorAll(".chip").forEach(function(b){
+  b.onclick=function(ev){
+   if(b.dataset.add){
+    var row=document.getElementById(id.replace("mt","ar"));
+    row.style.display="flex";row.querySelector("input").focus();return}
+   if(ev.target&&ev.target.dataset&&ev.target.dataset.d!==undefined){
+    arr.splice(+ev.target.dataset.d,1);renderList(id,arrKey);return}
+   arr[+b.dataset.i].on=!arr[+b.dataset.i].on;renderList(id,arrKey)}});
+}
+function wireAdd(rowId,listId,arrKey){
+ var row=document.getElementById(rowId),inp=row.querySelector("input"),btn=row.querySelector("button");
+ function add(){var v=(inp.value||"").trim();if(!v)return;
+  if(!ME[arrKey].some(function(x){return x.t===v}))ME[arrKey].push({t:v,on:true});
+  inp.value="";renderList(listId,arrKey);row.style.display="none"}
+ btn.onclick=add;
+ inp.addEventListener("keydown",function(e){if(e.key==="Enter")add();
+  if(e.key==="Escape"){inp.value="";row.style.display="none"}});
+}
+function renderRules(){
+ var box=document.getElementById("myRules");
+ box.innerHTML=ME.rules.map(function(r,i){
+  return '<div class="myrule"><p>'+r.t+'<small style="display:block;color:#7C8090;font-size:11px;margin-top:3px">내가 추가한 원칙 · 내 매칭에만 적용</small></p>'
+   +'<button class="del2" data-i="'+i+'" title="삭제">✕</button></div>'}).join("");
+ box.querySelectorAll(".del2").forEach(function(b){
+  b.onclick=function(){ME.rules.splice(+b.dataset.i,1);renderRules()}});
+}
+function renderMe(){
+ renderList("mt1","t1");renderList("mt2","t2");renderList("mt3","t3");renderRules();
+ var t=document.getElementById("aiToggle");
+ t.classList.toggle("on",!!ME.ai);t.textContent=ME.ai?"켜짐":"꺼짐";
+ renderMePrefs();
+}
+loadMe(function(){
+ renderMe();
+ wireAdd("ar1","mt1","t1");wireAdd("ar2","mt2","t2");wireAdd("ar3","mt3","t3");
+ document.getElementById("aiToggle").onclick=function(){ME.ai=!ME.ai;renderMe()};
+ document.getElementById("saveMe").onclick=saveMe;
+ var ri=document.getElementById("ruleIn"),ra=document.getElementById("ruleAdd");
+ function addRule(){var v=(ri.value||"").trim();if(!v)return;
+  ME.rules.push({t:v,on:true});ri.value="";renderRules()}
+ ra.onclick=addRule;
+ ri.addEventListener("keydown",function(e){if(e.key==="Enter")addRule()});
+});
+var HIST=[
+ {no:"№ 14",co:"한화에어로스페이스 × 한화시스템 × 한화투자증권 × 한화호텔앤드리조트",
+  rv:"방산 수주 공시를 실무자가 어떻게 읽는지 들었습니다. 리서치 초안 쓸 때 바로 썼어요.",st:"★★★★★ · 후속 연락 있음"},
+ {no:"№ 11",co:"한화솔루션 × 한화비전 × 한화생명 × 한화오션",
+  rv:"각 사 신입 온보딩 자료를 돌려봤습니다. 한 곳은 그날 바로 목차를 바꿨다고 하더군요.",st:"★★★★ · 기록만"},
+ {no:"№ 08",co:"한화투자증권 × 한화호텔앤드리조트 × 한화에어로스페이스",
+  rv:"출장 정산 프로세스가 셋 다 달랐습니다. 제일 간단한 곳 기준으로 정리해 각자 팀에 공유했어요.",st:"★★★★ · 후속 연락 있음"}];
+document.getElementById("histBox").innerHTML=HIST.map(function(h){
+ return '<div class="hist"><span class="hno">'+h.no+'</span><div class="hbd">'
+ +'<div class="hco">'+h.co+'</div><div class="hrv">'+h.rv+'</div>'
+ +'<div class="hstar">'+h.st+'</div></div></div>'}).join("");
+document.querySelectorAll(".tocb").forEach(function(b){b.onclick=function(){go(+b.dataset.go)}});
+
+/* ================= 탭 ================= */
+function go(i){document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("on",+t.dataset.t===i)});
+ document.querySelectorAll(".pane").forEach(function(p,j){p.classList.toggle("on",j===i)});
+ if(i===2)document.getElementById("bdg2").classList.remove("on");
+ if(i===4)document.getElementById("bdg4").classList.remove("on");
+ window.scrollTo({top:0,behavior:"smooth"})}
+document.querySelectorAll(".tab").forEach(function(t){t.onclick=function(){go(+t.dataset.t)}});
+
+drawStage();renderBayes();renderMatch();SEL=makeGroups(size,curW())[0];renderInvite();renderTalk();renderDeck();renderChat();
+</script>
+</body>
+</html>
