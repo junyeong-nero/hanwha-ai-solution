@@ -1,651 +1,908 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>달빛한화 · 초대장 왕복 프로토타입</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MoonLight">
+<meta name="theme-color" content="#0B0E1A">
+<title>MoonLight Hanwha</title>
 <style>
 @font-face{
-  font-family:'Pretendard';font-style:normal;font-weight:100 900;font-display:swap;
-  src:url('../assets/fonts/PretendardVariable.woff2') format('woff2');
+  font-family:'Pretendard';
+  src:url('../assets/fonts/PretendardVariable.woff2') format('woff2-variations');
+  font-weight:45 920; font-display:swap;
 }
 :root{
-  --night:#0B1026; --moon:#F3E6C8; --glow:#F37321;
-  --dim:#7F89B4; --line:rgba(243,230,200,.14);
-  --serif:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-  --sans:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --orange:#F37321; --orange-soft:#FF9A57; --bg:#0B0E1A; --bg2:#111527; --card:#171C33;
+  --card2:#1E2440; --line:#272E4E; --tx:#EDEFF7; --tx2:#9AA1BC; --tx3:#6B7291;
+  --ok:#3DDC97; --moon:#F5E9C9;
+  --nav-h:calc(58px + env(safe-area-inset-bottom));
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--night);font-family:var(--sans);color:var(--moon);min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;padding:34px 18px 60px;position:relative;overflow-x:hidden}
-#sky{position:fixed;inset:0;pointer-events:none;z-index:0}
-#sky span{position:absolute;background:var(--moon);border-radius:50%}
-body::after{content:'';position:fixed;left:50%;top:-14%;width:1100px;height:1000px;transform:translateX(-50%);
-  background:radial-gradient(circle,rgba(243,115,33,.11),transparent 62%);pointer-events:none;z-index:0}
-
-.head{position:relative;z-index:2;text-align:center;margin-bottom:26px;max-width:560px}
-.head .k{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--glow)}
-.head h1{font-family:var(--serif);font-size:24px;font-weight:400;margin-top:9px;line-height:1.4}
-.head p{color:var(--dim);font-size:12.5px;line-height:1.7;margin-top:9px}
-
-.stage{position:relative;z-index:1;display:flex;gap:56px;align-items:flex-start}
-.comet{position:absolute;top:300px;left:0;width:14px;height:14px;border-radius:50%;
-  background:radial-gradient(circle at 35% 35%,#FFF6E4,#F37321);opacity:0;pointer-events:none;z-index:5;
-  box-shadow:0 0 22px 7px rgba(243,115,33,.55)}
-.comet.fly{animation:fly 1.15s cubic-bezier(.5,0,.5,1) forwards}
-.comet.back{animation:back 1.15s cubic-bezier(.5,0,.5,1) forwards}
-@keyframes fly{0%{opacity:0;left:340px}12%{opacity:1}88%{opacity:1}100%{opacity:0;left:512px;transform:scale(.5)}}
-@keyframes back{0%{opacity:0;left:512px}12%{opacity:1}88%{opacity:1}100%{opacity:0;left:340px;transform:scale(.5)}}
-
-.unit{display:flex;flex-direction:column;align-items:center;gap:13px}
-.owner{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;color:var(--dim);
-  border:1px solid var(--line);padding:6px 14px;border-radius:999px}
-.owner b{color:var(--moon);font-weight:500}
-.owner.me{border-color:rgba(243,115,33,.42);color:var(--glow)}
-.owner.me b{color:var(--glow)}
-
-.phone{position:relative;width:378px;height:790px;
-  background:linear-gradient(180deg,#0D1330,#0B1026 55%,#0A0E22);
-  border-radius:42px;border:1px solid rgba(243,230,200,.16);
-  box-shadow:0 0 0 8px #05081A,0 36px 80px rgba(0,0,0,.7);
-  display:flex;flex-direction:column;overflow:hidden}
-.bar{display:flex;justify-content:space-between;align-items:center;padding:15px 25px 7px;
-  font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.04em}
-.bar b{color:var(--moon);font-weight:500}
-.screens{flex:1;overflow-y:auto;scrollbar-width:none;position:relative}
-.screens::-webkit-scrollbar{display:none}
-.screen{display:none;padding:6px 21px 28px;animation:rise .42s cubic-bezier(.2,.7,.3,1)}
-.screen.on{display:block}
-@keyframes rise{from{opacity:0;transform:translateY(13px)}to{opacity:1;transform:none}}
-
-.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--glow);text-transform:uppercase;margin-bottom:9px}
-h2.t{font-family:var(--serif);font-size:25px;font-weight:400;line-height:1.36;letter-spacing:-.01em}
-h2.t em{font-style:normal;color:var(--glow)}
-.sub{color:var(--dim);font-size:12.5px;line-height:1.65;margin-top:9px}
-
-.moonwrap{display:flex;justify-content:center;margin:10px 0 2px;position:relative}
-.moonwrap::before{content:'';position:absolute;width:215px;height:215px;top:-22px;border-radius:50%;
-  background:radial-gradient(circle,rgba(243,115,33,.25),transparent 60%);animation:breathe 7s ease-in-out infinite}
-@keyframes breathe{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
-.moonwrap svg{position:relative}
-
-.card{background:linear-gradient(165deg,rgba(26,33,72,.95),rgba(15,20,48,.95));
-  border:1px solid var(--line);border-radius:21px;padding:19px;margin-top:17px}
-.group-pill{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:6px 10px;border-radius:999px;
-  background:rgba(243,115,33,.1);border:1px solid rgba(243,115,33,.35);color:var(--glow);font-size:10.5px}
-.members{display:flex;flex-direction:column;gap:8px;margin-top:15px;padding-top:14px;border-top:1px dashed var(--line)}
-.member{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11.5px;color:#C9D0EC}
-.member span:last-child{font-family:var(--mono);font-size:9.5px;color:var(--dim);white-space:nowrap}
-.optional{font-size:10.5px;color:var(--dim);line-height:1.55;text-align:center;margin-top:3px}
-.group-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
-.group-room{display:flex;align-items:center;gap:12px;width:100%;padding:13px 12px;text-align:left;color:inherit;
-  background:rgba(26,33,72,.62);border:1px solid var(--line);border-radius:16px;font-family:inherit;cursor:pointer;transition:.18s}
-.group-room:hover,.group-room:focus-visible{border-color:rgba(243,115,33,.48);background:rgba(243,115,33,.08);outline:none}
-.room-moon{width:48px;height:48px;display:grid;place-items:center;flex:0 0 auto}
-.room-main{min-width:0;flex:1}
-.room-name{font-family:var(--serif);font-size:14.5px;line-height:1.35}
-.room-meta{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:4px}
-.room-activity{font-size:10.5px;color:#B5BDDF;line-height:1.45;margin-top:6px}
-.room-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:0 0 auto}
-.room-progress{font-family:var(--mono);font-size:9.5px;color:var(--glow);white-space:nowrap}
-.room-unread{min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;border-radius:999px;
-  background:var(--glow);color:#160B02;font-family:var(--mono);font-size:9px}
-.group-note{font-size:11px;color:var(--dim);line-height:1.6;margin-top:9px}
-.who{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
-.who .nm{font-family:var(--serif);font-size:22px}
-.who .co{font-size:11.5px;color:var(--dim)}
-.meta{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:7px;line-height:1.6}
-.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
-.tag{font-size:11.5px;padding:6px 11px;border-radius:999px;border:1px solid rgba(243,115,33,.4);
-  color:var(--glow);background:rgba(243,115,33,.09)}
-.tag.plain{border-color:var(--line);color:var(--dim);background:none}
-.reason{margin-top:15px;padding-top:14px;border-top:1px dashed var(--line);
-  font-size:12.5px;line-height:1.7;color:#C9D0EC}
-.reason strong{color:var(--moon);font-weight:500}
-
-.btn{width:100%;padding:14px;border-radius:13px;border:none;cursor:pointer;font-family:var(--sans);
-  font-size:13.5px;font-weight:600;background:var(--glow);color:#160B02;transition:.15s}
-.btn:hover:not(:disabled){filter:brightness(1.1)}
-.btn:active:not(:disabled){transform:scale(.98)}
-.btn:disabled{opacity:.5;cursor:default}
-.btn.ghost{background:none;border:1px solid var(--line);color:var(--dim);font-weight:500}
-.btn.ghost:hover:not(:disabled){color:var(--moon);border-color:rgba(243,230,200,.35)}
-.stack{display:flex;flex-direction:column;gap:9px;margin-top:15px}
-button:focus-visible{outline:2px solid var(--glow);outline-offset:3px}
-
-.seg{display:flex;gap:6px;background:rgba(255,255,255,.045);padding:4px;border-radius:12px;margin:15px 0 13px}
-.seg button{flex:1;padding:9px;border:none;border-radius:9px;background:none;cursor:pointer;
-  font-family:var(--sans);font-size:12.5px;color:var(--dim);font-weight:500;transition:.2s}
-.seg button.on{background:rgba(243,115,33,.16);color:var(--glow)}
-.rcard{display:block;width:100%;text-align:left;cursor:pointer;background:rgba(26,33,72,.6);
-  border:1px solid var(--line);border-radius:16px;padding:14px 15px;margin-bottom:9px;
-  transition:.2s;color:inherit;font-family:inherit}
-.rcard:hover{border-color:rgba(243,115,33,.45)}
-.rcard.picked{border-color:var(--glow);background:rgba(243,115,33,.1)}
-.rcard .rt{font-family:var(--serif);font-size:15.5px;display:flex;justify-content:space-between;gap:8px;align-items:center}
-.rcard .rt span{font-family:var(--mono);font-size:9.5px;color:var(--dim);white-space:nowrap}
-.rcard .rd{font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:6px}
-
-.letter{border:1px solid rgba(243,115,33,.4);border-radius:18px;padding:22px 19px;text-align:center;
-  background:radial-gradient(120% 100% at 50% 0%,rgba(243,115,33,.15),rgba(11,16,38,0));animation:rise .4s}
-.letter .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--glow)}
-.letter .from{font-size:11.5px;color:var(--dim);margin-top:13px}
-.letter .big{font-family:var(--serif);font-size:20px;margin:7px 0 10px;line-height:1.45}
-.letter .when{font-family:var(--mono);font-size:12px;color:#C9D0EC}
-.letter .msg{font-size:12px;color:var(--dim);line-height:1.7;margin-top:13px;padding-top:13px;border-top:1px dashed var(--line)}
-
-.times{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.times button{padding:12px;border-radius:11px;border:1px solid var(--line);background:none;cursor:pointer;
-  color:var(--dim);font-family:var(--mono);font-size:12px;transition:.18s}
-.times button:hover{border-color:rgba(243,115,33,.5);color:var(--moon)}
-
-.empty{text-align:center;padding:80px 10px;color:var(--dim);font-size:12.5px;line-height:1.85}
-.empty .m{opacity:.35;margin-bottom:20px}
-
-.toast{position:absolute;left:14px;right:14px;top:12px;z-index:9;
-  background:rgba(30,38,80,.97);border:1px solid rgba(243,115,33,.45);border-radius:16px;padding:13px 15px;
-  display:flex;gap:11px;align-items:center;box-shadow:0 14px 34px rgba(0,0,0,.55);
-  transform:translateY(-160%);transition:transform .5s cubic-bezier(.2,.9,.3,1);cursor:pointer}
-.toast.show{transform:none}
-.toast .a{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--glow)}
-.toast .b{font-size:12.5px;margin-top:4px}
-
-.tabs{display:flex;border-top:1px solid var(--line);background:rgba(8,12,30,.92);padding:9px 6px 18px}
-.tab{flex:1;background:none;border:none;cursor:pointer;color:var(--dim);position:relative;
-  display:flex;flex-direction:column;align-items:center;gap:5px;padding:5px 0;
-  font-family:var(--sans);font-size:10.5px;transition:.2s}
-.tab.on{color:var(--glow)}
-.tab .dot{width:15px;height:15px;border-radius:50%;border:1.4px solid currentColor;position:relative;overflow:hidden}
-.tab .dot::after{content:'';position:absolute;inset:-1px;border-radius:50%;background:currentColor;transform-origin:right center}
-.tab[data-p="new"] .dot::after{transform:scaleX(0)}
-.tab[data-p="half"] .dot::after{transform:scaleX(.5)}
-.tab[data-p="gib"] .dot::after{transform:scaleX(.8)}
-.tab[data-p="full"] .dot::after{transform:scaleX(1)}
-.badge{position:absolute;top:1px;right:24%;width:7px;height:7px;border-radius:50%;background:var(--glow);
-  opacity:0;transition:.3s;box-shadow:0 0 9px var(--glow)}
-.badge.on{opacity:1}
-
-.past{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid rgba(243,230,200,.07)}
-.past .nm{font-size:14px;font-family:var(--serif)}
-.past .info{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:5px}
-.past .nt{font-size:11.5px;color:#9AA3C9;margin-top:6px;line-height:1.5}
-.state{font-family:var(--mono);font-size:9px;padding:3px 7px;border-radius:5px;white-space:nowrap}
-.state.done{background:rgba(243,115,33,.15);color:var(--glow)}
-.state.miss{background:rgba(127,137,180,.14);color:var(--dim)}
-.locked{margin-top:15px;padding:13px 15px;border-radius:12px;border:1px dashed var(--line);
-  font-size:11.5px;color:var(--dim);line-height:1.6}
-.keeper{margin-top:20px;padding:17px;border-radius:17px;
-  background:linear-gradient(150deg,rgba(243,115,33,.13),rgba(26,33,72,.5));border:1px solid rgba(243,115,33,.28)}
-.keeper .h{font-family:var(--serif);font-size:16px}
-.keeper .p{font-size:11.5px;color:#B5BDDF;line-height:1.65;margin-top:7px}
-.gauge{display:flex;gap:5px;margin-top:12px}
-.gauge i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1)}
-.gauge i.f{background:var(--glow)}
-.vbadge{display:inline-flex;align-items:center;gap:7px;margin-top:13px;font-family:var(--mono);font-size:10.5px;
-  padding:7px 12px;border-radius:999px;border:1px solid rgba(243,115,33,.4);color:var(--glow)}
-.sect{margin-top:22px}
-.sect .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
-.chip{font-family:inherit;font-size:12px;padding:8px 13px;border-radius:999px;cursor:pointer;
-  background:none;border:1px solid var(--line);color:var(--dim);transition:.18s}
-.chip.on{border-color:var(--glow);color:var(--glow);background:rgba(243,115,33,.11)}
-.rule{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(243,230,200,.07)}
-.rule p{font-size:12.5px}
-.rule small{display:block;color:var(--dim);font-size:11px;margin-top:4px;line-height:1.5}
-.fixed{font-family:var(--mono);font-size:9px;color:var(--glow);border:1px solid rgba(243,115,33,.35);padding:3px 7px;border-radius:5px;white-space:nowrap}
-
-.notes{position:relative;z-index:1;display:flex;gap:34px;flex-wrap:wrap;justify-content:center;
-  margin-top:48px;max-width:880px}
-.notes div{flex:1;min-width:210px;color:var(--dim);font-size:12px;line-height:1.8}
-.notes h3{font-family:var(--serif);font-size:15px;color:var(--moon);font-weight:400;margin-bottom:9px}
-.reset{margin-top:32px;position:relative;z-index:2;background:none;border:1px solid var(--line);
-  color:var(--dim);font-family:var(--mono);font-size:11px;padding:9px 18px;border-radius:999px;cursor:pointer}
-.reset:hover{color:var(--moon)}
-
-@media(max-width:900px){
-  .stage{flex-direction:column;align-items:center;gap:34px}
-  .comet{display:none}
-  .phone{width:100%;max-width:378px;height:740px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:#05070F; color:var(--tx);
+  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  overscroll-behavior:none; touch-action:manipulation;
+  -webkit-font-smoothing:antialiased;
 }
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+button{font-family:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
+input,select{font-family:inherit;font-size:16px} /* 16px 미만이면 iOS가 포커스 시 강제 확대 */
+
+/* ===== 앱 프레임 ===== */
+#app{
+  position:fixed; inset:0; margin:0 auto; max-width:430px;
+  background:linear-gradient(180deg,#0B0E1A 0%,#0D1122 55%,#101430 100%);
+  display:flex; flex-direction:column; overflow:hidden;
+  height:100dvh;
+}
+@media(min-width:431px){ #app{box-shadow:0 0 60px rgba(0,0,0,.7);border-left:1px solid #1b2038;border-right:1px solid #1b2038} }
+#stars{position:absolute;inset:0;pointer-events:none;z-index:0}
+.star{position:absolute;border-radius:50%;background:#fff;opacity:.5;animation:tw 3.4s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.15}50%{opacity:.65}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001s !important;animation-iteration-count:1 !important;transition:none !important}}
+
+main{flex:1;position:relative;z-index:1;overflow:hidden}
+.tabpane{
+  position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(14px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 22px);
+  display:none;
+}
+.tabpane.on{display:block}
+h1.app{font-size:21px;font-weight:800;letter-spacing:-.3px;margin-bottom:2px}
+h1.app em{font-style:normal;color:var(--orange)}
+.sub{font-size:13px;color:var(--tx2);margin-bottom:16px}
+.t{font-size:15px;font-weight:700;margin:22px 0 10px}
+.hint{font-size:12px;color:var(--tx3);line-height:1.55}
+
+/* ===== 하단 네비게이션 ===== */
+nav#nav{
+  position:absolute;left:0;right:0;bottom:0;z-index:40;
+  display:flex;background:rgba(13,16,32,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+nav#nav button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 0;color:var(--tx3);font-size:10.5px;font-weight:600;position:relative;min-height:44px;
+}
+nav#nav button.on{color:var(--orange)}
+nav#nav svg{width:23px;height:23px}
+.navbdg{
+  position:absolute;top:2px;left:calc(50% + 8px);min-width:16px;height:16px;border-radius:9px;
+  background:var(--orange);color:#fff;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;padding:0 4px;
+}
+
+/* ===== 공용 컴포넌트 ===== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.chip{
+  display:inline-flex;align-items:center;padding:7px 13px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--tx2);font-size:13px;font-weight:600;margin:0 6px 8px 0;min-height:34px;
+}
+.chip.on{background:rgba(243,115,33,.16);border-color:var(--orange);color:var(--orange-soft)}
+.chip.add{border-style:dashed;color:var(--tx3)}
+.cta{
+  display:block;width:100%;padding:14px;border-radius:13px;background:var(--orange);color:#fff;
+  font-size:15px;font-weight:700;text-align:center;min-height:48px;
+}
+.cta:disabled{background:var(--card2);color:var(--tx3)}
+.cta.line{background:none;border:1px solid var(--line);color:var(--tx2)}
+.tag{display:inline-block;padding:3px 9px;border-radius:7px;background:var(--card2);color:var(--tx2);font-size:11.5px;font-weight:600;margin-right:5px}
+
+#toast{
+  position:absolute;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top));z-index:95;
+  background:#1C2340;border:1px solid var(--line);border-left:3px solid var(--orange);
+  border-radius:13px;padding:12px 15px;font-size:13.5px;line-height:1.45;
+  transform:translateY(-130%);transition:transform .35s cubic-bezier(.2,.9,.3,1.2);box-shadow:0 8px 28px rgba(0,0,0,.5);
+}
+#toast.on{transform:none}
+#toast b{color:var(--orange-soft)}
+
+/* ===== 홈: 태양계 ===== */
+.space{position:relative;width:320px;height:320px;margin:8px auto 4px}
+.orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px dashed rgba(154,161,188,.16);border-radius:50%}
+.holder{position:absolute;left:50%;top:50%;width:0;height:0;animation:orb var(--d) linear infinite;animation-delay:var(--del)}
+@keyframes orb{to{transform:rotate(360deg)}}
+.planet{
+  position:absolute;transform:translate(-50%,-50%);border-radius:50%;
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center; /* 44px 터치 타겟 */
+}
+.planet .dot{width:var(--s);height:var(--s);border-radius:50%;background:var(--c);transition:all .5s}
+.planet.dim .dot{background:#2A3050;box-shadow:none}
+.planet.lit .dot{box-shadow:0 0 6px var(--c),0 0 18px var(--c),0 0 34px color-mix(in srgb,var(--c) 45%,transparent)}
+.planet.mine .dot{outline:2px solid rgba(245,233,201,.75);outline-offset:3px}
+#sun{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;
+  background:radial-gradient(circle at 36% 32%,#FFF7DF,var(--moon) 55%,#D8C48F);
+  box-shadow:0 0 22px rgba(245,233,201,.55),0 0 70px rgba(245,233,201,.22);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#4A3F22;
+}
+.spacestats{display:flex;gap:10px;margin:14px 0 4px}
+.spacestats .card{flex:1;padding:12px 14px;text-align:center}
+.spacestats b{display:block;font-size:19px;color:var(--orange-soft)}
+.spacestats span{font-size:11.5px;color:var(--tx2)}
+.corow{display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid rgba(39,46,78,.6);min-height:48px}
+.corow:last-child{border-bottom:0}
+.corow .pd{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+.corow .nm{flex:1;font-size:13.5px;font-weight:600}
+.corow .st{font-size:11.5px;color:var(--tx3)}
+.corow .st.lit{color:var(--orange-soft)}
+
+/* 내 행성(위성) 뷰 */
+#satview{position:absolute;inset:0;z-index:45;background:linear-gradient(180deg,#0B0E1A,#131838);display:none;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom))}
+#satview.on{display:flex}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--tx2);font-size:14px;font-weight:600;padding:8px 0;min-height:44px}
+.mespace{position:relative;width:290px;height:290px;margin:10px auto}
+#meCore{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#FF9A57,var(--orange));box-shadow:0 0 26px rgba(243,115,33,.5);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;
+}
+#meCore span{font-size:9.5px;font-weight:700;color:#fff}
+.sat{position:absolute;transform:translate(-50%,-50%);text-align:center}
+.sat .av{width:40px;height:40px;border-radius:50%;background:var(--card2);border:1.5px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:17px;margin:0 auto}
+.sat .nm{font-size:10px;color:var(--tx2);margin-top:3px;font-weight:600;white-space:nowrap}
+
+/* 계열사 상세 시트 & 공용 시트 */
+.sheetwrap{position:absolute;inset:0;z-index:60;display:none}
+.sheetwrap.on{display:block}
+.sheetwrap .dimbg{position:absolute;inset:0;background:rgba(4,6,14,.6)}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;background:var(--bg2);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--line);padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+  animation:up .28s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes up{from{transform:translateY(40%)}}
+.grip{width:38px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
+
+/* ===== 매칭 ===== */
+.meet{margin-bottom:14px}
+.meet .hd{display:flex;align-items:flex-start;gap:11px}
+.meet .em{width:44px;height:44px;border-radius:13px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.meet h3{font-size:15.5px;font-weight:700;line-height:1.3}
+.meet .meta{font-size:12px;color:var(--tx2);margin-top:3px}
+.meet .ai{
+  margin-top:11px;font-size:12.5px;line-height:1.55;color:var(--tx2);
+  background:rgba(243,115,33,.07);border:1px solid rgba(243,115,33,.22);border-radius:11px;padding:10px 12px;
+}
+.meet .ai b{color:var(--orange-soft)}
+.band{margin-top:12px}
+.band .bar{height:7px;border-radius:4px;background:var(--card2);overflow:hidden}
+.band .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--orange),var(--orange-soft));transition:width .4s}
+.band .lb{display:flex;justify-content:space-between;font-size:11.5px;color:var(--tx3);margin-top:6px}
+.band .lb b{color:var(--orange-soft)}
+.meet .cta{margin-top:12px;padding:12px}
+
+/* ===== 채팅 리스트 ===== */
+.room{display:flex;gap:12px;align-items:center;padding:13px 2px;border-bottom:1px solid rgba(39,46,78,.55);width:100%;text-align:left;min-height:60px}
+.room .av{width:48px;height:48px;border-radius:16px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0;position:relative}
+.room .av .full{position:absolute;right:-3px;bottom:-3px;font-size:13px}
+.room .bd{flex:1;min-width:0}
+.room .r1{display:flex;justify-content:space-between;align-items:baseline}
+.room .r1 b{font-size:14.5px}
+.room .r1 b small{color:var(--tx3);font-weight:600;margin-left:4px}
+.room .r1 time{font-size:11px;color:var(--tx3)}
+.room .r2{display:flex;justify-content:space-between;align-items:center;margin-top:3px}
+.room .r2 p{font-size:12.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.room .ub{min-width:18px;height:18px;border-radius:10px;background:var(--orange);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px;margin-left:8px}
+.empty{padding:44px 0;text-align:center;color:var(--tx3);font-size:13.5px;line-height:1.7}
+.empty i{font-style:normal;font-size:34px;display:block;margin-bottom:10px}
+
+/* ===== 채팅방 ===== */
+#roomview{position:absolute;inset:0;z-index:55;background:var(--bg);display:none;flex-direction:column}
+#roomview.on{display:flex}
+#rhead{
+  display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
+  border-bottom:1px solid var(--line);background:rgba(13,16,32,.94);
+}
+#rhead .ttl{flex:1;min-width:0}
+#rhead b{font-size:15px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rhead span{font-size:11.5px;color:var(--tx3)}
+#rbanner{display:none;background:rgba(243,115,33,.1);border-bottom:1px solid rgba(243,115,33,.3);padding:9px 14px;font-size:12.5px;color:var(--orange-soft);align-items:center;gap:8px}
+#rbanner.on{display:flex}
+#rbanner button{margin-left:auto;background:var(--orange);color:#fff;font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:8px;flex-shrink:0}
+#msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px;display:flex;flex-direction:column;gap:4px}
+.msg{display:flex;gap:9px;max-width:86%;margin-top:8px}
+.msg .mav{width:34px;height:34px;border-radius:12px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.msg .who{font-size:11.5px;color:var(--tx2);font-weight:600;margin-bottom:4px}
+.msg .who small{color:var(--tx3);font-weight:500;margin-left:4px}
+.msg .bub{background:var(--card);border:1px solid var(--line);border-radius:4px 15px 15px 15px;padding:9px 13px;font-size:14px;line-height:1.5;width:fit-content}
+.msg.me{align-self:flex-end;flex-direction:row-reverse}
+.msg.me .bub{background:var(--orange);border:0;border-radius:15px 4px 15px 15px;color:#fff}
+.msg.sys{align-self:center;max-width:92%;margin:10px 0 2px}
+.msg.sys .bub{background:rgba(245,233,201,.08);border:1px solid rgba(245,233,201,.2);border-radius:12px;color:var(--moon);font-size:12px;text-align:center}
+.plan{border:1px solid rgba(243,115,33,.4) !important;background:linear-gradient(160deg,#1E1A2E,#171C33) !important;border-radius:14px !important;min-width:230px}
+.plan h4{font-size:13px;color:var(--orange-soft);margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.plan .row{display:flex;gap:8px;font-size:13px;margin:6px 0;line-height:1.45}
+.plan .row i{font-style:normal;flex-shrink:0}
+.plan button{width:100%;margin-top:10px;background:var(--orange);color:#fff;font-size:13px;font-weight:700;padding:10px;border-radius:9px}
+.plan button:disabled{background:var(--card2);color:var(--tx3)}
+#composer{display:flex;gap:8px;align-items:center;padding:9px 12px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(13,16,32,.94)}
+#composer .plus{width:38px;height:38px;border-radius:50%;background:var(--card2);font-size:20px;color:var(--tx2);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+#composer input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px 15px;color:var(--tx);outline:none;min-width:0}
+#composer .send{width:38px;height:38px;border-radius:50%;background:var(--orange);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.psheet-item{display:flex;align-items:center;gap:13px;width:100%;padding:14px 4px;font-size:15px;font-weight:600;text-align:left;border-bottom:1px solid rgba(39,46,78,.5);min-height:52px}
+.psheet-item:last-child{border-bottom:0}
+.psheet-item i{font-style:normal;font-size:20px;width:28px;text-align:center}
+.psheet-item small{display:block;font-size:11.5px;color:var(--tx3);font-weight:500;margin-top:2px}
+.psheet-item:disabled{opacity:.38}
+.typing{font-size:12px;color:var(--tx3);padding:4px 14px}
+
+/* 사진첩 */
+#album{position:absolute;inset:0;z-index:58;background:var(--bg);display:none;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
+#album.on{display:flex}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px;overflow-y:auto}
+.photo{aspect-ratio:1;border-radius:13px;display:flex;align-items:flex-end;padding:9px;font-size:11px;color:rgba(255,255,255,.9);font-weight:600}
+
+/* ===== 베일 벗기기 ===== */
+#veil{position:absolute;inset:0;z-index:90;background:#04060F;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:30px}
+#veil.on{display:flex}
+#veil .vm{
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle at 36% 32%,#FFF7DF,var(--moon) 58%,#CDB983);
+  box-shadow:0 0 40px rgba(245,233,201,.7),0 0 120px rgba(245,233,201,.3);
+  animation:rise 1.6s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes rise{from{transform:translateY(70px) scale(.5);opacity:0}to{transform:none;opacity:1}}
+#veil h2{margin-top:26px;font-size:19px;font-weight:800;color:var(--moon);animation:fin 1s .9s both}
+#veil p{margin-top:10px;font-size:13.5px;color:var(--tx2);line-height:1.6;animation:fin 1s 1.4s both}
+@keyframes fin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* ===== 프로필 ===== */
+.pfhead{display:flex;align-items:center;gap:15px;margin-bottom:6px}
+.pfav{width:66px;height:66px;border-radius:50%;background:var(--card2);border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:31px}
+.pfhead input{background:none;border:0;border-bottom:1.5px solid var(--line);color:var(--tx);font-size:17px;font-weight:700;padding:5px 2px;width:150px;outline:none}
+.pfhead small{display:block;font-size:11.5px;color:var(--tx3);margin-top:5px}
+.req{display:inline-block;font-size:10px;font-weight:700;color:var(--orange);border:1px solid rgba(243,115,33,.5);border-radius:5px;padding:1.5px 5px;margin-left:6px;vertical-align:2px}
+.frow{margin-bottom:16px}
+.frow label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+.frow select{
+  width:100%;background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:12px 14px;color:var(--tx);outline:none;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239AA1BC' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 15px center;
+}
+.step{display:flex;align-items:center;gap:14px}
+.step button{width:40px;height:40px;border-radius:11px;background:var(--card2);font-size:19px;color:var(--tx2)}
+.step b{font-size:17px;min-width:64px;text-align:center}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px}
+.seg button{flex:1;padding:10px 4px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--tx3);min-height:40px}
+.seg button.on{background:var(--orange);color:#fff}
+.swrow{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.swrow .lb b{font-size:13.5px;display:block}
+.swrow .lb span{font-size:11.5px;color:var(--tx3)}
+.sw{width:50px;height:30px;border-radius:16px;background:var(--card2);position:relative;transition:.25s;flex-shrink:0}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.25s}
+.sw.on{background:var(--orange)}
+.sw.on::after{left:23px}
 </style>
 </head>
 <body>
-<div id="sky" aria-hidden="true"></div>
+<div id="app">
+  <div id="stars"></div>
 
-<div class="head">
-  <div class="k">달빛한화 · 그룹 매칭 프로토타입</div>
-  <h1>이번 달, 함께 만날 모임이 도착했어요</h1>
-  <p>왼쪽에서 모임의 이유를 고르면 그룹 초대장이 도착합니다. 멤버들이 수락하거나 시간을 바꾸며 함께할 약속을 만듭니다.</p>
-</div>
+  <main>
+    <!-- ============ 홈 ============ -->
+    <section class="tabpane on" id="tab-home">
+      <h1 class="app">MoonLight <em>Hanwha</em></h1>
+      <p class="sub">만남이 성사될수록, 내 우주가 밝아집니다.</p>
+      <div class="space" id="space"></div>
+      <p class="hint" style="text-align:center">행성을 눌러 계열사 커넥션을 확인하세요 · 빛나는 행성 = 만남이 성사된 계열사</p>
+      <div class="spacestats" id="spacestats"></div>
+      <h2 class="t">계열사 커넥션</h2>
+      <div class="card" id="colist" style="padding:5px 14px"></div>
+    </section>
 
-<div class="stage">
-  <div class="comet" id="comet"></div>
+    <!-- ============ 매칭 ============ -->
+    <section class="tabpane" id="tab-match">
+      <h1 class="app">AI 매칭</h1>
+      <p class="sub" id="matchsub"></p>
+      <div id="meets"></div>
+      <p class="hint" style="margin-top:4px">주황 띠는 모임 안에 <b style="color:var(--orange-soft)">한 번 이상 만난 사람</b>이 얼마나 있는지를 보여줘요. 프로필 설정을 바꾸면 추천 순서가 달라집니다.</p>
+    </section>
 
-  <!-- ============ 보내는 쪽 ============ -->
-  <div class="unit">
-    <div class="owner me"><b>이정현</b> · 한화투자증권 · 모임 제안자</div>
-    <div class="phone">
-      <div class="bar"><b>달빛한화</b><span>19:04</span><span>丨丨丨 ▮</span></div>
-      <div class="toast" id="a-toast" onclick="aOpen()"><div><div class="a">답장 도착</div><div class="b" id="a-toast-b"></div></div></div>
-      <div class="screens" id="a-screens">
-        <section class="screen on" id="a-moon"></section>
-        <section class="screen" id="a-reason">
-          <div class="eyebrow">모임 이유 만들기</div>
-          <h2 class="t">이번 달엔<br><em>같이</em> 만나니까</h2>
-          <p class="sub">그룹이 함께할 이유를 고르면 초대장이 만들어져요. 가벼운 미션부터 있습니다.</p>
-          <div class="seg">
-            <button class="on" onclick="deck(this,'work')">일 얘기로</button>
-            <button onclick="deck(this,'life')">일 얘기 말고</button>
+    <!-- ============ 채팅 ============ -->
+    <section class="tabpane" id="tab-chat">
+      <h1 class="app">채팅</h1>
+      <p class="sub">만나기 전까지는 모두 익명이에요.</p>
+      <div id="roomlist"></div>
+    </section>
+
+    <!-- ============ 프로필 ============ -->
+    <section class="tabpane" id="tab-profile">
+      <h1 class="app">프로필</h1>
+      <p class="sub">설문이 아니라 설정입니다. 언제든 바꾸면 매칭에 바로 반영돼요.</p>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="pfhead">
+          <button class="pfav" id="pfav" onclick="cycleAvatar()">🌙</button>
+          <div>
+            <input id="nick" maxlength="8" autocomplete="off">
+            <small>익명 채팅에서 쓰이는 닉네임 · 사진을 눌러 변경</small>
           </div>
-          <div id="deck"></div>
-          <div id="letterBox"></div>
-        </section>
-        <section class="screen" id="a-past"></section>
-        <section class="screen" id="a-me"></section>
-        <section class="screen" id="a-group"></section>
+        </div>
       </div>
-      <div class="tabs" id="a-tabs">
-        <button class="tab on" data-p="gib" onclick="go('a','a-moon',0)"><i class="dot"></i>매칭</button>
-        <button class="tab" data-p="half" onclick="go('a','a-me',1)"><i class="dot"></i>내 프로필</button>
-        <button class="tab" data-p="full" onclick="go('a','a-group',2)"><i class="dot"></i>현재 참여중인 그룹<i class="badge" id="a-badge"></i></button>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="frow">
+          <label>계열사<span class="req">필수</span></label>
+          <select id="f-co" onchange="setP('company',this.value)"></select>
+        </div>
+        <div class="frow">
+          <label>선호 지역<span class="req">필수</span></label>
+          <div id="f-region"></div>
+        </div>
+        <div class="frow" style="margin-bottom:2px">
+          <label>나이<span class="req">필수</span></label>
+          <div class="step">
+            <button onclick="bumpAge(-1)">−</button><b id="f-age"></b><button onclick="bumpAge(1)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="frow">
+          <label>성별</label>
+          <div class="seg" id="f-gender"></div>
+        </div>
+        <div class="frow">
+          <label>MBTI</label>
+          <select id="f-mbti" onchange="setP('mbti',this.value)"></select>
+        </div>
+        <div class="frow">
+          <label>관심사</label>
+          <div id="f-int"></div>
+        </div>
+        <div class="frow">
+          <label>취미</label>
+          <div id="f-hob"></div>
+        </div>
+        <div class="frow" style="margin-bottom:2px">
+          <label>원하는 모임 규모</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="step"><button onclick="bumpSize('min',-1)">−</button><b id="f-min"></b><button onclick="bumpSize('min',1)">+</button></div>
+            <span style="color:var(--tx3)">~</span>
+            <div class="step"><button onclick="bumpSize('max',-1)">−</button><b id="f-max"></b><button onclick="bumpSize('max',1)">+</button></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="t" style="margin-top:4px">매칭 성향</h2>
+      <div class="card" style="display:flex;flex-direction:column;gap:15px;margin-bottom:16px">
+        <div class="swrow">
+          <div class="lb"><b>이성 간 성비 균형</b><span>모임의 성비가 맞았으면 좋겠어요</span></div>
+          <button class="sw" id="f-bal" onclick="toggleBal()" aria-label="성비 균형"></button>
+        </div>
+        <div>
+          <div class="lb" style="margin-bottom:8px"><b style="font-size:13.5px">계열사 범위</b></div>
+          <div class="seg" id="f-scope"></div>
+        </div>
+        <div>
+          <div class="lb" style="margin-bottom:8px"><b style="font-size:13.5px">관계 방향</b></div>
+          <div class="seg" id="f-dir"></div>
+        </div>
+      </div>
+
+      <button class="cta line" onclick="location.reload()">데모 처음부터 다시 보기</button>
+      <p class="hint" style="text-align:center;margin-top:12px">데모 프로토타입 · 데이터는 브라우저 안에서만 동작합니다</p>
+    </section>
+  </main>
+
+  <!-- 하단 네비게이션 -->
+  <nav id="nav">
+    <button class="on" data-t="home" onclick="go('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><ellipse cx="12" cy="12" rx="9.5" ry="4.2" transform="rotate(-24 12 12)"/></svg>홈
+    </button>
+    <button data-t="match" onclick="go('match')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.8 4.9L19 9.7l-4.4 3.4 1.5 5.2L12 15.5l-4.1 2.8 1.5-5.2L5 9.7l5.2-1.8z" stroke-linejoin="round"/></svg>매칭
+    </button>
+    <button data-t="chat" onclick="go('chat')" style="position:relative">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 016.5 4h11A2.5 2.5 0 0120 6.5v8a2.5 2.5 0 01-2.5 2.5H9l-4.2 3.4c-.4.3-.8 0-.8-.4z" stroke-linejoin="round"/></svg>채팅
+      <span class="navbdg" id="chatbdg" style="display:none"></span>
+    </button>
+    <button data-t="profile" onclick="go('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8.2" r="3.6"/><path d="M4.8 20c.9-3.7 3.8-5.6 7.2-5.6s6.3 1.9 7.2 5.6"/></svg>프로필
+    </button>
+  </nav>
+
+  <!-- 내 행성(위성) 뷰 -->
+  <div id="satview">
+    <button class="back" onclick="closeSat()">‹ 태양계로 돌아가기</button>
+    <h1 class="app" style="margin-top:6px" id="satTitle"></h1>
+    <p class="sub">나와 연결된 동료들이 위성처럼 곁을 돌고 있어요.</p>
+    <div class="mespace" id="mespace"></div>
+    <div class="card" id="satlist" style="padding:5px 14px"></div>
+  </div>
+
+  <!-- 계열사 상세 시트 -->
+  <div class="sheetwrap" id="cowrap">
+    <div class="dimbg" onclick="hideCo()"></div>
+    <div class="sheet" id="cosheet"></div>
+  </div>
+
+  <!-- 채팅방 -->
+  <div id="roomview">
+    <div id="rhead">
+      <button class="back" style="padding:8px 6px" onclick="closeRoom()">‹</button>
+      <div class="ttl"><b id="rname"></b><span id="rmeta"></span></div>
+      <button style="padding:8px;font-size:18px" onclick="openAlbumBtn()" id="albBtn">🖼️</button>
+    </div>
+    <div id="rbanner"></div>
+    <div id="msgs"></div>
+    <div class="typing" id="typing" style="display:none"></div>
+    <div id="composer">
+      <button class="plus" onclick="openPlus()">＋</button>
+      <input id="cin" placeholder="메시지 보내기" autocomplete="off" onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="send" onclick="sendMsg()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M4 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </div>
+
+  <!-- + 메뉴 시트 -->
+  <div class="sheetwrap" id="pluswrap">
+    <div class="dimbg" onclick="hidePlus()"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <button class="psheet-item" onclick="aiPlan()"><i>🌙</i><div>AI 추천 약속 잡기<small>채팅 내용을 읽고 장소·시간·활동·맛집까지 한 번에</small></div></button>
+      <button class="psheet-item" id="plusAlbum" onclick="hidePlus();openAlbum()"><i>🖼️</i><div>모임 사진첩<small>만남이 성사되면 열려요</small></div></button>
+      <button class="psheet-item" onclick="hidePlus();toast('모임 정보','이 모임은 <b>매칭 탭의 AI 추천</b>으로 만들어졌어요.')"><i>ℹ️</i><div>모임 정보</div></button>
+    </div>
+  </div>
+
+  <!-- 사진첩 -->
+  <div id="album">
+    <button class="back" onclick="closeAlbum()">‹ 채팅방으로</button>
+    <h1 class="app" id="albTitle" style="margin-top:4px"></h1>
+    <p class="sub">이 모임의 추억이 여기에 쌓여요.</p>
+    <div class="pgrid" id="pgrid"></div>
+  </div>
+
+  <!-- 베일 벗기기 -->
+  <div id="veil">
+    <div class="vm"></div>
+    <h2>달빛을 통해 베일이 벗겨졌습니다</h2>
+    <p id="veiltxt"></p>
+  </div>
+
+  <!-- 직접 추가 시트 -->
+  <div class="sheetwrap" id="addwrap">
+    <div class="dimbg" onclick="hideAdd()"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <b id="addtitle" style="font-size:16px"></b>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <input id="addin" maxlength="10" autocomplete="off" placeholder="직접 입력 (10자 이내)"
+          style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--tx);outline:none;min-width:0"
+          onkeydown="if(event.key==='Enter')confirmAdd()">
+        <button class="cta" style="width:84px;padding:12px" onclick="confirmAdd()">추가</button>
       </div>
     </div>
   </div>
 
-  <!-- ============ 받는 쪽 ============ -->
-  <div class="unit">
-    <div class="owner"><b>정하람</b> · 한화솔루션 큐셀부문 · 그룹 멤버</div>
-    <div class="phone">
-      <div class="bar"><b>달빛한화</b><span>19:05</span><span>丨丨丨 ▮</span></div>
-      <div class="toast" id="b-toast" onclick="bOpen()"><div><div class="a">그룹 초대장</div><div class="b">이번 달 모임 초대장이 도착했어요</div></div></div>
-      <div class="screens" id="b-screens">
-        <section class="screen on" id="b-moon"></section>
-        <section class="screen" id="b-inbox"></section>
-        <section class="screen" id="b-me"></section>
-        <section class="screen" id="b-group"></section>
-      </div>
-      <div class="tabs" id="b-tabs">
-        <button class="tab on" data-p="gib" onclick="go('b','b-moon',0)"><i class="dot"></i>매칭</button>
-        <button class="tab" data-p="half" onclick="go('b','b-me',1)"><i class="dot"></i>내 프로필</button>
-        <button class="tab" data-p="full" onclick="go('b','b-group',2)"><i class="dot"></i>현재 참여중인 그룹<i class="badge" id="b-badge"></i></button>
-      </div>
-    </div>
-  </div>
+  <div id="toast" onclick="this.classList.remove('on')"></div>
 </div>
-
-<div class="notes">
-  <div><h3>매칭보다 모임</h3>사람을 연결하는 데서 끝나지 않고, 그룹이 함께할 이유와 첫 미션까지 만들어야 만남이 시작됩니다.</div>
-  <div><h3>그룹이 먼저입니다</h3>4명이 함께 만나 어색함을 낮추고, 1:1 대화는 모임 뒤에 서로 원할 때만 선택합니다.</div>
-  <div><h3>확정되면 달이 찹니다</h3>그룹 일정이 잡히는 순간 모두의 달이 보름달이 되고, 모임 기록은 다음 달 아카이브로 넘어갑니다.</div>
-</div>
-
-<button class="reset" onclick="location.reload()">처음부터 다시 보기</button>
 
 <script>
-/* 별 */
-(function(){const f=document.createDocumentFragment();
-for(let i=0;i<80;i++){const s=document.createElement('span');const r=Math.random()*1.7+.6;
-s.style.cssText='width:'+r+'px;height:'+r+'px;left:'+(Math.random()*100)+'%;top:'+(Math.random()*100)+'%;opacity:'+(Math.random()*.5+.12);
-f.appendChild(s);}document.getElementById('sky').appendChild(f);})();
-
-/* 달 */
-let uid=0;
-function moonSVG(f,size){
-  const R=62,rx=Math.abs(1-2*f)*R,sweep=f>.5?1:0,id='m'+(uid++);
-  return '<svg width="'+size+'" height="'+size+'" viewBox="-95 -95 190 190" role="img" aria-label="달">'
-  +'<defs><radialGradient id="g'+id+'" cx="38%" cy="32%">'
-  +'<stop offset="0%" stop-color="#FFF8E7"/><stop offset="100%" stop-color="#E4CFA4"/></radialGradient>'
-  +'<clipPath id="c'+id+'"><circle r="62"/></clipPath></defs>'
-  +'<circle r="62" fill="url(#g'+id+')"/>'
-  +'<g clip-path="url(#c'+id+')" fill="#C9B183" opacity=".38">'
-  +'<circle cx="-22" cy="-20" r="11"/><circle cx="14" cy="10" r="16"/>'
-  +'<circle cx="-8" cy="34" r="7"/><circle cx="30" cy="-28" r="6"/></g>'
-  +(f>=.995?'':'<path d="M0 -'+R+' A'+R+' '+R+' 0 0 0 0 '+R+' A'+rx+' '+R+' 0 0 '+sweep+' 0 -'+R+' Z" fill="#0B1026" opacity=".9"/>')
-  +'</svg>';
-}
-
-/* 상태 */
-const GROUP={
-  name:'판교 퇴근 후 달빛 모임',
-  size:4,
-  members:[
-    {name:'이정현',company:'한화투자증권',role:'모임 제안자'},
-    {name:'정하람',company:'한화솔루션 큐셀부문',role:'그룹 멤버'},
-    {name:'강민서',company:'한화에어로스페이스',role:'그룹 멤버'},
-    {name:'오유진',company:'한화생명',role:'그룹 멤버'}
-  ]
-};
-const GROUPS=[
-  {name:'판교 퇴근 후 달빛 모임',size:4,companies:3,progress:.45,activity:'모임 이유를 고르는 중',unread:0},
-  {name:'한강 러닝 크루',size:4,companies:3,progress:.75,activity:'새 미션 2개 · 어제',unread:2},
-  {name:'계열사 재무 스터디',size:5,companies:3,progress:.5,activity:'다음 주제 투표 중 · 2일 전',unread:1},
-  {name:'성수 전시 번개',size:4,companies:2,progress:.25,activity:'멤버 모집 중 · 3일 전',unread:0}
+/* ================= 데이터 ================= */
+const COMPANIES=[
+  {id:'aero', name:'한화에어로스페이스', c:'#8B5CF6'},
+  {id:'sol',  name:'한화솔루션',        c:'#17A67C'},
+  {id:'life', name:'한화생명',          c:'#E8B84B'},
+  {id:'inv',  name:'한화투자증권',      c:'#F37321'},
+  {id:'sys',  name:'한화시스템',        c:'#5A9CF3'},
+  {id:'ocean',name:'한화오션',          c:'#2BB3C0'},
+  {id:'hotel',name:'한화호텔앤드리조트',c:'#E86A8A'},
+  {id:'gal',  name:'한화갤러리아',      c:'#B49BE0'},
 ];
-const S={picked:null,sent:false,slot:'8월 29일 (토) 19:00',confirmed:false,counter:false,directInvite:false};
-const REASONS={
-  work:[
-    {t:'계열사 제품 한 장씩 교환',m:'40분',d:'각자 회사의 제품이나 서비스를 한 장으로 소개하고, 서로의 일을 구경해요.'},
-    {t:'우리 회사는 이렇게 일해요',m:'1시간',d:'결재선, 회의 문화, 진짜 야근 빈도. 서로 다른 업무 방식을 비교해 봐요.'},
-    {t:'엑셀 자동화 미니 클리닉',m:'1시간',d:'그룹 멤버들이 제일 손이 많이 가는 반복 업무를 하나씩 가져와 같이 줄여봐요.'}],
-  life:[
-    {t:'회사 앞 국밥 원정대',m:'점심 1시간',d:'네 명이 각자 좋아하는 회사 근처 식당을 하나씩 추천하고 함께 가요.'},
-    {t:'퇴근 후 20분 러닝 크루',m:'30분',d:'판교 주변을 딱 20분만 같이 뛰어요. 말이 없어도 괜찮은 모임이에요.'},
-    {t:'각자 한 잔씩 바꿔 마시기',m:'1시간',d:'좋아하는 음료를 하나씩 골라 서로의 취향을 발견해요.'}]
+const PEOPLE={
+  p1:{real:'오세림', nick:'달빛서기',   co:'inv',  av:'🐰'},
+  p2:{real:'이하늘', nick:'은하수달',   co:'sol',  av:'🦊'},
+  p3:{real:'김서연', nick:'보름달곰',   co:'life', av:'🐻'},
+  p4:{real:'박지훈', nick:'고요한혜성', co:'sys',  av:'🐺'},
+  p5:{real:'정우진', nick:'새벽위성',   co:'aero', av:'🦉'},
+  p6:{real:'최민아', nick:'달무리여우', co:'gal',  av:'🐱'},
+  p7:{real:'한지원', nick:'초승달항해사',co:'ocean',av:'🐧'},
+  p8:{real:'강도윤', nick:'월광산책자', co:'hotel',av:'🐹'},
+  p9:{real:'윤소이', nick:'별헤는밤',   co:'life', av:'🦌'},
+  p10:{real:'서준호',nick:'만월기사',   co:'inv',  av:'🐯'},
 };
-let mode='work';
+const MEETINGS=[
+  {id:'m1', em:'🏃', name:'판교 퇴근 후 20분 러닝 크루', region:'판교', when:'평일 저녁', cap:6,
+   tags:['러닝','운동'], members:['p2','p4','p5'],
+   ai:'회원님의 관심사 <b>러닝</b>과 퇴근 동선이 겹쳐요. 세 분 모두 판교에서 근무 중이라 부담 없이 모이기 좋아요.'},
+  {id:'m2', em:'🥃', name:'각자 한 잔씩 바꿔 마시기', region:'판교', when:'금요일 저녁', cap:5,
+   tags:['위스키','취향'], members:['p1','p6','p8'],
+   ai:'취미 <b>위스키</b>가 겹치는 멤버들이에요. 이미 아는 얼굴이 있어 첫 만남의 어색함이 덜할 거예요.'},
+  {id:'m3', em:'📊', name:'엑셀 자동화 미니 클리닉', region:'여의도', when:'수요일 점심', cap:6,
+   tags:['자동화','업무'], members:['p3','p4','p9','p10'],
+   ai:'관심사 <b>자동화</b> 기반 추천이에요. 서로 다른 4개 계열사가 모여 업무 방식을 비교해볼 수 있어요.'},
+  {id:'m4', em:'🍲', name:'회사 앞 국밥 원정대', region:'장교', when:'화요일 점심', cap:4,
+   tags:['맛집','점심'], members:['p7','p8','p9'],
+   ai:'모두 처음 만나는 조합이에요. <b>넓은 인맥</b>을 원하는 회원님께 새로운 연결이 될 수 있어요.'},
+  {id:'m5', em:'🎲', name:'보드게임 달밤 모임', region:'판교', when:'목요일 저녁', cap:6,
+   tags:['보드게임','전시'], members:['p2','p5','p6','p7'],
+   ai:'선호 지역 <b>판교</b>와 저녁 시간대가 딱 맞아요. 계열사 4곳이 섞인 다양한 조합입니다.'},
+  {id:'m6', em:'📷', name:'주말 사진 산책단', region:'서울숲', when:'토요일 오후', cap:5,
+   tags:['사진','산책'], members:['p3','p6'],
+   ai:'취미 <b>사진</b>이 겹쳐요. 소규모라 회원님이 설정한 모임 규모에 가장 가까운 모임이에요.'},
+];
+const PLANS={
+  m1:{place:'판교 화랑공원 앞',   when:'이번 주 목요일 19:30', act:'가볍게 3km 러닝 후 스트레칭', food:'러닝 후 — 판교역 곰탕집 · 카페 문라이트'},
+  m2:{place:'판교 하이볼 바 "달"',when:'이번 주 금요일 19:00', act:'각자 가져온 위스키 한 잔씩 교환 시음', food:'근처 안주 맛집 — 판교 어탕국수 · 치즈플래터'},
+  m3:{place:'여의도 한화 라운지', when:'수요일 12:00',        act:'각자 반복 업무 1개씩 가져와 같이 자동화', food:'점심 — 여의도 콩국수 · 커피 브루잉랩'},
+  m4:{place:'장교동 본사 앞',     when:'화요일 11:50',        act:'국밥 맛집 릴레이 1차: 청진옥 코스',      food:'후식 — 을지로 오래된 다방'},
+  m5:{place:'판교 보드게임 카페', when:'목요일 19:00',        act:'초심자 환영 · 스플렌더 + 텔레스트레이션', food:'근처 — 판교 떡볶이 연구소'},
+  m6:{place:'서울숲 정문',        when:'토요일 15:00',        act:'필름 카메라 산책 & 서로 찍어주기',       food:'산책 후 — 성수 베이글 · 로스터리 카페'},
+};
+const REPLIES=[
+  '좋아요, 저도 그 생각 했어요 😄','오 시간 괜찮으신가요 다들?','저는 목요일이 제일 좋아요!',
+  '다들 어느 사옥에서 오세요?','ㅋㅋㅋ 기대되네요','저 처음이라 조금 떨리네요 😅','날짜 정해지면 바로 캘린더에 넣을게요!',
+];
 
-function go(side,id,idx){
-  const box=document.getElementById(side+'-screens');
-  [].forEach.call(box.children,function(s){s.classList.toggle('on',s.id===id);});
-  const tabs=document.getElementById(side+'-tabs').querySelectorAll('.tab');
-  [].forEach.call(tabs,function(t,i){t.classList.toggle('on',i===idx);});
-  box.scrollTop=0;
-  if(side==='b'&&(id==='b-group'||id==='b-inbox'))document.getElementById('b-badge').classList.remove('on');
-  if(side==='a'&&id==='a-group')document.getElementById('a-badge').classList.remove('on');
+/* ================= 상태 ================= */
+const S={
+  tab:'home',
+  profile:{
+    nick:'달토끼', av:'🌙', company:'inv', region:'판교', age:27, gender:null, mbti:'ENFP',
+    interests:['러닝','자동화'], hobbies:['위스키','사진'], sizeMin:4, sizeMax:6,
+    balance:false, scope:'all', dir:'wide',
+  },
+  met:{p1:true,p2:true},                 // 한 번 이상 만난 사람
+  joined:[],                             // 참가한 모임 id
+  rooms:{},                              // id -> {msgs, unread, planned, revealed, photos}
+};
+const AVATARS=['🌙','🌕','⭐','☄️','🪐','🌌'];
+let REGIONS=['판교','여의도','장교','대전','창원','서울숲'];
+let INTS=['러닝','자동화','주식','전시','야구','캠핑'];
+let HOBS=['위스키','사진','보드게임','커피','등산','요리'];
+const co=id=>COMPANIES.find(c=>c.id===id);
+const myCo=()=>co(S.profile.company);
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function nowT(){const d=new Date(),h=d.getHours();return (h<12?'오전 ':'오후 ')+((h%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')}
+function toast(a,b){$('toast').innerHTML='<b>'+a+'</b> · '+b;$('toast').classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
+
+/* ================= 별 배경 ================= */
+(function(){let h='';for(let i=0;i<70;i++){const s=Math.random()<.8?1.4:2.2;
+  h+='<span class="star" style="left:'+(Math.random()*100)+'%;top:'+(Math.random()*100)+'%;width:'+s+'px;height:'+s+'px;animation-delay:'+(Math.random()*3)+'s"></span>'}
+  $('stars').innerHTML=h})();
+
+/* ================= 탭 전환 ================= */
+function go(t){
+  S.tab=t;
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  if(t==='home')renderHome();
+  if(t==='match')renderMatch();
+  if(t==='chat')renderRooms();
 }
 
-function groupMembersMarkup(){
-  return '<div class="members">'+GROUP.members.map(function(m){
-    return '<div class="member"><span>'+m.name+' · '+m.company+'</span><span>'+m.role+'</span></div>';
-  }).join('')+'</div>';
+/* ================= 홈: 태양계 ================= */
+function activeCompanies(){
+  const set=new Set();
+  Object.keys(S.met).forEach(pid=>set.add(PEOPLE[pid].co));
+  return set;
+}
+function renderHome(){
+  const act=activeCompanies();
+  let h='<div id="sun">한화</div>';
+  COMPANIES.forEach((c,i)=>{
+    const r=44+i*15.6, d=34+i*9, del=-(d*(i*.37%1));
+    h+='<div class="orbit" style="width:'+(r*2)+'px;height:'+(r*2)+'px"></div>';
+    const lit=act.has(c.id), mine=c.id===S.profile.company;
+    h+='<div class="holder" style="--d:'+d+'s;--del:'+del+'s">'
+      +'<button class="planet '+(lit?'lit':'dim')+(mine?' mine':'')+'" style="--c:'+c.c+';--s:'+(mine?'19px':'15px')+';left:'+r+'px;top:0" '
+      +'onclick="showCo(\''+c.id+'\')" aria-label="'+c.name+'"><span class="dot"></span></button></div>';
+  });
+  $('space').innerHTML=h;
+  const met=Object.keys(S.met).length;
+  $('spacestats').innerHTML=
+    '<div class="card"><b>'+act.size+'<small style="font-size:12px;color:var(--tx3)"> / '+COMPANIES.length+'</small></b><span>빛나는 행성</span></div>'
+   +'<div class="card"><b>'+met+'명</b><span>연결된 동료</span></div>'
+   +'<div class="card"><b>'+S.joined.length+'개</b><span>참여 중인 모임</span></div>';
+  $('colist').innerHTML=COMPANIES.map(c=>{
+    const lit=activeCompanies().has(c.id);
+    const n=Object.keys(S.met).filter(p=>PEOPLE[p].co===c.id).length;
+    return '<button class="corow" style="width:100%;text-align:left" onclick="showCo(\''+c.id+'\')">'
+      +'<span class="pd" style="background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 8px '+c.c:'none')+'"></span>'
+      +'<span class="nm">'+c.name+(c.id===S.profile.company?' <small style="color:var(--orange);font-size:10.5px">MY</small>':'')+'</span>'
+      +'<span class="st '+(lit?'lit':'')+'">'+(lit?'커넥션 활성 · '+n+'명':'미개척')+'</span></button>';
+  }).join('');
+}
+function showCo(id){
+  const c=co(id), lit=activeCompanies().has(id);
+  const ppl=Object.keys(S.met).filter(p=>PEOPLE[p].co===id).map(p=>PEOPLE[p]);
+  const mine=id===S.profile.company;
+  $('cosheet').innerHTML='<div class="grip"></div>'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
+    +'<span style="width:26px;height:26px;border-radius:50%;background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 14px '+c.c:'none')+'"></span>'
+    +'<div><b style="font-size:17px">'+c.name+'</b>'
+    +'<div style="font-size:12px;color:'+(lit?'var(--orange-soft)':'var(--tx3)')+'">'+(lit?'커넥션 활성화':'아직 만남이 없는 계열사')+'</div></div></div>'
+    +(ppl.length
+      ?'<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px">이곳에서 만난 동료 — '+ppl.map(p=>'<b style="color:var(--tx)">'+p.real+'</b>').join(', ')+'</div>'
+      :'<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px">매칭 탭에서 이 계열사 동료가 있는 모임에 참가하면 이 행성이 빛나기 시작해요.</div>')
+    +(mine
+      ?'<button class="cta" onclick="hideCo();openSat()">내 행성 보기 — 위성이 된 동료들</button>'
+      :'<button class="cta line" onclick="hideCo();go(\'match\')">매칭 탭에서 모임 찾기</button>');
+  $('cowrap').classList.add('on');
+}
+function hideCo(){$('cowrap').classList.remove('on')}
+
+/* 내 행성(위성) 뷰 */
+function openSat(){
+  $('satTitle').textContent='내 행성 · '+myCo().name;
+  const mates=Object.keys(S.met).filter(p=>PEOPLE[p].co===S.profile.company);
+  let h='<div class="orbit" style="width:190px;height:190px"></div><div class="orbit" style="width:266px;height:266px"></div>'
+       +'<div id="meCore">'+S.profile.av+'<span>나</span></div>';
+  mates.forEach((pid,i)=>{
+    const r=i%2?133:95, d=26+i*7, del=-(d*i*.31);
+    h+='<div class="holder" style="--d:'+d+'s;--del:'+del+'s">'
+      +'<div class="sat" style="left:'+r+'px;top:0"><div class="av">'+PEOPLE[pid].av+'</div><div class="nm">'+PEOPLE[pid].real+'</div></div></div>';
+  });
+  $('mespace').innerHTML=h;
+  $('satlist').innerHTML=mates.length
+    ?mates.map(pid=>{const p=PEOPLE[pid];return '<div class="corow"><span style="font-size:20px">'+p.av+'</span><span class="nm">'+p.real+'</span><span class="st lit">연결됨</span></div>'}).join('')
+    :'<div class="empty" style="padding:22px 0">아직 같은 계열사에서 만난 동료가 없어요</div>';
+  $('satview').classList.add('on');
+}
+function closeSat(){$('satview').classList.remove('on')}
+
+/* ================= 매칭 ================= */
+function knownIn(m){return m.members.filter(p=>S.met[p]).length}
+function renderMatch(){
+  const P=S.profile;
+  $('matchsub').innerHTML='<b style="color:var(--orange-soft)">'+P.nick+'</b>님의 설정 — '+co(P.company).name+' · '+P.region+' · '+P.sizeMin+'~'+P.sizeMax+'명 기준으로 골랐어요.';
+  const list=[...MEETINGS].sort((a,b)=>{
+    const ra=(a.region===P.region?0:1)-(b.region===P.region?0:1); if(ra)return ra;
+    const ka=knownIn(a)/a.members.length, kb=knownIn(b)/b.members.length;
+    return P.dir==='deep'? kb-ka : ka-kb;
+  });
+  $('meets').innerHTML=list.map(m=>{
+    const kn=knownIn(m), ratio=Math.round(kn/m.members.length*100);
+    const joined=S.joined.includes(m.id);
+    return '<div class="card meet">'
+      +'<div class="hd"><div class="em">'+m.em+'</div><div style="flex:1">'
+      +'<h3>'+m.name+'</h3><div class="meta">'+m.region+' · '+m.when+' · '+m.members.length+'명 참여 중 / 정원 '+m.cap+'</div>'
+      +'<div style="margin-top:7px">'+m.tags.map(t=>'<span class="tag">#'+t+'</span>').join('')+'</div>'
+      +'</div></div>'
+      +'<div class="ai">🌙 <b>AI 추천 이유</b> — '+m.ai+'</div>'
+      +'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div>'
+      +'<div class="lb"><span>'+(kn? '아는 얼굴 <b>'+kn+'명</b> / '+m.members.length+'명':'모두 새로운 만남')+'</span><span>'+ratio+'%</span></div></div>'
+      +'<button class="cta" '+(joined?'disabled':'')+' onclick="joinMeet(\''+m.id+'\')">'+(joined?'참가 완료 · 채팅 탭에서 확인':'참가')+'</button>'
+      +'</div>';
+  }).join('');
+}
+function joinMeet(id){
+  const m=MEETINGS.find(x=>x.id===id);
+  S.joined.push(id);
+  const seed=[
+    {f:'sys',  x:'모임이 열렸어요. 만나기 전까지는 서로 익명이에요 🌙'},
+    {f:m.members[0], x:'안녕하세요! 다들 반가워요 ☺️', t:'오후 6:02'},
+    {f:m.members[1]||m.members[0], x:'와 '+m.tags[0]+' 얘기 나눌 사람 찾고 있었는데 반갑네요!', t:'오후 6:05'},
+  ];
+  S.rooms[id]={msgs:seed,unread:2,planned:null,revealed:false,photos:[]};
+  updateBdg();renderMatch();
+  toast('참가 완료','<b>'+m.name+'</b> 채팅방이 열렸어요');
 }
 
-function groupStatus(){
-  if(S.confirmed)return '4/4명 일정 확정';
-  if(S.counter)return '3/4명 응답 · 시간 조율 중';
-  if(S.sent)return '응답 기다리는 중';
-  return '4명 · 계열사 3곳';
+/* ================= 채팅 리스트 ================= */
+function updateBdg(){
+  const n=Object.values(S.rooms).reduce((s,r)=>s+r.unread,0);
+  $('chatbdg').style.display=n?'flex':'none';$('chatbdg').textContent=n;
 }
-
-function groupProgress(g,index){
-  if(index===0){
-    if(S.confirmed)return 1;
-    if(S.sent)return .75;
+function renderRooms(){
+  if(!S.joined.length){
+    $('roomlist').innerHTML='<div class="empty"><i>🌘</i>아직 참여한 모임이 없어요.<br>매칭 탭에서 마음에 드는 모임에 참가해 보세요.</div>';return;
   }
-  return g.progress;
-}
-
-function openGroupRoom(side,index){
-  if(side==='b'&&index===0&&S.sent){bOpen();return;}
-  const g=GROUPS[index];
-  const t=side==='a'?document.getElementById('a-toast'):document.getElementById('b-toast');
-  if(side==='a')document.getElementById('a-toast-b').textContent=g.name+' 단체 톡방을 열었어요';
-  else t.querySelector('.b').textContent=g.name+' 단체 톡방을 열었어요';
-  t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},3500);
-}
-
-function renderGroupRooms(targetId,side){
-  const el=document.getElementById(targetId);
-  const rooms=GROUPS.map(function(g,index){return {g:g,index:index,progress:groupProgress(g,index)};})
-    .sort(function(a,b){return b.progress-a.progress;});
-  el.innerHTML=rooms.map(function(room){
-    const g=room.g, pct=Math.round(room.progress*100);
-    const status=room.index===0?(S.confirmed?'모임 확정':S.sent?'응답 중':'매칭 예정'):(g.progress>=.7?'활동 중':'멤버 모집 중');
-    return '<button class="group-room" onclick="openGroupRoom(\''+side+'\','+room.index+')">'
-      +'<span class="room-moon">'+moonSVG(room.progress,48)+'</span>'
-      +'<span class="room-main"><span class="room-name">'+g.name+'</span>'
-      +'<span class="room-meta">'+g.size+'명 · 계열사 '+g.companies+'곳 · '+status+'</span>'
-      +'<span class="room-activity">'+g.activity+'</span></span>'
-      +'<span class="room-side"><span class="room-progress">달 '+pct+'%</span>'
-      +(g.unread?'<span class="room-unread">'+g.unread+'</span>':'')+'</span></button>';
+  $('roomlist').innerHTML=S.joined.map(id=>{
+    const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id];
+    const last=r.msgs[r.msgs.length-1];
+    const lastTxt=last.kind==='plan'?'🌙 AI가 약속을 제안했어요':last.x;
+    return '<button class="room" onclick="openRoom(\''+id+'\')">'
+      +'<span class="av">'+m.em+(r.revealed?'<span class="full">🌕</span>':'')+'</span>'
+      +'<span class="bd"><span class="r1"><b>'+m.name+'<small>'+(m.members.length+1)+'</small></b><time>'+(last.t||'')+'</time></span>'
+      +'<span class="r2"><p>'+esc(String(lastTxt)).slice(0,44)+'</p>'+(r.unread?'<span class="ub">'+r.unread+'</span>':'')+'</span></span></button>';
   }).join('');
 }
 
-/* ---- A: 이번 달 ---- */
-function renderA(){
-  const el=document.getElementById('a-moon');
-  if(S.confirmed){
-    el.innerHTML='<div class="moonwrap">'+moonSVG(1,168)+'</div>'
-    +'<div style="text-align:center"><div class="eyebrow" style="margin-bottom:8px">약속 확정</div>'
-    +'<h2 class="t">우리 모임의<br><em>보름달</em>이 찼어요</h2></div>'
-    +'<div class="card"><div class="who"><span class="nm">'+GROUP.name+'</span></div>'
-    +'<div class="group-pill">'+groupStatus()+'</div>'
-    +'<div class="meta">'+S.picked.t+'<br>'+S.slot+' · 판교</div>'+groupMembersMarkup()
-    +'<p class="reason">'+(S.counter?'멤버들이 시간을 맞췄어요.':'그룹 멤버 모두가 참석을 확정했어요.')
-    +'<br><strong>사흘 전에 모임 전체에 한 번 더 알려드릴게요.</strong></p></div>'
-    +'<div class="stack"><button class="btn ghost">캘린더에 넣기</button>'
-    +'<button class="btn ghost">판교 갈 만한 곳 세 군데 받기</button>'
-    +'<button class="btn ghost" onclick="startOneToOne(\'a\')">멤버 한 명과 1:1 대화 '+(S.directInvite?'요청 보냄':'시작하기')+'</button>'
-    +'<p class="optional">1:1 대화는 그룹 모임 이후 선택할 수 있어요.</p></div>';
-    return;
+/* ================= 채팅방 ================= */
+let CUR=null;
+function label(pid,room){
+  const p=PEOPLE[pid];
+  if(S.met[pid]||room.revealed) return '<b style="color:var(--tx)">'+p.real+'</b><small>'+co(p.co).name+'</small>';
+  return p.nick+'<small>익명</small>';
+}
+function openRoom(id){
+  CUR=id; const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id];
+  r.unread=0; updateBdg();
+  $('rname').textContent=m.name;
+  const anon=m.members.filter(p=>!S.met[p]&&!r.revealed).length;
+  $('rmeta').textContent='멤버 '+(m.members.length+1)+' · '+(r.revealed?'실명 공개됨 🌕':'익명 '+anon+'명');
+  $('albBtn').style.visibility=r.revealed?'visible':'hidden';
+  renderBanner();renderMsgs();
+  $('roomview').classList.add('on');
+}
+function closeRoom(){$('roomview').classList.remove('on');CUR=null;renderRooms()}
+function renderBanner(){
+  const r=S.rooms[CUR];
+  if(r.planned&&!r.revealed){
+    $('rbanner').innerHTML='📅 '+r.planned.when+' · '+r.planned.place+'<button onclick="doReveal()">만남 완료 (데모)</button>';
+    $('rbanner').classList.add('on');
+  }else $('rbanner').classList.remove('on');
+}
+function renderMsgs(){
+  const r=S.rooms[CUR];
+  $('msgs').innerHTML=r.msgs.map((m,i)=>{
+    if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+m.x+'</div></div>';
+    if(m.f==='me')return '<div class="msg me"><div><div class="bub">'+esc(m.x)+'</div></div></div>';
+    if(m.f==='ai'){
+      const p=m.plan;
+      return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI</div>'
+        +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
+        +'<div class="row"><i>📍</i><span><b>'+p.place+'</b></span></div>'
+        +'<div class="row"><i>🕖</i><span>'+p.when+'</span></div>'
+        +'<div class="row"><i>🎯</i><span>'+p.act+'</span></div>'
+        +'<div class="row"><i>🍜</i><span>'+p.food+'</span></div>'
+        +'<button '+(S.rooms[CUR].planned?'disabled':'')+' onclick="confirmPlan('+i+')">'+(S.rooms[CUR].planned?'약속 확정됨':'이 약속으로 확정')+'</button>'
+        +'</div></div></div>';
+    }
+    const p=PEOPLE[m.f];
+    return '<div class="msg"><div class="mav">'+p.av+'</div><div><div class="who">'+label(m.f,r)+'</div><div class="bub">'+esc(m.x)+'</div></div></div>';
+  }).join('');
+  $('msgs').scrollTop=$('msgs').scrollHeight;
+}
+function sendMsg(){
+  const v=$('cin').value.trim(); if(!v||!CUR)return;
+  const r=S.rooms[CUR];
+  r.msgs.push({f:'me',x:v,t:nowT()});
+  $('cin').value=''; renderMsgs();
+  const m=MEETINGS.find(x=>x.id===CUR);
+  const pid=m.members[Math.floor(Math.random()*m.members.length)];
+  showTyping(PEOPLE[pid], r, ()=>{
+    r.msgs.push({f:pid,x:REPLIES[Math.floor(Math.random()*REPLIES.length)],t:nowT()});
+    if(CUR)renderMsgs();
+  });
+}
+function showTyping(p,room,cb){
+  $('typing').style.display='block';
+  $('typing').textContent=(S.met[Object.keys(PEOPLE).find(k=>PEOPLE[k]===p)]||room.revealed?p.real:p.nick)+' 님이 입력 중…';
+  setTimeout(()=>{$('typing').style.display='none';cb()},1100+Math.random()*900);
+}
+
+/* + 메뉴 */
+function openPlus(){
+  $('plusAlbum').disabled=!S.rooms[CUR].revealed;
+  $('pluswrap').classList.add('on');
+}
+function hidePlus(){$('pluswrap').classList.remove('on')}
+function aiPlan(){
+  hidePlus();
+  const r=S.rooms[CUR];
+  if(r.msgs.some(m=>m.f==='ai')){toast('AI 약속','이미 이 방에 추천 약속이 있어요');return}
+  $('typing').style.display='block';$('typing').textContent='MoonLight AI가 대화를 읽고 있어요…';
+  setTimeout(()=>{
+    $('typing').style.display='none';
+    r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
+    r.msgs.push({f:'ai',plan:PLANS[CUR],t:nowT()});
+    if(CUR)renderMsgs();
+  },1600);
+}
+function confirmPlan(){
+  const r=S.rooms[CUR];
+  r.planned=PLANS[CUR];
+  r.msgs.push({f:'sys',x:'📅 약속이 확정되었습니다 — '+r.planned.when+' · '+r.planned.place});
+  renderBanner();renderMsgs();
+  toast('약속 확정','만남 이후 이 방의 베일이 벗겨져요 🌕');
+}
+
+/* ================= 베일 벗기기 ================= */
+function doReveal(){
+  const m=MEETINGS.find(x=>x.id===CUR), r=S.rooms[CUR];
+  $('veiltxt').textContent=m.members.map(p=>PEOPLE[p].nick).join(', ')+' 님의 이름이 공개됩니다';
+  $('veil').classList.add('on');
+  setTimeout(()=>{
+    $('veil').classList.remove('on');
+    r.revealed=true; r.planned=null;
+    m.members.forEach(p=>S.met[p]=true);
+    r.photos=[
+      {g:'linear-gradient(140deg,#F37321,#8B5CF6)',l:'첫 만남 단체샷'},
+      {g:'linear-gradient(140deg,#17A67C,#2BB3C0)',l:m.tags[0]+' 하는 중'},
+      {g:'linear-gradient(140deg,#E8B84B,#E86A8A)',l:'다 같이 한 컷'},
+      {g:'linear-gradient(140deg,#5A9CF3,#B49BE0)',l:'다음에 또 만나요'},
+    ];
+    r.msgs.push({f:'sys',x:'🌕 달빛을 통해 베일이 벗겨졌습니다 — 이제 서로의 이름과 계열사가 보여요. 사진첩이 열렸어요!'});
+    m.members.forEach(p=>r.msgs.push({f:p,x:'저 '+PEOPLE[p].real+'이에요! 오늘 정말 즐거웠어요 😊',t:nowT()}));
+    openRoom(CUR);
+    toast('커넥션 활성화','새 행성이 빛나기 시작했어요 ✨ 홈에서 확인해 보세요');
+  },3000);
+}
+
+/* ================= 사진첩 ================= */
+function openAlbumBtn(){if(S.rooms[CUR].revealed)openAlbum()}
+function openAlbum(){
+  const m=MEETINGS.find(x=>x.id===CUR), r=S.rooms[CUR];
+  if(!r.revealed)return;
+  $('albTitle').textContent=m.name+' 사진첩';
+  $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'">'+p.l+'</div>').join('')
+    +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3)">＋ 사진 추가</button>';
+  $('album').classList.add('on');
+}
+function closeAlbum(){$('album').classList.remove('on')}
+
+/* ================= 프로필 ================= */
+function setP(k,v){S.profile[k]=v;renderProfile();toast('설정 저장','매칭 추천에 바로 반영돼요')}
+function cycleAvatar(){const i=AVATARS.indexOf(S.profile.av);S.profile.av=AVATARS[(i+1)%AVATARS.length];renderProfile()}
+function bumpAge(d){S.profile.age=Math.min(45,Math.max(20,S.profile.age+d));renderProfile()}
+function bumpSize(k,d){
+  const P=S.profile;
+  if(k==='min')P.sizeMin=Math.min(P.sizeMax,Math.max(2,P.sizeMin+d));
+  else P.sizeMax=Math.max(P.sizeMin,Math.min(10,P.sizeMax+d));
+  renderProfile();
+}
+function toggleBal(){S.profile.balance=!S.profile.balance;renderProfile();toast('설정 저장','매칭 추천에 바로 반영돼요')}
+function tgl(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);renderProfile()}
+function renderProfile(){
+  const P=S.profile;
+  $('pfav').textContent=P.av;
+  if(document.activeElement!==$('nick'))$('nick').value=P.nick;
+  $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
+  $('f-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(P.region===r?' on':'')+'" onclick="setP(\'region\',\''+r+'\')">'+esc(r)+'</button>').join('')
+    +'<button class="chip add" onclick="openAdd(\'region\')">＋ 직접 추가</button>';
+  $('f-age').textContent=P.age+'세';
+  $('f-gender').innerHTML=[['m','남성'],['f','여성'],[null,'선택 안 함']].map(([v,l])=>
+    '<button class="'+(P.gender===v?'on':'')+'" onclick="setP(\'gender\','+(v?'\''+v+'\'':'null')+')">'+l+'</button>').join('');
+  const MB=['ISTJ','ISFJ','INFJ','INTJ','ISTP','ISFP','INFP','INTP','ESTP','ESFP','ENFP','ENTP','ESTJ','ESFJ','ENFJ','ENTJ'];
+  $('f-mbti').innerHTML=MB.map(m=>'<option'+(m===P.mbti?' selected':'')+'>'+m+'</option>').join('');
+  $('f-int').innerHTML=INTS.map(v=>'<button class="chip'+(P.interests.includes(v)?' on':'')+'" onclick="tgl(S.profile.interests,\''+v+'\')">'+esc(v)+'</button>').join('')
+    +'<button class="chip add" onclick="openAdd(\'int\')">＋ 직접 추가</button>';
+  $('f-hob').innerHTML=HOBS.map(v=>'<button class="chip'+(P.hobbies.includes(v)?' on':'')+'" onclick="tgl(S.profile.hobbies,\''+v+'\')">'+esc(v)+'</button>').join('')
+    +'<button class="chip add" onclick="openAdd(\'hob\')">＋ 직접 추가</button>';
+  $('f-min').textContent=P.sizeMin+'명';$('f-max').textContent=P.sizeMax+'명';
+  $('f-bal').classList.toggle('on',P.balance);
+  $('f-scope').innerHTML=[['mine','내 계열사 위주'],['all','다른 계열사와도']].map(([v,l])=>
+    '<button class="'+(P.scope===v?'on':'')+'" onclick="setP(\'scope\',\''+v+'\')">'+l+'</button>').join('');
+  $('f-dir').innerHTML=[['deep','깊은 유대 — 만난 사람과 또'],['wide','넓은 인맥 — 새로운 만남']].map(([v,l])=>
+    '<button class="'+(P.dir===v?'on':'')+'" onclick="setP(\'dir\',\''+v+'\')">'+l+'</button>').join('');
+}
+$('nick').addEventListener('input',e=>{S.profile.nick=e.target.value||'달토끼'});
+
+/* 직접 추가 */
+let ADDKIND=null;
+const ADDMETA={
+  region:{t:'선호 지역 직접 추가'},
+  int:{t:'관심사 직접 추가'},
+  hob:{t:'취미 직접 추가'},
+};
+function openAdd(kind){
+  ADDKIND=kind;
+  $('addtitle').textContent=ADDMETA[kind].t;
+  $('addin').value='';
+  $('addwrap').classList.add('on');
+  setTimeout(()=>$('addin').focus(),100);
+}
+function hideAdd(){$('addwrap').classList.remove('on')}
+function confirmAdd(){
+  let v=$('addin').value.trim().replace(/["'\\<>]/g,'');
+  if(!v)return;
+  if(ADDKIND==='region'){
+    if(!REGIONS.includes(v))REGIONS.push(v);
+    S.profile.region=v;
+  }else if(ADDKIND==='int'){
+    if(!INTS.includes(v))INTS.push(v);
+    if(!S.profile.interests.includes(v))S.profile.interests.push(v);
+  }else{
+    if(!HOBS.includes(v))HOBS.push(v);
+    if(!S.profile.hobbies.includes(v))S.profile.hobbies.push(v);
   }
-  if(S.sent&&S.counter){
-    el.innerHTML='<div class="moonwrap">'+moonSVG(.85,168)+'</div>'
-    +'<div style="text-align:center"><div class="eyebrow" style="margin-bottom:8px">답장 도착</div>'
-    +'<h2 class="t">그룹 멤버가<br><em>시간을 바꿔</em> 제안했어요</h2></div>'
-    +'<div class="letter" style="margin-top:17px"><div class="lbl">바꾼 시간</div>'
-    +'<div class="big">'+S.slot+'</div><div class="when">'+S.picked.t+' · 판교</div>'
-    +'<div class="msg">그룹 멤버들의 일정이 맞는 시간이에요. 이때는 모두 참석할 수 있습니다.</div></div>'
-    +'<div class="stack"><button class="btn" onclick="confirmIt()">이 시간으로 확정</button>'
-    +'<button class="btn ghost">다른 날 더 보기</button></div>';
-    return;
-  }
-  if(S.sent){
-    el.innerHTML='<div class="moonwrap">'+moonSVG(.85,168)+'</div>'
-    +'<div style="text-align:center"><div class="eyebrow" style="margin-bottom:8px">보냈어요</div>'
-    +'<h2 class="t">그룹 멤버들이<br>초대장을 읽는 중</h2>'
-    +'<p class="sub">응답이 없으면 이틀 뒤 한 번 더 알려드릴게요.<br>그때도 없으면 이번 달 모임은 여기서 접습니다.</p></div>'
-    +'<div class="card"><div class="who"><span class="nm">'+GROUP.name+'</span></div>'
-    +'<div class="group-pill">'+groupStatus()+'</div><div class="meta">'+S.slot+' · 판교</div>'+groupMembersMarkup()+'</div>'
-    +'<div class="stack"><button class="btn ghost" disabled>답장 기다리는 중</button></div>';
-    return;
-  }
-  el.innerHTML='<div class="moonwrap">'+moonSVG(.85,168)+'</div>'
-  +'<div style="text-align:center"><div class="eyebrow" style="margin-bottom:8px">2026.08 · 열엿새달</div>'
-  +'<h2 class="t">이번 달 달빛은<br><em>'+GROUP.name+'</em>에 닿았어요</h2></div>'
-  +'<div class="card"><div class="who"><span class="nm">'+GROUP.name+'</span><span class="co">그룹 매칭</span></div>'
-  +'<div class="group-pill">'+groupStatus()+'</div><div class="meta">사원 4명 · 계열사 3곳 · 판교 근무</div>'+groupMembersMarkup()
-  +'<div class="tags"><span class="tag">러닝</span><span class="tag">위스키</span>'
-  +'<span class="tag">엑셀·자동화</span><span class="tag">판교</span>'
-  +'<span class="tag plain">+ 화요일 저녁 비어 있음</span></div>'
-  +'<p class="reason">겹치는 취향 <strong>4개</strong>, 계열사 <strong>3곳</strong>.<br>서로 다른 일을 해서 함께 만나기 좋은 모임이에요.</p></div>'
-  +'<div class="stack"><button class="btn" onclick="go(\'a\',\'a-reason\',0)">모임 이유 고르기</button>'
-  +'<button class="btn ghost" onclick="this.textContent=\'다음 보름에 다시 만나요\';this.disabled=true">이번 달은 쉴게요</button></div>';
+  hideAdd();renderProfile();
+  toast('추가 완료','<b>'+esc(v)+'</b> 항목이 선택됐어요 · 매칭에 반영돼요');
 }
 
-/* ---- A: 이유 덱 ---- */
-function deck(btn,k){mode=k;
-  const bs=document.querySelectorAll('.seg button');
-  [].forEach.call(bs,function(b){b.classList.toggle('on',b===btn);});
-  renderDeck();}
-function renderDeck(){
-  document.getElementById('deck').innerHTML=REASONS[mode].map(function(r,i){
-    return '<button class="rcard" onclick="pick(this,'+i+')"><div class="rt">'+r.t
-    +'<span>'+r.m+'</span></div><div class="rd">'+r.d+'</div></button>';}).join('');
-  document.getElementById('letterBox').innerHTML='';
-}
-function pick(el,i){
-  const cs=document.querySelectorAll('.rcard');
-  [].forEach.call(cs,function(c){c.classList.remove('picked');});
-  el.classList.add('picked');
-  S.picked=REASONS[mode][i];
-  document.getElementById('letterBox').innerHTML='<div class="letter">'
-  +'<div class="lbl">그룹 초대장</div><div class="from">'+GROUP.name+' 멤버들에게</div>'
-  +'<div class="big">'+S.picked.t+'</div>'
-  +'<div class="when">8월 29일 (토) 19:00 · 판교</div>'
-  +'<div class="msg">'+S.picked.d+'</div>'
-  +'<div class="stack"><button class="btn" id="sendBtn" onclick="send()">모임 제안하기</button></div></div>';
-  document.getElementById('letterBox').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-
-/* ---- 보내기 ---- */
-function send(){
-  if(S.sent)return;
-  S.sent=true;
-  const b=document.getElementById('sendBtn');
-    b.textContent='모임 제안 보냄';b.disabled=true;
-  const c=document.getElementById('comet');
-  c.className='comet';void c.offsetWidth;c.classList.add('fly');
-  renderA();renderGroupA();renderGroupB();
-  setTimeout(function(){
-    renderB();renderInbox();renderGroupB();
-    document.getElementById('b-badge').classList.add('on');
-    const t=document.getElementById('b-toast');
-    t.classList.add('show');
-    setTimeout(function(){t.classList.remove('show');},5500);
-  },1150);
-  setTimeout(function(){go('a','a-moon',0);},1450);
-}
-
-/* ---- B: 이번 달 ---- */
-function renderB(){
-  const el=document.getElementById('b-moon');
-  if(S.confirmed){
-    el.innerHTML='<div class="moonwrap">'+moonSVG(1,168)+'</div>'
-    +'<div style="text-align:center"><div class="eyebrow" style="margin-bottom:8px">약속 확정</div>'
-    +'<h2 class="t">우리 모임의<br><em>보름달</em>이 찼어요</h2></div>'
-    +'<div class="card"><div class="who"><span class="nm">'+GROUP.name+'</span><span class="co">그룹 매칭</span></div>'
-    +'<div class="group-pill">'+groupStatus()+'</div><div class="meta">'+S.picked.t+'<br>'+S.slot+' · 판교</div>'+groupMembersMarkup()
-    +'<p class="reason"><strong>사흘 전에 모임 전체에 한 번 더 알려드릴게요.</strong><br>못 가게 되면 그때 말해도 괜찮아요.</p></div>'
-    +'<div class="stack"><button class="btn ghost">캘린더에 넣기</button>'
-    +'<button class="btn ghost" onclick="startOneToOne(\'b\')">멤버 한 명과 1:1 대화 '+(S.directInvite?'요청 보냄':'시작하기')+'</button>'
-    +'<p class="optional">1:1 대화는 그룹 모임 이후 선택할 수 있어요.</p></div>';
-    return;
-  }
-  el.innerHTML='<div class="moonwrap">'+moonSVG(.85,168)+'</div>'
-  +'<div style="text-align:center"><div class="eyebrow" style="margin-bottom:8px">2026.08 · 열엿새달</div>'
-  +'<h2 class="t">이번 달 달빛은<br><em>'+GROUP.name+'</em>에 닿았어요</h2></div>'
-  +'<div class="card"><div class="who"><span class="nm">'+GROUP.name+'</span><span class="co">그룹 매칭</span></div>'
-  +'<div class="group-pill">'+groupStatus()+'</div><div class="meta">사원 4명 · 계열사 3곳 · 판교 근무</div>'+groupMembersMarkup()
-  +'<div class="tags"><span class="tag">러닝</span><span class="tag">위스키</span>'
-  +'<span class="tag">엑셀·자동화</span><span class="tag plain">+ 판교 자주 옴</span></div>'
-  +'<p class="reason">'+(S.sent?'<strong>그룹 초대장이 와 있어요.</strong> 초대장 탭에서 열어보세요.'
-      :'겹치는 취향 <strong>4개</strong>.<br>그룹 이유를 확인하고 참여해 보세요.')+'</p></div>'
-  +'<div class="stack">'+(S.sent?'<button class="btn" onclick="bOpen()">초대장 열기</button>'
-      :'<button class="btn ghost">그룹 이유 보기</button>')+'</div>';
-}
-
-/* ---- B: 초대장함 ---- */
-function bOpen(){document.getElementById('b-toast').classList.remove('show');renderInbox();go('b','b-inbox',2);}
-function renderInbox(){
-  const el=document.getElementById('b-inbox');
-  if(!S.sent){
-    el.innerHTML='<div class="empty"><div class="m">'+moonSVG(.04,80)+'</div>'
-    +'아직 받은 그룹 초대장이 없어요.<br>이번 달 달빛이 닿은 모임에<br>참여할 준비를 해 보세요.</div>';
-    return;
-  }
-  if(S.confirmed){
-    el.innerHTML='<div class="eyebrow">확정된 모임</div>'
-    +'<h2 class="t">'+GROUP.name+'에서<br>만나기로 했어요</h2>'
-    +'<div class="letter" style="margin-top:17px"><div class="lbl">확정</div>'
-    +'<div class="big">'+S.picked.t+'</div><div class="when">'+S.slot+' · 판교</div>'
-    +'<div class="msg">'+S.picked.d+'<br><br>'+groupStatus()+'</div></div>';
-    return;
-  }
-  el.innerHTML='<div class="eyebrow">받은 그룹 초대장</div>'
-  +'<h2 class="t"><em>'+GROUP.name+'</em>이<br>만날 이유를 보냈어요</h2>'
-  +'<div class="letter" style="margin-top:17px"><div class="lbl">그룹 초대장</div>'
-  +'<div class="from">4명 · 계열사 3곳 · 판교</div>'
-  +'<div class="big">'+S.picked.t+'</div>'
-  +'<div class="when">8월 29일 (토) 19:00 · 판교</div>'
-  +'<div class="msg">'+S.picked.d+'</div></div>'
-  +'<div class="stack"><button class="btn" onclick="accept(\'8월 29일 (토) 19:00\',false)">모임에 참여할게요</button></div>'
-  +'<div class="sect"><div class="lbl">시간만 바꾸고 싶다면</div><div class="times">'
-  +'<button onclick="accept(\'9월 1일 (화) 19:00\',true)">9월 1일 (화) 19:00</button>'
-  +'<button onclick="accept(\'9월 3일 (목) 19:30\',true)">9월 3일 (목) 19:30</button>'
-  +'<button onclick="accept(\'9월 5일 (토) 11:00\',true)">9월 5일 (토) 11:00</button></div>'
-  +'<p class="sub" style="font-size:11.5px">거절 버튼은 없어요. 답을 안 하면 이번 달 모임은 그냥 지나갑니다.</p></div>';
-}
-
-/* ---- 답장 ---- */
-function accept(slot,isCounter){
-  S.slot=slot;S.counter=isCounter;
-  if(!isCounter)S.confirmed=true;
-  renderB();renderInbox();renderGroupB();
-  if(!isCounter)go('b','b-moon',0);
-  const c=document.getElementById('comet');
-  c.className='comet';void c.offsetWidth;c.classList.add('back');
-  setTimeout(function(){
-    renderA();renderGroupA();
-    document.getElementById('a-badge').classList.add('on');
-      document.getElementById('a-toast-b').textContent=isCounter
-        ?'그룹 멤버가 다른 시간을 제안했어요':'그룹 멤버 모두가 수락했어요';
-    const t=document.getElementById('a-toast');
-    t.classList.add('show');
-    setTimeout(function(){t.classList.remove('show');},5500);
-  },1150);
-}
-function aOpen(){document.getElementById('a-toast').classList.remove('show');go('a','a-group',2);}
-function confirmIt(){S.confirmed=true;renderA();renderB();renderInbox();renderGroupA();renderGroupB();}
-function startOneToOne(side){
-  S.directInvite=true;
-  renderA();renderB();renderGroupA();renderGroupB();
-  const t=side==='a'?document.getElementById('a-toast'):document.getElementById('b-toast');
-  if(side==='a')document.getElementById('a-toast-b').textContent='1:1 대화 요청을 보냈어요';
-  else t.querySelector('.b').textContent='1:1 대화 요청이 도착했어요';
-  t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},4500);
-}
-
-function renderGroupA(){
-  const el=document.getElementById('a-group');
-  el.innerHTML='<div class="eyebrow">현재 참여중인 그룹</div>'
-    +'<h2 class="t">우리의 달빛이<br><em>모임으로 이어져요</em></h2>'
-    +'<p class="sub">달이 많이 찬 단체 톡방일수록 위에 보여요. 그룹을 먼저 만나고, 1:1 대화는 그다음에 선택합니다.</p>'
-    +'<div class="group-list" id="a-group-list"></div>'
-    +'<p class="group-note">달 진행도는 멤버 응답과 최근 활동을 합쳐 보여주는 발표용 데모 지표입니다.</p>';
-  renderGroupRooms('a-group-list','a');
-}
-
-function renderGroupB(){
-  const el=document.getElementById('b-group');
-  el.innerHTML='<div class="eyebrow">현재 참여중인 그룹</div>'
-    +'<h2 class="t">단체 톡방에서<br><em>달이 차오르고 있어요</em></h2>'
-    +'<p class="sub">모임의 대화와 활동이 쌓일수록 달이 차오릅니다. 지금 가장 활발한 그룹부터 확인해 보세요.</p>'
-    +'<div class="group-list" id="b-group-list"></div>'
-    +'<p class="group-note">초대장이 도착하면 해당 그룹 카드의 달빛이 더 빠르게 차오릅니다.</p>';
-  renderGroupRooms('b-group-list','b');
-}
-
-/* ---- 지난 달 ---- */
-const PAST=[
-  {ph:.95,m:'2026.07',n:'한강 러닝 크루',c:'4인 · 3개 계열사',s:'done',nt:'한강 5km 뛰고 편의점에서 이온음료'},
-  {ph:.6,m:'2026.06',n:'점심 국밥 원정대',c:'4인 · 4개 계열사',s:'done',nt:'회사 앞 순대국. 그 뒤로 두 번 더 모였어요'},
-  {ph:.3,m:'2026.05',n:'계열사 재무 스터디',c:'5인 · 3개 계열사',s:'miss',nt:'세 번 미루다 달이 졌어요'},
-  {ph:.05,m:'2026.04',n:'처음 만난 동기들',c:'4인 · 2개 계열사',s:'done',nt:'서로 다른 회사인데 그날 처음 만났어요'}];
-document.getElementById('a-past').innerHTML=
-  '<div class="eyebrow">달이 진 뒤</div><h2 class="t">지금까지 네 번의<br>그룹 모임이 있었어요</h2><div style="margin-top:13px">'
-  +PAST.map(function(p){const rx=Math.abs(1-2*p.ph)*15;
-    return '<div class="past"><svg width="30" height="30" viewBox="-16 -16 32 32" style="flex:0 0 auto;margin-top:2px" aria-hidden="true">'
-    +'<circle r="15" fill="'+(p.s==='done'?'#E4CFA4':'#2A3160')+'"/>'
-    +'<path d="M0 -15 A15 15 0 0 0 0 15 A'+rx+' 15 0 0 '+(p.ph>.5?1:0)+' 0 -15 Z" fill="#0B1026" opacity=".88"/></svg>'
-    +'<div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
-    +'<span class="nm">'+p.n+'</span><span class="state '+p.s+'">'+(p.s==='done'?'만났어요':'못 만났어요')+'</span></div>'
-    +'<div class="info">'+p.m+' · '+p.c+'</div><div class="nt">'+p.nt+'</div></div></div>';}).join('')
-  +'</div><div class="locked">한 번 함께한 멤버 조합은 다시 뜨지 않아요. 매달 새로운 동료를 만납니다.</div>'
-  +'<div class="keeper"><div class="h">달빛지기까지 한 번</div>'
-  +'<p class="p">네 번 만난 사람은 자기 이름으로 모임을 열 수 있어요. 판교 러닝, 계열사 재무 스터디 같은 것들. 매칭을 기다리는 대신 만드는 쪽이 되는 겁니다.</p>'
-  +'<div class="gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div></div>';
-
-/* ---- 내 달 ---- */
-function chip(t,on){return '<button class="chip '+(on.indexOf(t)>-1?'on':'')+'" onclick="this.classList.toggle(\'on\')">'+t+'</button>';}
-function profile(name,co,loc,years,g){
-  return '<div class="eyebrow">내 달</div><h2 class="t">'+name+'</h2>'
-  +'<div class="meta" style="margin-top:8px">'+co+' · 사원 · '+years+' · '+loc+' 근무</div>'
-  +'<div class="vbadge"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6.5 5 9.5 10 3"/></svg> 사원증 인증 완료</div>'
-  +'<div class="sect"><div class="lbl">요즘 빠져 있는 것</div><div class="tags">'+g.a.map(function(t){return chip(t,g.on);}).join('')+'</div></div>'
-  +'<div class="sect"><div class="lbl">퇴근하고 움직이는 동네</div><div class="tags">'+g.b.map(function(t){return chip(t,g.on);}).join('')+'</div></div>'
-  +'<div class="sect"><div class="lbl">일 얘기라면 이런 것</div><div class="tags">'+g.c.map(function(t){return chip(t,g.on);}).join('')+'</div></div>'
-  +'<div class="sect"><div class="lbl">매칭 규칙</div>'
-  +'<div class="rule"><p>4인 그룹 매칭 우선<small>먼저 함께 만나고, 1:1 대화는 모임 뒤에 선택해요</small></p><span class="fixed">고정</span></div>'
-  +'<div class="rule"><p>사원끼리만 매칭<small>직급이 섞이면 하고 싶은 말을 못 해요</small></p><span class="fixed">고정</span></div>'
-  +'<div class="rule"><p>같은 부서 제외<small>옆자리 사람은 앱 없이도 만납니다</small></p><span class="fixed">고정</span></div>'
-  +'<div class="rule"><p>한 번 만난 사람 제외<small>매달 처음 보는 얼굴로</small></p><span class="fixed">고정</span></div>'
-  +'<div class="rule" style="border:none"><p>다른 계열사 우선<small>끄면 우리 회사 사람도 후보에 올라요</small></p>'
-  +'<button class="chip on" onclick="this.classList.toggle(\'on\');this.textContent=this.classList.contains(\'on\')?\'켜짐\':\'꺼짐\'">켜짐</button></div></div>';
-}
-document.getElementById('a-me').innerHTML=profile('이정현','한화투자증권','여의도','1년차',
-  {a:['러닝','클라이밍','위스키','전시','야구','캠핑'],b:['여의도','판교','성수','강남'],
-   c:['재무제표','엑셀·자동화','파생상품','AI 활용'],
-   on:['러닝','위스키','여의도','판교','엑셀·자동화','파생상품']});
-document.getElementById('b-me').innerHTML=profile('정하람','한화솔루션 큐셀부문','판교','2년차',
-  {a:['러닝','위스키','베이킹','사진','게임','전시'],b:['판교','강남','성수','분당'],
-   c:['엑셀·자동화','설비·공정','AI 활용','IR·홍보'],
-   on:['러닝','위스키','판교','분당','엑셀·자동화','AI 활용']});
-
-renderA();renderB();renderDeck();renderInbox();renderGroupA();renderGroupB();
+/* ================= 시작 ================= */
+renderHome();renderProfile();updateBdg();
 </script>
 </body>
 </html>
