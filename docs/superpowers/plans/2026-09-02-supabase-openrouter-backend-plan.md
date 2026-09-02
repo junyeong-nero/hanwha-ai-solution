@@ -2,25 +2,46 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 기존 단일 HTML 데모에 공용 QR·임시 입장 코드, Supabase 데이터/실시간 기능, OpenRouter LLM 매칭·약속 추천을 연결하고 25명 파일럿으로 확장 가능한 기반을 만든다.
+> 2026-09-02 검토 반영본. 변경 요지: 우선순위(P0/P1/P2) 신설, 이중 모드 제약, 발표 단계 사번 미수집, Deno 테스트를 Node 24 type-stripping으로 실행, 운영 디테일(익명 로그인·publication·CORS·유니크 제약·레이트리밋 테이블) 각 태스크에 반영, 사진 업로드 제외, AI 전송 고지를 Task 6으로 이동, 삭제된 파일 관련 제약 정리.
 
-**Architecture:** GitHub Pages의 `src/index.html`은 Supabase의 publishable/anon 키로 Auth·Database·Realtime·Storage만 호출한다. 비밀 키와 OpenRouter API 키를 사용하는 모든 검증·LLM 호출은 Supabase Edge Function에서 수행하며, RLS가 사용자별 데이터 접근을 제한한다. 발표 환경과 파일럿 환경은 설정값과 Supabase 프로젝트를 분리한다.
+**Goal:** 기존 단일 HTML 데모에 공용 QR·임시 입장 코드, Supabase 데이터/실시간 기능, OpenRouter LLM 매칭·약속 추천을 연결하고 25명 파일럿으로 확장 가능한 기반을 만든다. 백엔드 설정이 없으면 기존 로컬 데모가 그대로 동작해야 한다.
 
-**Tech Stack:** HTML/CSS/JavaScript(기존 단일 파일), Supabase Postgres/Auth/Realtime/Storage/Edge Functions, OpenRouter OpenAI 호환 Chat Completions API, Deno 테스트, Node 내장 테스트 러너
+**Architecture:** GitHub Pages의 `src/index.html`은 Supabase의 publishable/anon 키로 Auth·Database·Realtime만 호출한다. 비밀 키와 OpenRouter API 키를 사용하는 모든 검증·LLM 호출은 Supabase Edge Function에서 수행하며, RLS와 `security definer` RPC가 사용자별 데이터 접근을 제한한다. 발표 환경과 파일럿 환경은 설정값과 Supabase 프로젝트를 분리한다.
+
+**Tech Stack:** HTML/CSS/JavaScript(기존 단일 파일) + supabase-js UMD(CDN, 백엔드 모드에서만 동적 로드), Supabase Postgres/Auth/Realtime/Edge Functions(Deno), OpenRouter OpenAI 호환 Chat Completions API, Node 24 내장 테스트 러너(`node --test`, `.ts` 순수 모듈 직접 import)
 
 **Spec:** `docs/superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md`
+
+## 진행 현황 (2026-09-02)
+
+- **코드·테스트:** Task 1~7 구현 완료. `node --test tests/*.mjs` 53개 통과. 로컬 데모 모드 회귀(참가→AI 약속→베일 벗기기→행성 점등) 브라우저 확인 완료.
+- **미완(배포 의존):** Supabase 프로젝트 생성·마이그레이션 적용(`supabase db push`)·Edge Function 배포·OpenRouter 키 등록·실기기 검증. 절차는 [docs/deployment.md](../../deployment.md).
+- **Task 8(파일럿):** 제출 후 진행.
+
+## 우선순위
+
+| 우선순위 | 태스크 | 판단 |
+| --- | --- | --- |
+| **P0 — 발표 필수** | Task 1~4 | LLM 매칭을 실제 호출로 시연하는 최소 범위 |
+| **P1 — 발표 권장** | Task 5~7 | 실시간 채팅·AI 약속·안정화. 코드는 작성하고 배포는 시간에 따라 |
+| **P2 — 제출 후** | Task 8 | 25명 파일럿. 평가와 무관 |
+
+코드 작성은 P0·P1을 한 번에 진행해도 되지만, Supabase 프로젝트 배포와 라이브 검증은 P0 → P1 순서로 한다.
 
 ## Global Constraints
 
 - UI 텍스트·주석·문서·커밋 메시지는 한국어로 작성한다.
+- **이중 모드:** `src/index.html`의 `CONFIG.SUPABASE_URL`이 비어 있으면 기존 로컬 데모 모드로 동작하고 네트워크 요청을 하지 않는다. 모든 백엔드 연동은 `BACKEND` 플래그로 분기하며 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지한다.
 - `src/index.html`의 모바일 UI와 전역 `S` 상태 흐름을 유지하고, 기존 기능 명세의 4개 탭을 제거하지 않는다.
 - `viewport-fit=cover`, `env(safe-area-inset-*)`, `100dvh`, 입력 폰트 16px 이상, 터치 타겟 44px 이상, `prefers-reduced-motion` 지원을 유지한다.
 - 브라우저에는 Supabase publishable/anon 키만 포함한다. Supabase secret key와 OpenRouter API 키는 Edge Function 비밀 환경변수에만 둔다.
-- 사번·본명·이메일·전화번호·사진 URL을 LLM 프롬프트에 포함하지 않는다.
-- 발표용 QR은 공용 주소 하나를 사용하고, 입장 코드는 서버에서 만료 시간·활성 상태·호출 횟수를 확인한다.
+- supabase-js는 백엔드 모드에서만 jsDelivr CDN `<script>`를 동적으로 삽입해 로드한다. 다른 외부 라이브러리·빌드 도구는 도입하지 않는다.
+- 사번·본명·이메일·전화번호·사진 URL을 LLM 프롬프트에 포함하지 않는다. **발표 단계에서는 사번을 수집하지 않는다.**
+- 발표용 QR은 공용 주소 하나를 사용하고, 입장 코드는 서버에서 만료 시간·활성 상태·호출 횟수·레이트리밋을 확인한다.
 - LLM은 후보 모임 중에서만 선택하도록 하고, 서버가 `meeting_id`를 검증한다.
 - LLM JSON 파싱 실패는 1회 재시도 후 결정적 기본 추천으로 대체한다.
-- `src/달빛한화_PeerLink_v5.html`, `assets/` 안내 PDF와 기존 폰트 파일은 수정하지 않는다.
+- Edge Function의 순수 로직(`_shared/`)은 `Deno` 전역을 쓰지 않아 Node 24에서도 그대로 import·테스트할 수 있어야 한다. `Deno.env` 접근은 각 함수의 `index.ts`에서만 한다.
+- `assets/` 안내 PDF와 기존 폰트 파일은 수정하지 않는다.
 - 모든 작업은 작은 커밋으로 남기며 커밋 메시지는 `feat:`, `fix:`, `docs:` 중 하나로 시작한다.
 
 ## 파일 구조와 책임
@@ -28,34 +49,41 @@
 계획에서 새로 만드는 파일은 다음 책임만 갖는다.
 
 - `supabase/config.toml`: 로컬 Supabase·Edge Function 설정
-- `supabase/migrations/0001_initial.sql`: 테이블·인덱스·RLS 정책
-- `supabase/seed.sql`: 발표용 더미 계열사·모임·사용자 데이터
-- `supabase/functions/_shared/`: Edge Function 공용 타입, 검증, OpenRouter 클라이언트
-- `supabase/functions/verify-demo-entry/index.ts`: 임시 입장 코드 검증과 세션 생성
+- `supabase/migrations/0001_initial.sql`: 테이블·인덱스·유니크 제약·RLS 정책·Realtime publication·RPC 함수
+- `supabase/seed.sql`: 발표용 더미 계열사·모임 데이터와 로컬 개발용 입장 코드
+- `supabase/functions/_shared/cors.ts`: CORS 헤더와 프리플라이트 응답
+- `supabase/functions/_shared/supabase.ts`: 호출자 스코프 클라이언트·서비스 클라이언트 생성
+- `supabase/functions/_shared/auth.ts`: 코드 해시, 만료·레이트리밋 판정 (순수 함수)
+- `supabase/functions/_shared/llm.ts`: OpenRouter 호출, 타임아웃, 1회 재시도
+- `supabase/functions/_shared/recommendation.ts`: 매칭 프롬프트 생성·응답 파서·결정적 fallback 정렬 (순수 함수)
+- `supabase/functions/_shared/chat.ts`: 채팅 익명화·약속 프롬프트 생성·응답 파서 (순수 함수)
+- `supabase/functions/verify-demo-entry/index.ts`: 임시 입장 코드 검증과 세션 결합
 - `supabase/functions/recommend-meetings/index.ts`: 후보 필터링, LLM 호출, 응답 검증
-- `supabase/functions/suggest-meeting-plan/index.ts`: 최근 채팅 기반 약속 추천
-- `supabase/functions/complete-meeting/index.ts`: 만남 성사·연결 이력·사진첩 상태 처리
+- `supabase/functions/suggest-meeting-plan/index.ts`: 최근 채팅 기반 약속 추천, `meeting_plans` 저장
+- `supabase/functions/complete-meeting/index.ts`: `complete_meeting_tx` 호출
+- `supabase/functions/reset-demo/index.ts`: 관리 토큰 검증 후 발표 데이터 초기화
 - `src/index.html`: 기존 화면에 인증·원격 데이터·Realtime 호출을 연결하는 유일한 프론트엔드 파일
 - `tests/backend-contract.test.mjs`: 브라우저에 비밀 키가 노출되지 않는지와 클라이언트 호출 계약을 검사
-- `tests/edge-functions.test.ts`: Deno 순수 함수(입장 코드, JSON 검증, 익명화) 테스트
+- `tests/edge-functions.test.mjs`: `_shared/` 순수 함수(입장 코드, JSON 검증, 익명화)와 마이그레이션 스키마 검사. Node 24로 실행
 - `.env.example`: 필요한 공개 설정 키 이름만 문서화하고 실제 값은 넣지 않음
 - `docs/deployment.md`: Supabase 프로젝트·Edge Function·GitHub Pages 배포 절차와 발표 체크리스트
 
 ---
 
-### Task 1: Supabase 로컬 골격과 환경 설정
+### Task 1: Supabase 골격·환경 설정·규칙 문서 갱신
 
 **Files:**
 - Create: `supabase/config.toml`
 - Create: `.env.example`
 - Create: `tests/backend-contract.test.mjs`
 - Modify: `.gitignore`
+- Modify: `AGENTS.md`, `README.md` (외부 라이브러리 규칙을 이중 모드 기준으로 갱신, 삭제된 v5 파일 언급 제거)
 
 **Interfaces:**
-- Produces environment names: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `OPENROUTER_MODEL`, `DEMO_MODE`.
-- Produces Edge Function secret names: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`.
+- Browser config block: `const CONFIG={SUPABASE_URL:'',SUPABASE_ANON_KEY:'',DEMO_MODE:true}` and `const BACKEND=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_ANON_KEY)`.
+- Edge Function secret names set manually: `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `DEMO_RESET_TOKEN`. `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` are injected by the platform (`SUPABASE_` prefixed secrets cannot be set manually); `_shared/supabase.ts` reads `SUPABASE_SECRET_KEY` first and falls back to the injected service role key.
 
-- [ ] **Step 1: Write the failing contract test**
+- [x] **Step 1: Write the failing contract test**
 
 ```js
 import assert from 'node:assert/strict';
@@ -75,12 +103,12 @@ test('환경 예시는 공개 키와 함수 설정을 구분한다', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/backend-contract.test.mjs`
 Expected: FAIL because `.env.example` does not exist.
 
-- [ ] **Step 3: Add configuration files**
+- [x] **Step 3: Add configuration files**
 
 Create `.env.example` with empty placeholders only:
 
@@ -91,43 +119,44 @@ OPENROUTER_MODEL=openrouter/free
 DEMO_MODE=true
 ```
 
-Create `supabase/config.toml` with the project config generated by `supabase init`, keeping function JWT verification enabled by default.
+Create `supabase/config.toml` with the minimal project config (functions keep JWT verification enabled by default; `reset-demo` sets `verify_jwt = false` because it authenticates with its own token).
 
-- [ ] **Step 4: Update ignore rules and run the test**
+- [x] **Step 4: Update ignore rules, AGENTS.md, README.md**
 
-Add `.env`, `.env.local`, `supabase/.temp/` and `supabase/.branches/` to `.gitignore`. Run `node --test tests/backend-contract.test.mjs`; expected result is PASS.
+Add `.env`, `.env.local`, `supabase/.temp/` and `supabase/.branches/` to `.gitignore`. In `AGENTS.md` and `README.md`, replace "외부 라이브러리·네트워크 요청 없음" with the 이중 모드 rule and remove references to the deleted `src/달빛한화_PeerLink_v5.html`. Run `node --test tests/backend-contract.test.mjs`; expected result is PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add .gitignore .env.example supabase/config.toml tests/backend-contract.test.mjs
+git add .gitignore .env.example supabase/config.toml tests/backend-contract.test.mjs AGENTS.md README.md
 git commit -m "feat: Supabase 실행 골격과 환경 설정 추가"
 ```
 
-### Task 2: 데이터베이스 스키마·시드·RLS
+### Task 2: 데이터베이스 스키마·시드·RLS·RPC
 
 **Files:**
 - Create: `supabase/migrations/0001_initial.sql`
 - Create: `supabase/seed.sql`
-- Create: `tests/edge-functions.test.ts`
+- Create: `tests/edge-functions.test.mjs`
 
 **Interfaces:**
-- `profiles` stores private `employee_no`, `real_name` and public matching fields.
-- `meetings`, `meeting_members`, `messages`, `meeting_plans`, `connections`, `photos`, `demo_access_codes`, `demo_sessions`, `ai_recommendation_runs` match the design spec.
-- RLS guarantees: users can read/update their own profile; members can read/write messages in joined meetings; only a function/service role changes demo codes and connection reveal state.
+- `profiles` stores private `real_name` (and nullable `employee_no` for pilot only) and public matching fields.
+- `companies`, `meetings`, `meeting_members`, `messages`, `meeting_plans`, `connections`, `albums`, `demo_access_codes`, `demo_sessions`, `demo_entry_attempts`, `ai_recommendation_runs` match the design spec (12 tables).
+- RPC: `my_connections()`, `room_members(p_meeting_id)`, `room_summaries()`, `complete_meeting_tx(p_meeting_id)`.
+- RLS guarantees: users can read/update their own profile; members can read/write messages in joined meetings; only a function/service role changes demo codes and connections.
 
-- [ ] **Step 1: Write schema assertions**
+- [x] **Step 1: Write schema assertions**
 
-Add a SQL test checklist in `tests/edge-functions.test.ts` as a list of required table and column names. The test reads `supabase/migrations/0001_initial.sql` and asserts `create table` statements for all eleven tables plus `enable row level security` for user data tables.
+In `tests/edge-functions.test.mjs`, read `supabase/migrations/0001_initial.sql` and assert `create table` statements for all twelve tables, `enable row level security` for user data tables, the Realtime publication line for `messages` and `meeting_plans`, the ordered-pair unique constraint on `connections`, and the four RPC function names.
 
-- [ ] **Step 2: Run the schema test to verify it fails**
+- [x] **Step 2: Run the schema test to verify it fails**
 
-Run: `deno test tests/edge-functions.test.ts`
+Run: `node --test tests/edge-functions.test.mjs`
 Expected: FAIL because the migration file does not exist.
 
-- [ ] **Step 3: Write the migration**
+- [x] **Step 3: Write the migration**
 
-Create UUID primary keys where records are user-facing, use `auth.users(id)` for `profiles.user_id`, use `timestamptz` defaults of `now()`, and add indexes on `meeting_members.user_id`, `messages.meeting_id`, `connections.user_a_id`, and `connections.user_b_id`.
+Create UUID primary keys where records are user-facing, use `auth.users(id)` for `profiles.user_id`, use `timestamptz` defaults of `now()`, and add indexes on `meeting_members.user_id`, `messages.meeting_id`, `connections.user_a_id`, and `connections.user_b_id`. Add `check (user_a_id < user_b_id)` and `unique (user_a_id, user_b_id)` on `connections`. Add `check (char_length(body) <= 500)` on `messages`.
 
 Add RLS policies with these exact rules:
 
@@ -147,64 +176,69 @@ for select using (
 );
 ```
 
-Add equivalent insert policies for a joined member and deny direct browser updates to `connections`, `demo_access_codes`, and `ai_recommendation_runs`.
+Add equivalent insert policies for a joined member, allow members to update `meeting_plans.confirmed`, and deny direct browser writes to `connections`, `albums`, `demo_access_codes`, `demo_sessions`, `demo_entry_attempts`, and `ai_recommendation_runs`.
 
-- [ ] **Step 4: Add deterministic seed data**
+Add `alter publication supabase_realtime add table public.messages, public.meeting_plans;`.
 
-Insert the existing `COMPANIES`, `MEETINGS` and `PLANS` values as Korean seed rows. Add one active demo code with a short expiry only for local development; production codes are inserted through the function or Dashboard and never committed.
+Add the four `security definer` RPC functions with `set search_path = public` and explicit membership checks. `complete_meeting_tx` marks the meeting completed, upserts one ordered `connections` row per participant pair with `on conflict do nothing`, upserts one `albums` row per meeting, and returns `{connection_count, album_id}` so repeated calls return the same result.
 
-- [ ] **Step 5: Run schema and local database checks**
+- [x] **Step 4: Add deterministic seed data**
 
-Run: `deno test tests/edge-functions.test.ts` and `supabase db reset`.
-Expected: tests PASS, migration applies without SQL errors, and seeded companies/meetings are visible in the local Table Editor.
+Insert the existing `COMPANIES`, `MEETINGS` and `PLANS` values as Korean seed rows using stable UUIDs. Add one active demo code with a short expiry only for local development; production codes are inserted through the Dashboard and never committed.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Run schema and local database checks** _(코드·Node 테스트 완료 · Supabase 배포 후 라이브 검증 필요)_
+
+Run: `node --test tests/edge-functions.test.mjs`; expected PASS. When Supabase CLI is available, run `supabase db reset` and confirm the migration applies without SQL errors and seeded companies/meetings are visible in the local Table Editor. Enable **Anonymous sign-ins** in the Dashboard (Authentication → Providers) — the migration cannot do this.
+
+- [x] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/0001_initial.sql supabase/seed.sql tests/edge-functions.test.ts
+git add supabase/migrations/0001_initial.sql supabase/seed.sql tests/edge-functions.test.mjs
 git commit -m "feat: 네트워킹 데이터 스키마와 RLS 추가"
 ```
 
 ### Task 3: 발표용 공용 QR 입장과 프로필 저장
 
 **Files:**
-- Create: `supabase/functions/verify-demo-entry/index.ts`
+- Create: `supabase/functions/_shared/cors.ts`
+- Create: `supabase/functions/_shared/supabase.ts`
 - Create: `supabase/functions/_shared/auth.ts`
+- Create: `supabase/functions/verify-demo-entry/index.ts`
 - Modify: `src/index.html`
-- Modify: `tests/backend-contract.test.mjs`
+- Modify: `tests/backend-contract.test.mjs`, `tests/edge-functions.test.mjs`
 
 **Interfaces:**
 - `POST /functions/v1/verify-demo-entry` request: `{ code: string }`; the caller must already have a Supabase anonymous JWT.
 - Success response: `{ expires_at: string }`; the function binds the caller’s `auth.uid()` to `demo_sessions`.
-- Error response: `{ error_code: "INVALID_CODE" | "EXPIRED_CODE" | "RATE_LIMITED" }` with HTTP 401/429.
-- Browser functions: `enterDemo(code)`, `saveProfile(profile)`, `loadProfile()`.
+- Error response: `{ error_code: "INVALID_CODE" | "EXPIRED_CODE" | "RATE_LIMITED" | "CODE_EXHAUSTED" }` with HTTP 401/429.
+- Pure helpers in `_shared/auth.ts`: `hashCode(code): Promise<string>` (SHA-256 hex), `evaluateCode(row, now): 'ok'|'INVALID_CODE'|'EXPIRED_CODE'|'CODE_EXHAUSTED'`, `isRateLimited(attemptTimestamps, now, limit=20, windowMs=600000): boolean`.
+- Browser functions: `enterDemo(code, realName, nick)`, `saveProfile()`, `loadProfile()`.
 
-- [ ] **Step 1: Add failing client contract tests**
+- [x] **Step 1: Add failing contract tests**
 
-Extend `tests/backend-contract.test.mjs` to require `src/index.html` to contain `verify-demo-entry`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and a visible Korean error message for expired codes. Assert that the input elements for 사번·본명·닉네임 have `font-size:16px` through the existing CSS rule.
+Extend `tests/backend-contract.test.mjs` to require `src/index.html` to contain `verify-demo-entry`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `signInAnonymously`, and a visible Korean error message for expired codes. Assert the entry overlay has inputs for 본명·닉네임·코드 but **no 사번 input**. Extend `tests/edge-functions.test.mjs` with `evaluateCode`/`isRateLimited` cases.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
-Run: `node --test tests/backend-contract.test.mjs`
+Run: `node --test tests/backend-contract.test.mjs tests/edge-functions.test.mjs`
 Expected: FAIL because the current file has no Supabase client or entry screen.
 
-- [ ] **Step 3: Implement server verification**
+- [x] **Step 3: Implement server verification**
 
-In `enterDemo`, call `supabase.auth.signInAnonymously()` first, then call `verify-demo-entry` with the code and the resulting JWT. In the function, hash the code with SHA-256, query `demo_access_codes`, reject inactive/expired codes, increment the use count atomically, and insert a short-lived `demo_sessions` row for the caller’s `auth.uid()`. Return only `expires_at`. Apply a per-IP and per-code limit of 20 attempts per 10 minutes.
+In `enterDemo`, call `supabase.auth.signInAnonymously()` first, then call `verify-demo-entry` with the code. In the function, respond to `OPTIONS` with CORS headers, hash the code with SHA-256, count `demo_entry_attempts` for the IP hash in the last 10 minutes (reject with 429 above 20), query `demo_access_codes`, reject inactive/expired/exhausted codes, increment the use count atomically, and insert a short-lived `demo_sessions` row for the caller’s `auth.uid()`. Return only `expires_at`.
 
-- [ ] **Step 4: Add the entry screen without changing existing tab markup**
+- [x] **Step 4: Add the entry screen without changing existing tab markup**
 
-Add an initial overlay in `src/index.html` with QR 안내 문구, 6자리 코드 input, 사번·본명·닉네임 inputs, and a 48px CTA. On success, hide the overlay, load the profile into `S.profile`, and call existing `go('home')`/`renderProfile()` functions. On failure, show one of the specified Korean messages and keep the user on the overlay.
+Add an initial overlay in `src/index.html` (shown only when `BACKEND`) with QR 안내 문구, 6자리 코드 input, 본명·닉네임 inputs, and a 48px CTA. On success, hide the overlay, upsert the profile (`saveProfile`), load it into `S.profile`, and call existing `go('home')`/`renderProfile()`. On failure, show one of the specified Korean messages and keep the user on the overlay. On page load with an existing session and profile, skip the overlay.
 
-- [ ] **Step 5: Run browser contract and manual flow checks**
+- [ ] **Step 5: Run browser contract and manual flow checks** _(코드·Node 테스트 완료 · Supabase 배포 후 라이브 검증 필요)_
 
-Run: `node --test tests/backend-contract.test.mjs`.
-Manual: open the GitHub Pages URL, submit an invalid code, submit the seeded code, save a nickname, refresh, and confirm the session/profile are restored. Confirm the overlay and inputs remain usable at 375×812.
+Run: `node --test tests/*.mjs`. Manual (after deployment): open the GitHub Pages URL, submit an invalid code, submit the seeded code, save a nickname, refresh, and confirm the session/profile are restored. Confirm the overlay and inputs remain usable at 375×812.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
-git add src/index.html supabase/functions/verify-demo-entry supabase/functions/_shared/auth.ts tests/backend-contract.test.mjs
+git add src/index.html supabase/functions/verify-demo-entry supabase/functions/_shared tests
 git commit -m "feat: 발표용 QR 입장과 프로필 저장 연결"
 ```
 
@@ -215,50 +249,52 @@ git commit -m "feat: 발표용 QR 입장과 프로필 저장 연결"
 - Create: `supabase/functions/_shared/recommendation.ts`
 - Create: `supabase/functions/recommend-meetings/index.ts`
 - Modify: `src/index.html`
-- Modify: `tests/edge-functions.test.ts`
+- Modify: `tests/edge-functions.test.mjs`
 
 **Interfaces:**
 - `POST /functions/v1/recommend-meetings` request: `{}`; identity comes from the caller JWT.
-- Success response: `{ recommendations: Recommendation[]; model: string; fallback: boolean }`.
+- Success response: `{ recommendations: Recommendation[]; candidates: Candidate[]; model: string; fallback: boolean }`.
 - `Recommendation`: `{ meeting_id: string; rank: number; reason: string; cautions: string[] }`.
-- Pure helper: `buildRecommendationPrompt(profile, candidates, knownIds): string`.
-- Pure helper: `parseRecommendations(raw, candidateIds): Recommendation[]`.
+- `Candidate`: `{ id, title, emoji, region, when_label, capacity, tags, member_count, known_count, joined }` — everything the card needs so the browser does not query meetings separately.
+- Pure helper: `buildRecommendationPrompt(profile, candidates): {system, user}`.
+- Pure helper: `parseRecommendations(raw, candidateIds): Recommendation[]` (throws `INVALID_LLM_OUTPUT`).
+- Pure helper: `deterministicOrder(candidates, profile): Recommendation[]` (fallback).
 
-- [ ] **Step 1: Write failing pure-function tests**
+- [x] **Step 1: Write failing pure-function tests**
 
-Add tests for: prompt excludes `employee_no`/`real_name`; parser rejects unknown meeting IDs; parser removes duplicate ranks; parser accepts a valid Korean reason; malformed JSON returns a typed error.
+Add tests for: prompt excludes `employee_no`/`real_name`; parser rejects unknown meeting IDs; parser removes duplicate ranks; parser accepts a valid Korean reason; malformed JSON throws `INVALID_LLM_OUTPUT`; deterministic fallback puts region matches first and respects `direction`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/edge-functions.test.ts`
+Run: `node --test tests/edge-functions.test.mjs`
 Expected: FAIL because `_shared/recommendation.ts` does not exist.
 
-- [ ] **Step 3: Implement prompt and parser**
+- [x] **Step 3: Implement prompt and parser**
 
-Define the prompt input as sanitized profile fields (`company`, `region`, `age_band`, `interests`, `hobbies`, `group_size`, `matching_preferences`) and candidate summaries (`id`, `title`, `region`, `member_count`, `known_member_ratio`, `tags`). Require JSON only and instruct the model to select at most three candidate IDs.
+Define the prompt input as sanitized profile fields (`company`, `region`, `age_band`, `interests`, `hobbies`, `group_size`, `matching_preferences`) and candidate summaries (`id`, `title`, `region`, `member_count`, `known_member_ratio`, `tags`). Require JSON only and instruct the model to rank every candidate and give a one-sentence Korean reason each.
 
-`parseRecommendations` must parse the first JSON object, keep only candidate IDs, sort by ascending rank, re-number ranks from 1, and require a non-empty `reason` of at most 160 Korean characters. Throw `INVALID_LLM_OUTPUT` when no valid recommendation remains.
+`parseRecommendations` must parse the first JSON object, keep only candidate IDs, sort by ascending rank, re-number ranks from 1, and require a non-empty `reason` of at most 160 characters. Throw `INVALID_LLM_OUTPUT` when no valid recommendation remains.
 
-- [ ] **Step 4: Implement OpenRouter client**
+- [x] **Step 4: Implement OpenRouter client**
 
-Use `fetch('https://openrouter.ai/api/v1/chat/completions')` with `Authorization: Bearer ${OPENROUTER_API_KEY}`, `model: Deno.env.get('OPENROUTER_MODEL') ?? 'openrouter/free'`, `temperature: 0.2`, and a 20-second `AbortController` timeout. Do not log prompts, responses, API keys, or profile names.
+Use `fetch('https://openrouter.ai/api/v1/chat/completions')` with `Authorization: Bearer ${apiKey}`, the model passed in from `index.ts` (`Deno.env.get('OPENROUTER_MODEL') ?? 'openrouter/free'`), `temperature: 0.2`, `response_format: {type:'json_object'}`, and a 20-second `AbortController` timeout. Retry once on timeout/HTTP 5xx/429. Do not log prompts, responses, API keys, or profile names.
 
-- [ ] **Step 5: Implement the function and fallback**
+- [x] **Step 5: Implement the function and fallback**
 
-Fetch the caller profile, prior connections, and active meetings using the caller-scoped Supabase client. Filter out full/cancelled meetings and enforce the profile’s region, scope, and group-size constraints. Call the LLM once, retry once on timeout/invalid JSON, then return deterministic ordering by region match, known-member preference, and meeting ID. Store only model, status, latency, and returned IDs in `ai_recommendation_runs`.
+Fetch the caller profile, prior connections (service client), and open meetings. Filter out full/cancelled meetings and enforce the profile’s region-first ordering, scope, and group-size constraints. Call the LLM once, retry once on invalid JSON, then fall back to `deterministicOrder`. Store only model, status, fallback, latency, and returned IDs in `ai_recommendation_runs`.
 
-- [ ] **Step 6: Connect the matching tab**
+- [x] **Step 6: Connect the matching tab**
 
-Replace the local `MEETINGS` sort in `renderMatch()` with `loadRecommendations()`. Keep the existing orange known-member bar and show the LLM `reason` below each card. While waiting, disable duplicate calls; on `fallback:true`, show a small Korean 안내 문구 without breaking the cards.
+In backend mode, `renderMatch()` calls `loadRecommendations()` and renders `candidates` in `recommendations` order. Keep the existing orange known-member bar and show the LLM `reason` in the existing AI 추천 이유 box. While waiting, disable duplicate calls; on `fallback:true`, show a small Korean 안내 문구 without breaking the cards. Local demo mode keeps the current local sort.
 
-- [ ] **Step 7: Run tests and local function checks**
+- [ ] **Step 7: Run tests and local function checks** _(코드·Node 테스트 완료 · Supabase 배포 후 라이브 검증 필요)_
 
-Run: `deno test tests/edge-functions.test.ts`; expected PASS. Run: `supabase functions serve recommend-meetings --env-file .env.local`; call it with a valid local session and confirm the response matches the JSON contract. Test invalid output with a stubbed OpenRouter response and confirm fallback is returned.
+Run: `node --test tests/*.mjs`; expected PASS. After deployment: call `recommend-meetings` with a valid session and confirm the response matches the JSON contract. Test invalid output with a stubbed OpenRouter response and confirm fallback is returned.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
-git add supabase/functions/_shared supabase/functions/recommend-meetings src/index.html tests/edge-functions.test.ts
+git add supabase/functions/_shared supabase/functions/recommend-meetings src/index.html tests/edge-functions.test.mjs
 git commit -m "feat: OpenRouter LLM 매칭 추천 연결"
 ```
 
@@ -266,39 +302,39 @@ git commit -m "feat: OpenRouter LLM 매칭 추천 연결"
 
 **Files:**
 - Modify: `src/index.html`
-- Create: `supabase/functions/_shared/chat.ts`
+- Create: `supabase/functions/_shared/chat.ts` (익명화 helper는 Task 6과 공유)
 - Modify: `tests/backend-contract.test.mjs`
 
 **Interfaces:**
-- Browser function `joinMeeting(meetingId): Promise<void>` inserts `meeting_members` and refreshes rooms.
-- Browser function `subscribeRoom(meetingId, onMessage): RealtimeChannel` subscribes to `messages` for that meeting.
-- Browser function `sendMessage(meetingId, body): Promise<void>` inserts a message after trimming to 500 characters.
-- Display function `labelForParticipant(participant, currentUserConnections, roomRevealed): string` returns nickname until the reveal rule permits real name.
+- Browser `joinMeet(id)` in backend mode inserts `meeting_members` (duplicate = no-op) and refreshes rooms.
+- Browser `subscribeRoom(meetingId)` subscribes to `postgres_changes` on `messages` and `meeting_plans` filtered by `meeting_id`.
+- Browser `sendMsg()` inserts a message after trimming to 500 characters.
+- RPC `room_members(p_meeting_id)` returns nickname/avatar/company and `real_name` only when connected or the meeting is completed.
 
-- [ ] **Step 1: Write failing static contracts**
+- [x] **Step 1: Write failing static contracts**
 
-Assert that `src/index.html` contains `supabase.channel`, `meeting_members`, `messages`, and a 500-character message limit. Assert that existing `joinMeet`, `sendMsg`, and `openRoom` remain present so the current demo controls continue to work.
+Assert that `src/index.html` contains `supabase.channel` (or `.channel(`), `meeting_members`, `room_members`, `room_summaries`, and a 500-character message limit. Assert that existing `joinMeet`, `sendMsg`, and `openRoom` remain present so the current demo controls continue to work.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/backend-contract.test.mjs`
 Expected: FAIL because the current functions only mutate `S`.
 
-- [ ] **Step 3: Connect join and room loading**
+- [x] **Step 3: Connect join and room loading**
 
-Make `joinMeet(id)` insert the authenticated user into `meeting_members`, handle a duplicate insert as a no-op, then call `renderRooms()`. Make `renderRooms()` query memberships and meeting summaries instead of only `S.joined`; preserve the existing empty-state copy.
+Make `joinMeet(id)` insert the authenticated user into `meeting_members`, handle a duplicate insert as a no-op, then call `renderRooms()`. Make `renderRooms()` call `room_summaries()` instead of only `S.joined`; preserve the existing empty-state copy.
 
-- [ ] **Step 4: Add Realtime subscription and message insert**
+- [x] **Step 4: Add Realtime subscription and message insert**
 
-On `openRoom(id)`, fetch the last 50 messages, render them, and subscribe to `postgres_changes` for `public.messages` filtered by `meeting_id=eq.${id}`. Remove the channel in `closeRoom()`. On send, trim whitespace, reject empty input, insert, clear the input, and render the inserted message from Realtime or the insert response exactly once.
+On `openRoom(id)`, fetch `room_members`, the last 50 messages, the latest plan, render them, and subscribe to `postgres_changes` for `public.messages` and `public.meeting_plans` filtered by `meeting_id=eq.${id}`. Remove the channel in `closeRoom()`. On send, trim whitespace, reject empty input, insert, clear the input, and render the inserted message exactly once (dedupe by message id).
 
-- [ ] **Step 5: Preserve anonymous naming rules**
+- [x] **Step 5: Preserve anonymous naming rules**
 
-Query only nickname and connection status for other members. Show a real name only when the current user has a `connections` row for that participant or the room is revealed. Never expose `real_name` in the general room list query.
+Only `room_members` exposes `real_name`, and only for connected users or completed meetings. Never select `real_name` from `profiles` for other users in the browser.
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit** _(커밋 완료 · 배포 후 수동 검증 항목은 docs/deployment.md §7)_
 
-Run: `node --test tests/backend-contract.test.mjs`. Open two browser windows with two demo sessions, join the same meeting, send messages in both directions, close/reopen the room, and confirm messages persist and rooms do not cross-talk.
+Run: `node --test tests/*.mjs`. After deployment: open two browser windows with two demo sessions, join the same meeting, send messages in both directions, close/reopen the room, and confirm messages persist and rooms do not cross-talk.
 
 ```bash
 git add src/index.html supabase/functions/_shared/chat.ts tests/backend-contract.test.mjs
@@ -311,41 +347,42 @@ git commit -m "feat: 모임 참가와 실시간 익명 채팅 연결"
 - Create: `supabase/functions/suggest-meeting-plan/index.ts`
 - Create: `supabase/functions/complete-meeting/index.ts`
 - Modify: `src/index.html`
-- Modify: `tests/edge-functions.test.ts`
+- Modify: `tests/edge-functions.test.mjs`
 
 **Interfaces:**
 - `POST /functions/v1/suggest-meeting-plan` request: `{ meeting_id: string }`.
-- Success response: `{ place: string; time: string; activity: string; nearby: string[]; fallback: boolean }`.
+- Success response: `{ plan: { id, place, time, activity, nearby: string[] }, fallback: boolean }`; the plan is also inserted into `meeting_plans`.
 - `POST /functions/v1/complete-meeting` request: `{ meeting_id: string }`.
 - Success response: `{ revealed: true; connection_count: number; album_id: string }`.
+- Pure helpers in `_shared/chat.ts`: `anonymizeMessages(messages, memberIds, {limit:30, maxLen:300})`, `buildPlanPrompt(meeting, anonymized)`, `parsePlan(raw)`.
 
-- [ ] **Step 1: Write failing tests for chat minimization and reveal idempotency**
+- [x] **Step 1: Write failing tests for chat minimization**
 
-Test that the prompt builder takes only the latest 30 messages, truncates each message to 300 characters, replaces participant names with anonymous IDs, and never includes employee numbers. Test that completing the same meeting twice returns the same album and does not duplicate connections.
+Test that `anonymizeMessages` keeps only the latest 30 messages, truncates each to 300 characters, replaces sender IDs with `참가자1`… labels, and that `buildPlanPrompt` output never contains a sender UUID or the string `employee_no`. Test that `parsePlan` rejects missing fields.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/edge-functions.test.ts`
-Expected: FAIL because the two functions and helpers do not exist.
+Run: `node --test tests/edge-functions.test.mjs`
+Expected: FAIL because the helpers do not exist.
 
-- [ ] **Step 3: Implement `suggest-meeting-plan`**
+- [x] **Step 3: Implement `suggest-meeting-plan`**
 
-Verify the caller is a meeting member, fetch the latest 30 messages, build a Korean JSON-only prompt, call the shared OpenRouter client, validate all four fields, and return a static fallback plan when both attempts fail. Never store raw chat content in `ai_recommendation_runs`.
+Verify the caller is a meeting member, fetch the latest 30 messages, build a Korean JSON-only prompt, call the shared OpenRouter client, validate all four fields, insert the plan into `meeting_plans`, and return it. Use a static fallback plan when both attempts fail. Never store raw chat content in `ai_recommendation_runs`.
 
-- [ ] **Step 4: Implement `complete-meeting`**
+- [x] **Step 4: Implement `complete-meeting`**
 
-Verify the caller is a member, update the meeting to completed, upsert one `connections` row for every participant pair, create one album record or deterministic album ID, and return the resulting connection count. Use a database transaction/RPC so retrying the request is safe.
+Verify the caller is a member, call `complete_meeting_tx(meeting_id)`, and return the resulting `connection_count` and `album_id`. Retrying the request returns the same values.
 
-- [ ] **Step 5: Connect existing UI controls**
+- [x] **Step 5: Connect existing UI controls and add the AI 전송 안내**
 
-Make `aiPlan()` call `suggest-meeting-plan`, render the returned card, and let `confirmPlan()` persist `meeting_plans`. Make the existing “만남 완료 (데모)” button call `complete-meeting`, then run the current veil animation, set `r.revealed`, open the album, and refresh home planet/connection counts.
+Make `aiPlan()` call `suggest-meeting-plan` and render the returned card (other members receive it via Realtime). Let `confirmPlan()` update `meeting_plans.confirmed`. Make the existing “만남 완료 (데모)” button call `complete-meeting`, then run the current veil animation, reload `room_members` (now with real names), open the album, and refresh home planet/connection counts through `my_connections()`. Add the notice **"AI 추천 약속 잡기를 누르면 최근 대화 일부가 익명 처리되어 외부 AI에 전송됩니다"** to the `＋` sheet item in both modes.
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit** _(커밋 완료 · 배포 후 수동 검증 항목은 docs/deployment.md §7)_
 
-Run Deno tests and manually complete the core flow: join → chat → AI plan → confirm → complete meeting → reveal → home planet lit. Repeat the completion click and confirm no duplicate satellites appear.
+Run `node --test tests/*.mjs`. After deployment, manually complete the core flow: join → chat → AI plan → confirm → complete meeting → reveal → home planet lit. Repeat the completion click and confirm no duplicate satellites appear.
 
 ```bash
-git add supabase/functions/suggest-meeting-plan supabase/functions/complete-meeting src/index.html tests/edge-functions.test.ts
+git add supabase/functions/suggest-meeting-plan supabase/functions/complete-meeting src/index.html tests/edge-functions.test.mjs
 git commit -m "feat: AI 약속 추천과 만남 완료 연결"
 ```
 
@@ -354,43 +391,43 @@ git commit -m "feat: AI 약속 추천과 만남 완료 연결"
 **Files:**
 - Modify: `src/index.html`
 - Create: `supabase/functions/reset-demo/index.ts`
-- Modify: `supabase/migrations/0001_initial.sql`
 - Create: `docs/deployment.md`
+- Modify: `tests/backend-contract.test.mjs`
 
 **Interfaces:**
-- `POST /functions/v1/reset-demo` request: `{}`; only an active presentation admin token may call it.
-- Success response: `{ reset: true }`.
-- Browser query parameter `?mode=demo` selects presentation copy and short-lived session behavior.
+- `POST /functions/v1/reset-demo` request: `{}` with header `x-demo-reset-token`; only the server-side `DEMO_RESET_TOKEN` may call it.
+- Success response: `{ reset: true }`; 403 otherwise.
+- Browser query parameter `?admin=1` reveals the reset control on the profile tab (backend mode only).
 
-- [ ] **Step 1: Add failure-mode tests**
+- [x] **Step 1: Add failure-mode tests**
 
-Add Node tests for visible Korean messages when Supabase is unreachable, OpenRouter times out, the session expires, and the QR code opens without a valid `mode` parameter. Add a test that no raw prompt is written to the frontend source.
+Add Node tests for visible Korean messages when Supabase is unreachable, OpenRouter falls back, and the session expires. Add a test that no raw prompt is written to the frontend source.
 
-- [ ] **Step 2: Implement reset function**
+- [x] **Step 2: Implement reset function**
 
-Delete demo-created `messages`, `meeting_members`, `meeting_plans`, `connections`, `photos`, and non-seed profiles in one transaction; keep companies, meetings, and seed data. Require a server-side reset token and return 403 for missing/invalid tokens.
+Delete demo-created `messages`, `meeting_members`, `meeting_plans`, `connections`, `albums`, `demo_sessions`, and non-seed profiles; reset `meetings.status` to `open`; keep companies, meetings, and seed data. Require the reset token and return 403 for missing/invalid tokens.
 
-- [ ] **Step 3: Add loading, retry, and reset UI**
+- [x] **Step 3: Add loading, retry, and reset UI**
 
-Add a global loading state for network actions, a “다시 시도” action for recoverable errors, session-expired handling that returns to the entry overlay, and a presentation-only reset control hidden unless `mode=demo&admin=1` is present. Keep all controls at least 44px high.
+Add a global network error toast with "다시 시도" wording, session-expired handling that returns to the entry overlay, and a presentation-only reset control hidden unless `?admin=1` is present. Keep all controls at least 44px high.
 
-- [ ] **Step 4: Document deployment and QR creation**
+- [x] **Step 4: Document deployment and QR creation**
 
-In `docs/deployment.md`, document: create two Supabase projects, apply migrations, seed only development data, set Edge Function secrets, deploy functions, configure GitHub Pages URL, create a QR for the public URL, create a short-lived demo code, and perform the five-step regression flow from `AGENTS.md`. Explicitly state that no secret key belongs in GitHub Pages.
+In `docs/deployment.md`, document: create two Supabase projects, enable Anonymous sign-ins, apply migrations, seed only development data, set Edge Function secrets, deploy functions, fill `CONFIG` in `src/index.html`, create a QR for the public URL, create a short-lived demo code via SQL, charge OpenRouter credit and check model ID/limits, and perform the five-step regression flow from `AGENTS.md`. Explicitly state that no secret key belongs in GitHub Pages.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit** _(커밋 완료 · 배포 후 수동 검증 항목은 docs/deployment.md §7)_
 
-Run: `node --test tests/*.mjs` and `deno test tests/*.ts`. Test the app with network throttling, expired sessions, and an invalid OpenRouter key; each case must show a recovery message rather than a blank screen.
+Run: `node --test tests/*.mjs`. After deployment, test the app with network throttling, expired sessions, and an invalid OpenRouter key; each case must show a recovery message rather than a blank screen.
 
 ```bash
-git add src/index.html supabase/functions/reset-demo supabase/migrations/0001_initial.sql docs/deployment.md tests
+git add src/index.html supabase/functions/reset-demo docs/deployment.md tests
 git commit -m "feat: 발표 모드 오류 처리와 데모 초기화 추가"
 ```
 
-### Task 8: 25명 파일럿 전환 점검
+### Task 8: 25명 파일럿 전환 점검 (P2 — 제출 후)
 
 **Files:**
-- Modify: `supabase/migrations/0001_initial.sql`
+- Modify: `supabase/migrations/` (새 마이그레이션 파일 추가)
 - Modify: `src/index.html`
 - Modify: `docs/deployment.md`
 - Create: `tests/pilot-security.test.mjs`
@@ -398,6 +435,7 @@ git commit -m "feat: 발표 모드 오류 처리와 데모 초기화 추가"
 **Interfaces:**
 - Pilot configuration uses `DEMO_MODE=false`, a separate Supabase project URL, a selected team-code or email-magic-link verifier, and the same `recommend-meetings` response contract.
 - Public client continues to use only `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+- 사번(`employee_no`)은 이 단계에서만 인증 후 저장한다.
 
 - [ ] **Step 1: Write security regression tests**
 
@@ -409,7 +447,7 @@ Add policies so a user can read only their own private profile fields, meeting m
 
 - [ ] **Step 3: Add consent and deletion controls**
 
-Add a Korean consent copy before the first AI request explaining that anonymized profile/chat excerpts are sent to an external LLM provider. Add a profile deletion action that removes the user’s profile, messages, memberships, photos, and connections through an authenticated Edge Function.
+Add a Korean consent step before the first AI request explaining that anonymized profile/chat excerpts are sent to an external LLM provider. Add a profile deletion action that removes the user’s profile, messages, memberships, albums, and connections through an authenticated Edge Function.
 
 - [ ] **Step 4: Configure model/privacy limits**
 
@@ -417,21 +455,22 @@ Set the OpenRouter model ID through a secret, disable prompt/output logging, sel
 
 - [ ] **Step 5: Verify pilot checklist and commit**
 
-Run all Node and Deno tests. Perform a two-user privacy test, a 25-user seed load test, and a manual QR session test on iOS Safari and Android Chrome at 375×812. Record the result in `docs/deployment.md`.
+Run all Node tests. Perform a two-user privacy test, a 25-user seed load test, and a manual QR session test on iOS Safari and Android Chrome at 375×812. Record the result in `docs/deployment.md`.
 
 ```bash
-git add supabase/migrations/0001_initial.sql src/index.html docs/deployment.md tests/pilot-security.test.mjs
+git add supabase/migrations src/index.html docs/deployment.md tests/pilot-security.test.mjs
 git commit -m "fix: 25명 파일럿 접근과 개인정보 정책 보강"
 ```
 
 ## 전체 완료 기준
 
+- 백엔드 설정이 비어 있으면 기존 로컬 데모가 네트워크 요청 없이 그대로 동작한다.
 - 공용 QR 하나로 여러 사용자가 동시에 발표용 세션을 만들 수 있다.
 - 만료·잘못된 입장 코드는 세션을 만들지 않는다.
 - 프로필 변경 후 LLM 추천 결과와 추천 이유가 갱신된다.
 - LLM이 존재하지 않는 모임을 추천하지 않으며, 장애 시 fallback이 표시된다.
 - 같은 모임의 채팅은 Realtime으로 전달되고 다른 모임에는 노출되지 않는다.
 - AI 약속 추천·확정·만남 완료·베일 벗기기·사진첩·홈 행성 점등이 하나의 흐름으로 동작한다.
-- 사번·본명이 일반 사용자 화면과 LLM 요청에 노출되지 않는다.
+- 본명이 연결되지 않은 사용자 화면과 LLM 요청에 노출되지 않는다.
 - 발표 프로젝트와 파일럿 프로젝트가 분리되고, GitHub Pages에 비밀 키가 없다.
-- 기존 `tests/responsive-ui.test.mjs`와 새 계약·Deno 테스트가 모두 통과한다.
+- 기존 `tests/responsive-ui.test.mjs`와 새 계약·순수 함수 테스트가 모두 `node --test tests/*.mjs`로 통과한다.
