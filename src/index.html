@@ -281,21 +281,23 @@ nav#nav svg{width:23px;height:23px}
 .sw.on::after{left:23px}
 
 /* ===== 반응형 레이아웃 ===== */
-@media (min-width:431px) and (max-width:599px){
+/* mobile: compact phone and narrow foldable layouts */
+@media (max-width:599px){
   #app{width:100%;max-width:520px;}
-  .tabpane{padding-left:24px;padding-right:24px;}
+  .tabpane{padding-left:clamp(18px,5vw,24px);padding-right:clamp(18px,5vw,24px);}
 }
 
-@media (min-width:600px){
+/* web: tablet and browser-sized layouts */
+@media (min-width:600px) and (max-width:1023px){
   #app{
-    width:100%; max-width:760px;
+    width:100%; max-width:960px;
     box-shadow:0 0 60px rgba(0,0,0,.7);
     border-left:1px solid #1b2038; border-right:1px solid #1b2038;
   }
   .tabpane{
     padding:clamp(24px,4vw,42px) clamp(24px,5vw,56px) 34px;
   }
-  .space{width:min(42vw,360px);height:min(42vw,360px);}
+  .space{width:min(50vw,420px);height:min(50vw,420px);}
   .spacestats{
     display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;
   }
@@ -313,10 +315,11 @@ nav#nav svg{width:23px;height:23px}
   @keyframes up-wide{from{transform:translate(-50%,40%);opacity:.7}to{transform:translate(-50%,0);opacity:1}}
 }
 
-@media (min-width:900px){
-  #app{max-width:1280px;}
+/* pc: desktop workspace layout */
+@media (min-width:1024px){
+  #app{max-width:1440px;}
   nav#nav{
-    top:0; right:auto; bottom:0; width:104px;
+    top:0; right:auto; bottom:0; width:112px;
     flex-direction:column; align-items:stretch; gap:8px;
     padding:calc(22px + env(safe-area-inset-top)) 12px calc(22px + env(safe-area-inset-bottom));
     border-top:0; border-right:1px solid var(--line);
@@ -328,7 +331,7 @@ nav#nav svg{width:23px;height:23px}
   nav#nav button.on{background:rgba(243,115,33,.12);}
   nav#nav svg{width:24px;height:24px;}
   .navbdg{top:7px;left:calc(50% + 7px);}
-  .tabpane{left:104px;padding:34px clamp(32px,5vw,80px) 42px;}
+  .tabpane{left:112px;padding:34px clamp(32px,5vw,80px) 42px;}
   .sheet{max-width:640px;}
   .tabpane > h1.app{font-size:25px;}
   .tabpane > .sub{font-size:14px;}
@@ -341,8 +344,8 @@ nav#nav svg{width:23px;height:23px}
   #tab-profile > .cta,
   #tab-profile > .hint,
   #tab-profile > .t{max-width:920px;}
-  #roomview,#album,#satview{left:104px;}
-  #toast{left:120px;right:32px;max-width:760px;margin:0 auto;}
+  #roomview,#album,#satview{left:112px;}
+  #toast{left:128px;right:32px;max-width:760px;margin:0 auto;}
 }
 </style>
 </head>
