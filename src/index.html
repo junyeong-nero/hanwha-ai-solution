@@ -279,6 +279,71 @@ nav#nav svg{width:23px;height:23px}
 .sw::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.25s}
 .sw.on{background:var(--orange)}
 .sw.on::after{left:23px}
+
+/* ===== 반응형 레이아웃 ===== */
+@media (min-width:431px) and (max-width:599px){
+  #app{width:100%;max-width:520px;}
+  .tabpane{padding-left:24px;padding-right:24px;}
+}
+
+@media (min-width:600px){
+  #app{
+    width:100%; max-width:760px;
+    box-shadow:0 0 60px rgba(0,0,0,.7);
+    border-left:1px solid #1b2038; border-right:1px solid #1b2038;
+  }
+  .tabpane{
+    padding:clamp(24px,4vw,42px) clamp(24px,5vw,56px) 34px;
+  }
+  .space{width:min(42vw,360px);height:min(42vw,360px);}
+  .spacestats{
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;
+  }
+  .spacestats .card{min-width:0;}
+  .meetgrid{
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;
+  }
+  .meetgrid > .meet{margin-bottom:0;}
+  #roomlist{max-width:820px;}
+  #album .pgrid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:960px;}
+  .sheet{
+    left:50%; right:auto; width:min(calc(100% - 32px),640px); bottom:16px;
+    border-radius:20px; transform:translateX(-50%); animation-name:up-wide;
+  }
+  @keyframes up-wide{from{transform:translate(-50%,40%);opacity:.7}to{transform:translate(-50%,0);opacity:1}}
+}
+
+@media (min-width:900px){
+  #app{max-width:1280px;}
+  nav#nav{
+    top:0; right:auto; bottom:0; width:104px;
+    flex-direction:column; align-items:stretch; gap:8px;
+    padding:calc(22px + env(safe-area-inset-top)) 12px calc(22px + env(safe-area-inset-bottom));
+    border-top:0; border-right:1px solid var(--line);
+  }
+  nav#nav button{
+    flex:none; width:100%; min-height:64px; gap:5px; padding:10px 4px;
+    border-radius:14px; font-size:11px;
+  }
+  nav#nav button.on{background:rgba(243,115,33,.12);}
+  nav#nav svg{width:24px;height:24px;}
+  .navbdg{top:7px;left:calc(50% + 7px);}
+  .tabpane{left:104px;padding:34px clamp(32px,5vw,80px) 42px;}
+  .sheet{max-width:640px;}
+  .tabpane > h1.app{font-size:25px;}
+  .tabpane > .sub{font-size:14px;}
+  #tab-home .space{width:min(32vw,420px);height:min(32vw,420px);margin-top:12px;}
+  #tab-home .spacestats,
+  #tab-home #colist{max-width:860px;}
+  .meetgrid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1080px;}
+  #tab-chat #roomlist{max-width:920px;}
+  #tab-profile > .card,
+  #tab-profile > .cta,
+  #tab-profile > .hint,
+  #tab-profile > .t{max-width:920px;}
+  #roomview,#album,#satview{left:104px;}
+  #toast{left:120px;right:32px;max-width:760px;margin:0 auto;}
+}
 </style>
 </head>
 <body>
@@ -301,7 +366,7 @@ nav#nav svg{width:23px;height:23px}
     <section class="tabpane" id="tab-match">
       <h1 class="app">AI 매칭</h1>
       <p class="sub" id="matchsub"></p>
-      <div id="meets"></div>
+      <div id="meets" class="meetgrid"></div>
       <p class="hint" style="margin-top:4px">주황 띠는 모임 안에 <b style="color:var(--orange-soft)">한 번 이상 만난 사람</b>이 얼마나 있는지를 보여줘요. 프로필 설정을 바꾸면 추천 순서가 달라집니다.</p>
     </section>
 
