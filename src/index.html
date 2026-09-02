@@ -280,6 +280,19 @@ nav#nav svg{width:23px;height:23px}
 .sw.on{background:var(--orange)}
 .sw.on::after{left:23px}
 
+/* ===== 발표 입장 화면 (백엔드 모드에서만 표시) ===== */
+#entry{position:absolute;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:24px 20px;background:linear-gradient(180deg,#0B0E1A,#131838);overflow-y:auto}
+#entry.on{display:flex}
+.ecard{width:100%;max-width:360px}
+.emoon{width:64px;height:64px;border-radius:50%;margin:0 auto 18px;background:radial-gradient(circle at 36% 32%,#FFF7DF,var(--moon) 58%,#CDB983);box-shadow:0 0 26px rgba(245,233,201,.6)}
+.elb{display:block;font-size:13px;font-weight:700;margin:14px 0 7px}
+.elb small{font-weight:500;color:var(--tx3);margin-left:6px}
+#entry input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;color:var(--tx);outline:none;min-height:48px}
+#entry input:focus{border-color:var(--orange)}
+.eerr{min-height:20px;font-size:12.5px;color:#FF8A80;margin:10px 0 6px}
+#matchnote:empty{display:none}
+#matchnote{font-size:12.5px;color:var(--orange-soft);background:rgba(243,115,33,.08);border:1px solid rgba(243,115,33,.25);border-radius:11px;padding:9px 12px;margin-bottom:12px}
+
 /* ===== 반응형 레이아웃 ===== */
 /* 모바일: 휴대폰과 좁은 폴더블 화면 */
 @media (max-width:599px){
@@ -374,6 +387,7 @@ nav#nav svg{width:23px;height:23px}
     <section class="tabpane" id="tab-match">
       <h1 class="app">AI 매칭</h1>
       <p class="sub" id="matchsub"></p>
+      <div id="matchnote"></div>
       <div id="meets" class="meetgrid"></div>
       <p class="hint" style="margin-top:4px">주황 띠는 모임 안에 <b style="color:var(--orange-soft)">한 번 이상 만난 사람</b>이 얼마나 있는지를 보여줘요. 프로필 설정을 바꾸면 추천 순서가 달라집니다.</p>
     </section>
@@ -460,8 +474,13 @@ nav#nav svg{width:23px;height:23px}
         </div>
       </div>
 
+      <div class="card" id="adminbox" style="display:none;margin-bottom:16px">
+        <b style="font-size:14px">발표 관리</b>
+        <p class="hint" style="margin:6px 0 12px">발표용 데이터(참가·채팅·약속·연결)를 모두 비웁니다. 관리 토큰이 필요해요.</p>
+        <button class="cta line" onclick="resetDemo()">발표 데이터 초기화</button>
+      </div>
       <button class="cta line" onclick="location.reload()">데모 처음부터 다시 보기</button>
-      <p class="hint" style="text-align:center;margin-top:12px">데모 프로토타입 · 데이터는 브라우저 안에서만 동작합니다</p>
+      <p class="hint" style="text-align:center;margin-top:12px" id="modehint">데모 프로토타입 · 데이터는 브라우저 안에서만 동작합니다</p>
     </section>
   </main>
 
@@ -519,7 +538,7 @@ nav#nav svg{width:23px;height:23px}
     <div class="dimbg" onclick="hidePlus()"></div>
     <div class="sheet">
       <div class="grip"></div>
-      <button class="psheet-item" onclick="aiPlan()"><i>🌙</i><div>AI 추천 약속 잡기<small>채팅 내용을 읽고 장소·시간·활동·맛집까지 한 번에</small></div></button>
+      <button class="psheet-item" onclick="aiPlan()"><i>🌙</i><div>AI 추천 약속 잡기<small>채팅 내용을 읽고 장소·시간·활동·맛집까지 한 번에 · 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요</small></div></button>
       <button class="psheet-item" id="plusAlbum" onclick="hidePlus();openAlbum()"><i>🖼️</i><div>모임 사진첩<small>만남이 성사되면 열려요</small></div></button>
       <button class="psheet-item" onclick="hidePlus();toast('모임 정보','이 모임은 <b>매칭 탭의 AI 추천</b>으로 만들어졌어요.')"><i>ℹ️</i><div>모임 정보</div></button>
     </div>
@@ -555,11 +574,36 @@ nav#nav svg{width:23px;height:23px}
     </div>
   </div>
 
+  <!-- 발표 입장 화면 (백엔드 모드에서만) -->
+  <div id="entry">
+    <div class="ecard">
+      <div class="emoon"></div>
+      <h1 class="app" style="text-align:center">MoonLight <em>Hanwha</em></h1>
+      <p class="sub" style="text-align:center">발표용 체험 화면이에요.<br>화면에 표시된 6자리 입장 코드를 입력해 주세요.</p>
+      <label class="elb" for="e-code">입장 코드</label>
+      <input id="e-code" inputmode="numeric" maxlength="6" placeholder="6자리 숫자" autocomplete="one-time-code">
+      <label class="elb" for="e-name">본명<small>베일 벗기기 때만 공개돼요</small></label>
+      <input id="e-name" maxlength="10" placeholder="홍길동" autocomplete="off">
+      <label class="elb" for="e-nick">닉네임<small>익명 채팅에서 쓰여요</small></label>
+      <input id="e-nick" maxlength="8" placeholder="달토끼" autocomplete="off" onkeydown="if(event.key==='Enter')enterDemo()">
+      <p class="eerr" id="e-err"></p>
+      <button class="cta" id="e-btn" onclick="enterDemo()">입장하기</button>
+      <p class="hint" style="text-align:center;margin-top:14px">사번은 수집하지 않아요 · 강한 신원 인증이 아닌 발표용 접근 제어입니다</p>
+    </div>
+  </div>
+
   <div id="toast" onclick="this.classList.remove('on')"></div>
 </div>
 
 <script>
-/* ================= 데이터 ================= */
+/* ================= 백엔드 설정 (이중 모드) =================
+   GitHub Pages 배포 시 Supabase 프로젝트 URL과 publishable(anon) 키만 채운다.
+   비어 있으면 아래 하드코딩 데이터만으로 동작하는 로컬 데모 모드가 된다 (네트워크 요청 없음).
+   secret key·OpenRouter 키는 절대 여기 넣지 않는다 — Edge Function 비밀값에만 둔다. */
+const CONFIG={SUPABASE_URL:'',SUPABASE_ANON_KEY:'',DEMO_MODE:true};
+const BACKEND=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_ANON_KEY);
+
+/* ================= 데이터 (로컬 데모 모드 · 백엔드 모드에서는 서버 데이터로 대체됨) ================= */
 const COMPANIES=[
   {id:'aero', name:'한화에어로스페이스', c:'#8B5CF6'},
   {id:'sol',  name:'한화솔루션',        c:'#17A67C'},
@@ -648,9 +692,9 @@ function go(t){
   S.tab=t;
   document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
-  if(t==='home')renderHome();
+  if(t==='home'){renderHome(); if(BACKEND&&ME)loadConnections().then(renderHome);}
   if(t==='match')renderMatch();
-  if(t==='chat')renderRooms();
+  if(t==='chat'){renderRooms(); if(BACKEND&&ME)loadRooms().then(renderRooms);}
 }
 
 /* ================= 홈: 태양계 ================= */
@@ -724,32 +768,48 @@ function openSat(){
 function closeSat(){$('satview').classList.remove('on')}
 
 /* ================= 매칭 ================= */
-function knownIn(m){return m.members.filter(p=>S.met[p]).length}
+function knownIn(m){return m.knownCount!=null?m.knownCount:m.members.filter(p=>S.met[p]).length}
+function memberTotal(m){return m.memberCount!=null?m.memberCount:m.members.length}
 function renderMatch(){
   const P=S.profile;
-  $('matchsub').innerHTML='<b style="color:var(--orange-soft)">'+P.nick+'</b>님의 설정 — '+co(P.company).name+' · '+P.region+' · '+P.sizeMin+'~'+P.sizeMax+'명 기준으로 골랐어요.';
+  $('matchsub').innerHTML='<b style="color:var(--orange-soft)">'+esc(P.nick)+'</b>님의 설정 — '+co(P.company).name+' · '+esc(P.region)+' · '+P.sizeMin+'~'+P.sizeMax+'명 기준으로 골랐어요.';
+  if(BACKEND){loadRecommendations();return}
   const list=[...MEETINGS].sort((a,b)=>{
     const ra=(a.region===P.region?0:1)-(b.region===P.region?0:1); if(ra)return ra;
     const ka=knownIn(a)/a.members.length, kb=knownIn(b)/b.members.length;
     return P.dir==='deep'? kb-ka : ka-kb;
   });
+  renderMatchCards(list,'');
+}
+function renderMatchCards(list,note){
+  $('matchnote').innerHTML=note||'';
   $('meets').innerHTML=list.map(m=>{
-    const kn=knownIn(m), ratio=Math.round(kn/m.members.length*100);
+    const total=memberTotal(m), kn=knownIn(m), ratio=total?Math.round(kn/total*100):0;
     const joined=S.joined.includes(m.id);
     return '<div class="card meet">'
       +'<div class="hd"><div class="em">'+m.em+'</div><div style="flex:1">'
-      +'<h3>'+m.name+'</h3><div class="meta">'+m.region+' · '+m.when+' · '+m.members.length+'명 참여 중 / 정원 '+m.cap+'</div>'
-      +'<div style="margin-top:7px">'+m.tags.map(t=>'<span class="tag">#'+t+'</span>').join('')+'</div>'
+      +'<h3>'+esc(m.name)+'</h3><div class="meta">'+esc(m.region)+' · '+esc(m.when)+' · '+total+'명 참여 중 / 정원 '+m.cap+'</div>'
+      +'<div style="margin-top:7px">'+m.tags.map(t=>'<span class="tag">#'+esc(t)+'</span>').join('')+'</div>'
       +'</div></div>'
       +'<div class="ai">🌙 <b>AI 추천 이유</b> — '+m.ai+'</div>'
       +'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div>'
-      +'<div class="lb"><span>'+(kn? '아는 얼굴 <b>'+kn+'명</b> / '+m.members.length+'명':'모두 새로운 만남')+'</span><span>'+ratio+'%</span></div></div>'
+      +'<div class="lb"><span>'+(kn? '아는 얼굴 <b>'+kn+'명</b> / '+total+'명':'모두 새로운 만남')+'</span><span>'+ratio+'%</span></div></div>'
       +'<button class="cta" '+(joined?'disabled':'')+' onclick="joinMeet(\''+m.id+'\')">'+(joined?'참가 완료 · 채팅 탭에서 확인':'참가')+'</button>'
       +'</div>';
   }).join('');
 }
-function joinMeet(id){
+async function joinMeet(id){
   const m=MEETINGS.find(x=>x.id===id);
+  if(BACKEND){
+    // 중복 참가는 무시(no-op). RLS: 본인 행만 insert 가능
+    const {error}=await sb.from('meeting_members').upsert({meeting_id:id,user_id:ME},{onConflict:'meeting_id,user_id',ignoreDuplicates:true});
+    if(error){netFail('모임 참가');return}
+    if(!S.joined.includes(id))S.joined.push(id);
+    await loadRooms();
+    if(R.rec)renderMatchCards(R.rec.list,R.rec.note);
+    toast('참가 완료','<b>'+esc(m.name)+'</b> 채팅방이 열렸어요');
+    return;
+  }
   S.joined.push(id);
   const seed=[
     {f:'sys',  x:'모임이 열렸어요. 만나기 전까지는 서로 익명이에요 🌙'},
@@ -772,23 +832,29 @@ function renderRooms(){
   }
   $('roomlist').innerHTML=S.joined.map(id=>{
     const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id];
-    const last=r.msgs[r.msgs.length-1];
-    const lastTxt=last.kind==='plan'?'🌙 AI가 약속을 제안했어요':last.x;
+    if(!m||!r)return '';
+    const last=r.msgs.length?r.msgs[r.msgs.length-1]:{x:r.last||'대화를 시작해 보세요',t:r.lastT||''};
+    const lastTxt=last.f==='ai'?'🌙 AI가 약속을 제안했어요':(last.x||'');
     return '<button class="room" onclick="openRoom(\''+id+'\')">'
       +'<span class="av">'+m.em+(r.revealed?'<span class="full">🌕</span>':'')+'</span>'
-      +'<span class="bd"><span class="r1"><b>'+m.name+'<small>'+(m.members.length+1)+'</small></b><time>'+(last.t||'')+'</time></span>'
+      +'<span class="bd"><span class="r1"><b>'+esc(m.name)+'<small>'+(memberTotal(m)+1)+'</small></b><time>'+(last.t||'')+'</time></span>'
       +'<span class="r2"><p>'+esc(String(lastTxt)).slice(0,44)+'</p>'+(r.unread?'<span class="ub">'+r.unread+'</span>':'')+'</span></span></button>';
   }).join('');
 }
 
 /* ================= 채팅방 ================= */
 let CUR=null;
+const UNKNOWN={real:null,nick:'익명',co:null,av:'🌙'};
 function label(pid,room){
-  const p=PEOPLE[pid];
-  if(S.met[pid]||room.revealed) return '<b style="color:var(--tx)">'+p.real+'</b><small>'+co(p.co).name+'</small>';
-  return p.nick+'<small>익명</small>';
+  const p=PEOPLE[pid]||UNKNOWN, c=co(p.co);
+  if((S.met[pid]||room.revealed)&&p.real) return '<b style="color:var(--tx)">'+esc(p.real)+'</b><small>'+(c?c.name:'')+'</small>';
+  return esc(p.nick)+'<small>익명</small>';
 }
-function openRoom(id){
+async function openRoom(id){
+  if(BACKEND){
+    try{await loadRoom(id)}catch(e){netFail('채팅방 열기');return}
+    subscribeRoom(id);
+  }
   CUR=id; const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id];
   r.unread=0; updateBdg();
   $('rname').textContent=m.name;
@@ -798,7 +864,7 @@ function openRoom(id){
   renderBanner();renderMsgs();
   $('roomview').classList.add('on');
 }
-function closeRoom(){$('roomview').classList.remove('on');CUR=null;renderRooms()}
+function closeRoom(){$('roomview').classList.remove('on');CUR=null;if(BACKEND)unsubscribeRoom();renderRooms()}
 function renderBanner(){
   const r=S.rooms[CUR];
   if(r.planned&&!r.revealed){
@@ -813,23 +879,30 @@ function renderMsgs(){
     if(m.f==='me')return '<div class="msg me"><div><div class="bub">'+esc(m.x)+'</div></div></div>';
     if(m.f==='ai'){
       const p=m.plan;
-      return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI</div>'
+      return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
         +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
-        +'<div class="row"><i>📍</i><span><b>'+p.place+'</b></span></div>'
-        +'<div class="row"><i>🕖</i><span>'+p.when+'</span></div>'
-        +'<div class="row"><i>🎯</i><span>'+p.act+'</span></div>'
-        +'<div class="row"><i>🍜</i><span>'+p.food+'</span></div>'
-        +'<button '+(S.rooms[CUR].planned?'disabled':'')+' onclick="confirmPlan('+i+')">'+(S.rooms[CUR].planned?'약속 확정됨':'이 약속으로 확정')+'</button>'
+        +'<div class="row"><i>📍</i><span><b>'+esc(p.place)+'</b></span></div>'
+        +'<div class="row"><i>🕖</i><span>'+esc(p.when)+'</span></div>'
+        +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
+        +'<div class="row"><i>🍜</i><span>'+esc(p.food)+'</span></div>'
+        +'<button '+(S.rooms[CUR].planned||r.revealed?'disabled':'')+' onclick="confirmPlan('+i+')">'+(S.rooms[CUR].planned||r.revealed?'약속 확정됨':'이 약속으로 확정')+'</button>'
         +'</div></div></div>';
     }
-    const p=PEOPLE[m.f];
+    const p=PEOPLE[m.f]||UNKNOWN;
     return '<div class="msg"><div class="mav">'+p.av+'</div><div><div class="who">'+label(m.f,r)+'</div><div class="bub">'+esc(m.x)+'</div></div></div>';
   }).join('');
   $('msgs').scrollTop=$('msgs').scrollHeight;
 }
-function sendMsg(){
+async function sendMsg(){
   const v=$('cin').value.trim(); if(!v||!CUR)return;
   const r=S.rooms[CUR];
+  if(BACKEND){
+    const body=v.slice(0,500); $('cin').value='';   // 메시지 500자 제한
+    const {data,error}=await sb.from('messages').insert({meeting_id:CUR,sender_id:ME,body}).select('id,sender_id,body,created_at').single();
+    if(error){netFail('메시지 전송');$('cin').value=body;return}
+    if(pushMsg(r,data))renderMsgs();   // Realtime으로 같은 메시지가 와도 id로 한 번만 그린다
+    return;
+  }
   r.msgs.push({f:'me',x:v,t:nowT()});
   $('cin').value=''; renderMsgs();
   const m=MEETINGS.find(x=>x.id===CUR);
@@ -851,11 +924,22 @@ function openPlus(){
   $('pluswrap').classList.add('on');
 }
 function hidePlus(){$('pluswrap').classList.remove('on')}
-function aiPlan(){
+async function aiPlan(){
   hidePlus();
   const r=S.rooms[CUR];
   if(r.msgs.some(m=>m.f==='ai')){toast('AI 약속','이미 이 방에 추천 약속이 있어요');return}
   $('typing').style.display='block';$('typing').textContent='MoonLight AI가 대화를 읽고 있어요…';
+  if(BACKEND){
+    try{
+      const d=await callFn('suggest-meeting-plan',{meeting_id:CUR});
+      const pl=d.plan||{};
+      applyPlan(r,{id:pl.id,place:pl.place,time_label:pl.time,activity:pl.activity,nearby:pl.nearby||[],confirmed:false,source:d.fallback?'fallback':'llm',created_at:new Date().toISOString()});
+      if(d.fallback)toast('기본 제안','AI 응답이 지연되어 기본 약속안을 보여드려요');
+      if(CUR)renderMsgs();
+    }catch(e){ if(e.code!=='UNAUTHORIZED')toast('AI 약속','약속 제안에 실패했어요 · 다시 시도해 주세요') }
+    finally{$('typing').style.display='none'}
+    return;
+  }
   setTimeout(()=>{
     $('typing').style.display='none';
     r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
@@ -863,8 +947,18 @@ function aiPlan(){
     if(CUR)renderMsgs();
   },1600);
 }
-function confirmPlan(){
+async function confirmPlan(i){
   const r=S.rooms[CUR];
+  if(BACKEND){
+    const msg=r.msgs[i]; if(!msg||!msg.planId)return;
+    const {error}=await sb.from('meeting_plans').update({confirmed:true}).eq('id',msg.planId);
+    if(error){netFail('약속 확정');return}
+    r.planned=msg.plan;
+    r.msgs.push({f:'sys',confirmOf:msg.planId,x:'📅 약속이 확정되었습니다 — '+msg.plan.when+' · '+msg.plan.place});
+    renderBanner();renderMsgs();
+    toast('약속 확정','만남 이후 이 방의 베일이 벗겨져요 🌕');
+    return;
+  }
   r.planned=PLANS[CUR];
   r.msgs.push({f:'sys',x:'📅 약속이 확정되었습니다 — '+r.planned.when+' · '+r.planned.place});
   renderBanner();renderMsgs();
@@ -872,20 +966,39 @@ function confirmPlan(){
 }
 
 /* ================= 베일 벗기기 ================= */
-function doReveal(){
+function placeholderPhotos(m){
+  // 발표 단계 사진첩은 플레이스홀더만 (실제 업로드는 파일럿 이후 범위)
+  return [
+    {g:'linear-gradient(140deg,#F37321,#8B5CF6)',l:'첫 만남 단체샷'},
+    {g:'linear-gradient(140deg,#17A67C,#2BB3C0)',l:(m.tags[0]||'모임')+' 하는 중'},
+    {g:'linear-gradient(140deg,#E8B84B,#E86A8A)',l:'다 같이 한 컷'},
+    {g:'linear-gradient(140deg,#5A9CF3,#B49BE0)',l:'다음에 또 만나요'},
+  ];
+}
+async function doReveal(){
   const m=MEETINGS.find(x=>x.id===CUR), r=S.rooms[CUR];
-  $('veiltxt').textContent=m.members.map(p=>PEOPLE[p].nick).join(', ')+' 님의 이름이 공개됩니다';
+  let res=null;
+  if(BACKEND){
+    // 서버에서 연결 이력·앨범을 먼저 만든다 (멱등). 실패하면 애니메이션 없이 종료
+    try{res=await callFn('complete-meeting',{meeting_id:CUR})}
+    catch(e){ if(e.code!=='UNAUTHORIZED')toast('만남 완료','처리에 실패했어요 · 다시 시도해 주세요'); return }
+  }
+  $('veiltxt').textContent=m.members.map(p=>(PEOPLE[p]||UNKNOWN).nick).join(', ')+' 님의 이름이 공개됩니다';
   $('veil').classList.add('on');
-  setTimeout(()=>{
+  setTimeout(async()=>{
     $('veil').classList.remove('on');
     r.revealed=true; r.planned=null;
+    r.photos=placeholderPhotos(m);
+    if(BACKEND){
+      const id=CUR;
+      await Promise.all([loadConnections(),loadRooms()]);
+      await openRoom(id);
+      S.rooms[id].msgs.push({f:'sys',x:'🌕 달빛을 통해 베일이 벗겨졌습니다 — 이제 서로의 이름과 계열사가 보여요. 사진첩이 열렸어요!'});
+      renderMsgs();
+      toast('커넥션 활성화','연결 '+(res?res.connection_count:0)+'개 · 새 행성이 빛나기 시작했어요 ✨');
+      return;
+    }
     m.members.forEach(p=>S.met[p]=true);
-    r.photos=[
-      {g:'linear-gradient(140deg,#F37321,#8B5CF6)',l:'첫 만남 단체샷'},
-      {g:'linear-gradient(140deg,#17A67C,#2BB3C0)',l:m.tags[0]+' 하는 중'},
-      {g:'linear-gradient(140deg,#E8B84B,#E86A8A)',l:'다 같이 한 컷'},
-      {g:'linear-gradient(140deg,#5A9CF3,#B49BE0)',l:'다음에 또 만나요'},
-    ];
     r.msgs.push({f:'sys',x:'🌕 달빛을 통해 베일이 벗겨졌습니다 — 이제 서로의 이름과 계열사가 보여요. 사진첩이 열렸어요!'});
     m.members.forEach(p=>r.msgs.push({f:p,x:'저 '+PEOPLE[p].real+'이에요! 오늘 정말 즐거웠어요 😊',t:nowT()}));
     openRoom(CUR);
@@ -906,17 +1019,17 @@ function openAlbum(){
 function closeAlbum(){$('album').classList.remove('on')}
 
 /* ================= 프로필 ================= */
-function setP(k,v){S.profile[k]=v;renderProfile();toast('설정 저장','매칭 추천에 바로 반영돼요')}
-function cycleAvatar(){const i=AVATARS.indexOf(S.profile.av);S.profile.av=AVATARS[(i+1)%AVATARS.length];renderProfile()}
-function bumpAge(d){S.profile.age=Math.min(45,Math.max(20,S.profile.age+d));renderProfile()}
+function setP(k,v){S.profile[k]=v;renderProfile();profileChanged();toast('설정 저장','매칭 추천에 바로 반영돼요')}
+function cycleAvatar(){const i=AVATARS.indexOf(S.profile.av);S.profile.av=AVATARS[(i+1)%AVATARS.length];renderProfile();profileChanged()}
+function bumpAge(d){S.profile.age=Math.min(45,Math.max(20,S.profile.age+d));renderProfile();profileChanged()}
 function bumpSize(k,d){
   const P=S.profile;
   if(k==='min')P.sizeMin=Math.min(P.sizeMax,Math.max(2,P.sizeMin+d));
   else P.sizeMax=Math.max(P.sizeMin,Math.min(10,P.sizeMax+d));
-  renderProfile();
+  renderProfile();profileChanged();
 }
-function toggleBal(){S.profile.balance=!S.profile.balance;renderProfile();toast('설정 저장','매칭 추천에 바로 반영돼요')}
-function tgl(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);renderProfile()}
+function toggleBal(){S.profile.balance=!S.profile.balance;renderProfile();profileChanged();toast('설정 저장','매칭 추천에 바로 반영돼요')}
+function tgl(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);renderProfile();profileChanged()}
 function renderProfile(){
   const P=S.profile;
   $('pfav').textContent=P.av;
@@ -940,7 +1053,7 @@ function renderProfile(){
   $('f-dir').innerHTML=[['deep','깊은 유대 — 만난 사람과 또'],['wide','넓은 인맥 — 새로운 만남']].map(([v,l])=>
     '<button class="'+(P.dir===v?'on':'')+'" onclick="setP(\'dir\',\''+v+'\')">'+l+'</button>').join('');
 }
-$('nick').addEventListener('input',e=>{S.profile.nick=e.target.value||'달토끼'});
+$('nick').addEventListener('input',e=>{S.profile.nick=e.target.value||'달토끼';profileChanged()});
 
 /* 직접 추가 */
 let ADDKIND=null;
@@ -970,12 +1083,228 @@ function confirmAdd(){
     if(!HOBS.includes(v))HOBS.push(v);
     if(!S.profile.hobbies.includes(v))S.profile.hobbies.push(v);
   }
-  hideAdd();renderProfile();
+  hideAdd();renderProfile();profileChanged();
   toast('추가 완료','<b>'+esc(v)+'</b> 항목이 선택됐어요 · 매칭에 반영돼요');
+}
+
+/* ================= 백엔드 모드 (Supabase + Edge Functions) =================
+   CONFIG가 비어 있으면 아래 함수들은 호출되지 않는다.
+   서버 데이터를 PEOPLE / MEETINGS / S 와 같은 모양으로 채워 넣어 렌더 함수는 두 모드가 공유한다. */
+let sb=null;      // supabase-js 클라이언트
+let ME=null;      // 현재 사용자 id (auth.uid)
+let CH=null;      // 열려 있는 채팅방의 Realtime 채널
+const R={rec:null,recLoading:false,recDirty:true,saveTimer:null,seen:new Set()};
+const ENTRY_MSG={
+  INVALID_CODE:'입장 코드가 올바르지 않아요',
+  EXPIRED_CODE:'입장 코드가 만료됐어요. 발표 화면의 새 코드를 확인해 주세요',
+  RATE_LIMITED:'시도가 너무 많아요. 잠시 후 다시 시도해 주세요',
+  CODE_EXHAUSTED:'입장 코드 사용 횟수를 초과했어요',
+  UNAUTHORIZED:'세션이 만료됐어요. 다시 입장해 주세요',
+  NETWORK:'네트워크 연결을 확인해 주세요 · 다시 시도',
+};
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('script'));document.head.appendChild(s)})}
+function fmtT(iso){const d=new Date(iso);if(isNaN(d))return '';const h=d.getHours();return (h<12?'오전 ':'오후 ')+((h%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')}
+function netFail(what){toast('네트워크 오류',(what||'요청')+'에 실패했어요 · 연결을 확인하고 다시 시도해 주세요')}
+function showEntry(){$('entry').classList.add('on');entryErr('')}
+function hideEntry(){$('entry').classList.remove('on')}
+function entryErr(m){$('e-err').textContent=m||''}
+
+async function initBackend(){
+  // 로컬 데모 데이터는 비우고 서버 데이터로만 채운다
+  MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
+  S.joined=[]; S.rooms={};
+  $('modehint').textContent='발표용 백엔드 모드 · 데이터는 Supabase에 저장됩니다';
+  try{
+    await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js');
+    sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+    const {data:{session}}=await sb.auth.getSession();
+    if(session){ME=session.user.id; if(await loadProfile()){await afterLogin();return}}
+  }catch(e){netFail('초기화')}
+  showEntry();
+}
+/* Edge Function 호출 · 오류 코드 추출 */
+async function fnCode(error){
+  try{ if(error&&error.context&&typeof error.context.json==='function'){const j=await error.context.json();return j.error_code||'UNKNOWN'} }catch(_){}
+  return error&&error.name==='FunctionsFetchError'?'NETWORK':'UNKNOWN';
+}
+async function callFn(name,body,headers){
+  const {data,error}=await sb.functions.invoke(name,{body:body||{},headers:headers||{}});
+  if(error){
+    const code=await fnCode(error);
+    if(code==='UNAUTHORIZED'){toast('세션 만료',ENTRY_MSG.UNAUTHORIZED);showEntry()}
+    throw Object.assign(new Error(code),{code});
+  }
+  return data;
+}
+/* 발표 입장: 익명 세션 → 입장 코드 검증 → 프로필 저장 */
+async function enterDemo(){
+  const code=$('e-code').value.trim(), name=$('e-name').value.trim(), nick=$('e-nick').value.trim();
+  if(!/^\d{6}$/.test(code))return entryErr('입장 코드 6자리를 입력해 주세요');
+  if(!name||!nick)return entryErr('본명과 닉네임을 입력해 주세요');
+  const btn=$('e-btn'); btn.disabled=true; btn.textContent='확인 중…'; entryErr('');
+  try{
+    let {data:{session}}=await sb.auth.getSession();
+    if(!session){const r=await sb.auth.signInAnonymously(); if(r.error)throw r.error; session=r.data.session}
+    ME=session.user.id;
+    await callFn('verify-demo-entry',{code});
+    S.profile.nick=nick; S.profile.realName=name;
+    await saveProfile(true);
+    hideEntry(); await afterLogin();
+  }catch(e){ entryErr(ENTRY_MSG[e.code]||'입장에 실패했어요. 다시 시도해 주세요') }
+  finally{btn.disabled=false;btn.textContent='입장하기'}
+}
+/* 프로필 저장·복원 */
+function profileRow(){
+  const P=S.profile;
+  return {user_id:ME,real_name:P.realName||P.nick,nickname:P.nick,avatar:P.av,company_id:P.company,region:P.region,age:P.age,
+    gender:P.gender,mbti:P.mbti,interests:P.interests,hobbies:P.hobbies,group_size_min:P.sizeMin,group_size_max:P.sizeMax,
+    matching_preferences:{balance:P.balance,scope:P.scope,direction:P.dir},updated_at:new Date().toISOString()};
+}
+async function saveProfile(now){
+  if(!BACKEND||!ME||!sb)return;
+  clearTimeout(R.saveTimer);
+  const run=async()=>{const {error}=await sb.from('profiles').upsert(profileRow()); if(error)netFail('설정 저장'); else R.recDirty=true};
+  if(now)return run();
+  R.saveTimer=setTimeout(run,600);
+}
+function profileChanged(){ if(BACKEND)saveProfile(); }
+async function loadProfile(){
+  const {data,error}=await sb.from('profiles').select('*').eq('user_id',ME).maybeSingle();
+  if(error||!data)return false;
+  const P=S.profile, mp=data.matching_preferences||{};
+  P.nick=data.nickname; P.realName=data.real_name; P.av=data.avatar||P.av; P.company=data.company_id||P.company;
+  P.region=data.region||P.region; P.age=data.age||P.age; P.gender=data.gender; P.mbti=data.mbti||P.mbti;
+  P.interests=data.interests||[]; P.hobbies=data.hobbies||[]; P.sizeMin=data.group_size_min||4; P.sizeMax=data.group_size_max||6;
+  P.balance=!!mp.balance; P.scope=mp.scope||'all'; P.dir=mp.direction||'wide';
+  if(P.region&&!REGIONS.includes(P.region))REGIONS.push(P.region);   // 직접 추가한 항목 복원
+  P.interests.forEach(v=>{if(!INTS.includes(v))INTS.push(v)});
+  P.hobbies.forEach(v=>{if(!HOBS.includes(v))HOBS.push(v)});
+  return true;
+}
+async function afterLogin(){
+  await Promise.all([loadConnections(),loadRooms()]);
+  R.recDirty=true;
+  renderHome();renderProfile();updateBdg();go('home');
+  if(new URLSearchParams(location.search).get('admin')==='1')$('adminbox').style.display='block';
+}
+/* 커넥션 → S.met / PEOPLE (홈 행성 점등·위성) */
+async function loadConnections(){
+  const {data,error}=await sb.rpc('my_connections'); if(error){netFail('커넥션 조회');return}
+  Object.keys(S.met).forEach(k=>delete S.met[k]);
+  (data||[]).forEach(p=>{PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙'};S.met[p.user_id]=true});
+}
+function ensureMeeting(id,patch){
+  let m=MEETINGS.find(x=>x.id===id);
+  if(!m){m={id,em:'🌙',name:'',region:'',when:'',cap:6,tags:[],members:[],ai:''};MEETINGS.push(m)}
+  Object.assign(m,patch); return m;
+}
+function ensureRoom(id){return S.rooms[id]||(S.rooms[id]={msgs:[],unread:0,planned:null,revealed:false,photos:[]})}
+/* 채팅 목록 (room_summaries RPC) */
+async function loadRooms(){
+  const {data,error}=await sb.rpc('room_summaries'); if(error){netFail('채팅 목록');return}
+  S.joined=(data||[]).map(x=>x.meeting_id);
+  (data||[]).forEach(x=>{
+    const m=ensureMeeting(x.meeting_id,{em:x.emoji||'🌙',name:x.title,memberCount:Math.max(0,(x.member_count||1)-1)});
+    const r=ensureRoom(x.meeting_id);
+    r.revealed=x.status==='completed'; r.last=x.last_body; r.lastT=x.last_at?fmtT(x.last_at):'';
+    if(r.revealed&&!r.photos.length)r.photos=placeholderPhotos(m);
+  });
+}
+/* AI 매칭 (recommend-meetings Edge Function) */
+async function loadRecommendations(){
+  if(R.recLoading)return;
+  if(R.rec&&!R.recDirty){renderMatchCards(R.rec.list,R.rec.note);return}
+  R.recLoading=true;
+  $('matchnote').innerHTML='';
+  $('meets').innerHTML='<div class="empty"><i>🌙</i>MoonLight AI가 프로필을 읽고<br>어울리는 모임을 고르는 중이에요…</div>';
+  try{
+    const d=await callFn('recommend-meetings',{});
+    const byId={};
+    (d.candidates||[]).forEach(c=>{
+      byId[c.id]=ensureMeeting(c.id,{em:c.emoji||'🌙',name:c.title,region:c.region,when:c.when_label,cap:c.capacity,tags:c.tags||[],
+        memberCount:Math.max(0,(c.member_count||0)-(c.joined?1:0)),knownCount:c.known_count||0});
+      if(c.joined&&!S.joined.includes(c.id))S.joined.push(c.id);
+    });
+    const list=[];
+    (d.recommendations||[]).forEach(rc=>{
+      const m=byId[rc.meeting_id]; if(!m||list.includes(m))return;
+      m.ai=esc(rc.reason||'')+((rc.cautions||[]).length?' <span style="color:var(--tx3)">· '+esc(rc.cautions.join(' · '))+'</span>':'');
+      list.push(m);
+    });
+    Object.values(byId).forEach(m=>{if(!list.includes(m)){m.ai=m.ai||'기본 추천';list.push(m)}});
+    const note=d.fallback?'☁️ AI 응답이 지연되어 기본 추천을 보여드려요':'';
+    R.rec={list,note,model:d.model}; R.recDirty=false;
+    renderMatchCards(list,note);
+  }catch(e){
+    $('meets').innerHTML='<div class="empty"><i>☁️</i>추천을 불러오지 못했어요.<br><button class="cta line" style="margin-top:14px" onclick="R.recDirty=true;loadRecommendations()">다시 시도</button></div>';
+  }finally{R.recLoading=false}
+}
+/* 채팅방 로드 · Realtime */
+function upsertMember(p){ if(p.user_id===ME)return; PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙'} }
+async function refreshMembers(id){
+  const {data,error}=await sb.rpc('room_members',{p_meeting_id:id}); if(error)return;
+  const m=ensureMeeting(id,{}); m.members=[];
+  (data||[]).forEach(p=>{if(p.user_id===ME)return;m.members.push(p.user_id);upsertMember(p)});
+  m.memberCount=m.members.length;
+}
+function pushMsg(r,x){
+  if(!x||R.seen.has(x.id))return false; R.seen.add(x.id);
+  r.msgs.push({id:x.id,f:x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at)}); return true;
+}
+function applyPlan(r,pl){
+  if(!pl||!pl.id)return;
+  const plan={place:pl.place||'',when:pl.time_label||'',act:pl.activity||'',food:(pl.nearby||[]).join(' · ')};
+  let msg=r.msgs.find(m=>m.f==='ai'&&m.planId===pl.id);
+  if(!msg){
+    if(!r.msgs.some(m=>m.f==='ai'))r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
+    msg={f:'ai',plan,planId:pl.id,t:fmtT(pl.created_at)||nowT()}; r.msgs.push(msg);
+  }
+  msg.plan=plan; msg.source=pl.source;
+  if(pl.confirmed&&!r.revealed){
+    r.planned=plan;
+    if(!r.msgs.some(m=>m.confirmOf===pl.id))r.msgs.push({f:'sys',confirmOf:pl.id,x:'📅 약속이 확정되었습니다 — '+plan.when+' · '+plan.place});
+  }
+}
+async function loadRoom(id){
+  const [mem,msgs,plans]=await Promise.all([
+    sb.rpc('room_members',{p_meeting_id:id}),
+    sb.from('messages').select('id,sender_id,body,created_at').eq('meeting_id',id).order('created_at',{ascending:false}).limit(50),
+    sb.from('meeting_plans').select('*').eq('meeting_id',id).order('created_at',{ascending:false}).limit(1),
+  ]);
+  if(mem.error||msgs.error||plans.error)throw new Error('load');
+  const m=ensureMeeting(id,{}), r=ensureRoom(id);
+  m.members=[]; (mem.data||[]).forEach(p=>{if(p.user_id===ME)return;m.members.push(p.user_id);upsertMember(p)});
+  m.memberCount=m.members.length;
+  R.seen.clear();
+  r.msgs=[{f:'sys',x:r.revealed?'🌕 베일이 벗겨진 모임이에요. 서로의 이름이 보여요':'모임이 열렸어요. 만나기 전까지는 서로 익명이에요 🌙'}];
+  (msgs.data||[]).slice().reverse().forEach(x=>pushMsg(r,x));
+  const pl=(plans.data||[])[0]; if(pl)applyPlan(r,pl);
+}
+function subscribeRoom(id){
+  unsubscribeRoom();
+  CH=sb.channel('room-'+id)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'meeting_id=eq.'+id},async p=>{
+      const r=S.rooms[id]; if(!r||!p.new)return;
+      if(p.new.sender_id!==ME&&!PEOPLE[p.new.sender_id])await refreshMembers(id);   // 새로 들어온 멤버
+      if(pushMsg(r,p.new)&&CUR===id)renderMsgs();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'meeting_plans',filter:'meeting_id=eq.'+id},p=>{
+      const r=S.rooms[id]; if(!r||!p.new)return;
+      applyPlan(r,p.new); if(CUR===id){renderBanner();renderMsgs()}
+    })
+    .subscribe();
+}
+function unsubscribeRoom(){ if(CH&&sb){sb.removeChannel(CH);CH=null} }
+/* 발표 데이터 초기화 (관리 토큰 필요 · ?admin=1 일 때만 버튼 노출) */
+async function resetDemo(){
+  const tok=window.prompt('관리 토큰을 입력하세요'); if(!tok)return;
+  try{ await callFn('reset-demo',{},{'x-demo-reset-token':tok}); toast('초기화 완료','발표 데이터를 비웠어요'); setTimeout(()=>location.reload(),900); }
+  catch(e){ toast('초기화 실패',e.code==='FORBIDDEN'?'토큰이 올바르지 않아요':'다시 시도해 주세요') }
 }
 
 /* ================= 시작 ================= */
 renderHome();renderProfile();updateBdg();
+if(BACKEND)initBackend();
 </script>
 </body>
 </html>
