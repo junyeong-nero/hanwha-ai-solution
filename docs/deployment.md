@@ -4,6 +4,16 @@ MoonLight Hanwha를 GitHub Pages + Supabase + OpenRouter 조합으로 배포하�
 
 > **원칙:** GitHub Pages(`src/index.html`)에는 Supabase URL과 publishable/anon 키만 들어갑니다. Supabase secret key, OpenRouter API 키, 초기화 토큰은 **Edge Function 비밀값에만** 둡니다. `CONFIG`가 비어 있으면 앱은 네트워크 없이 로컬 데모 모드로 동작하므로, 아래 절차가 끝나지 않아도 발표 데모는 깨지지 않습니다.
 
+## 빠른 방법 — 스크립트 한 번
+
+§1의 프로젝트 생성만 대시보드에서 마친 뒤, 저장소 루트의 PowerShell에서:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/deploy-supabase.ps1
+```
+
+프로젝트 ref와 OpenRouter 키(화면에 안 보임)를 물어본 뒤 §2~§3(로그인·연결·마이그레이션·비밀값·함수 배포)을 순서대로 실행합니다. 끝나면 초기화 토큰을 한 번 보여주고 남은 수동 단계(§2 시드, §4 입장 코드, §5 `CONFIG`)를 안내합니다. 아래는 같은 내용을 손으로 할 때의 절차입니다.
+
 ## 0. 준비물
 
 - Supabase 계정 (무료 플랜으로 충분)
