@@ -26,22 +26,33 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ```
 ├── AGENTS.md               ← 이 문서
 ├── README.md               ← 과제 안내·평가표
+├── .env.example            ← 공개 설정 키 이름만 (실제 값 커밋 금지)
 ├── assets/
 │   ├── fonts/PretendardVariable.woff2
 │   └── 한화 AI 솔루션 챌린지 프로젝트 과제 안내.pdf (스캔본, 텍스트 추출 불가)
-├── docs/                   ← 기획 문서
-└── src/
-    ├── index.html          ← 프로토타입 본체 (단일 파일)
-    └── 달빛한화_PeerLink_v5.html  ← 피벗 이전 탐색 버전 (참고용, 수정 금지)
+├── docs/
+│   ├── features.md / background.md / overview.md
+│   ├── deployment.md       ← Supabase·Pages 배포 절차와 발표 체크리스트
+│   └── superpowers/        ← 백엔드 설계(specs)와 실행 계획(plans)
+├── src/
+│   └── index.html          ← 프로토타입 본체 (단일 파일, 이중 모드)
+├── supabase/
+│   ├── config.toml, seed.sql
+│   ├── migrations/         ← 스키마·RLS·RPC
+│   └── functions/          ← Edge Functions (Deno) + _shared/ 순수 로직
+└── tests/                  ← node --test tests/*.mjs
 ```
 
 ## 개발 규칙
 
-### 아키텍처
-- **`src/index.html` 단일 파일** — HTML/CSS/JS 전부 포함, 외부 라이브러리·빌드 도구·네트워크 요청 없음 (폰트만 `../assets/fonts/` 상대 경로 참조)
-- 데모 상태는 전역 `S` 객체 하나에 저장, 새로고침 시 초기화. 백엔드·localStorage 없음 (의도된 설계)
-- 데이터는 `COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS` 상수에 하드코딩
+### 아키텍처 — 이중 모드
+- **`src/index.html` 단일 파일** — HTML/CSS/JS 전부 포함, 빌드 도구 없음 (폰트만 `../assets/fonts/` 상대 경로 참조)
+- **로컬 데모 모드(기본):** 파일 상단 `CONFIG.SUPABASE_URL`이 비어 있으면 외부 네트워크 요청 없이 하드코딩 데이터(`COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS`)와 전역 `S` 객체만으로 동작. 새로고침 시 초기화
+- **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 OpenRouter LLM을 호출. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
+- 두 모드 모두에서 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지하고 `BACKEND` 플래그로만 분기
+- 브라우저에는 anon 키만. secret key·OpenRouter 키가 HTML에 들어가면 `tests/backend-contract.test.mjs`가 실패함
 - 화면 전환은 섹션 show/hide 방식 (SPA 라우터 없음)
+- Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않아 Node 24에서도 그대로 테스트됨 (`node --test tests/*.mjs`)
 
 ### iOS Safari 대응 (수정 시 반드시 유지)
 - `viewport-fit=cover` + `env(safe-area-inset-*)` 패딩 — 노치·홈 인디케이터 대응
@@ -69,14 +80,26 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
   4. 홈 탭 → 해당 계열사 행성 점등·연결 동료 수 증가 확인
   5. 프로필 설정 변경(선호 지역·관계 방향) → 매칭 탭 정렬 변화 확인
 
+## 테스트
+
+```bash
+node --test tests/*.mjs
+```
+
+- `responsive-ui.test.mjs` — 반응형 CSS 구조
+- `backend-contract.test.mjs` — 비밀 키 미노출, 이중 모드·입장 화면·Realtime 호출 계약
+- `edge-functions.test.mjs` — 마이그레이션 스키마 검사, `_shared/` 순수 함수(입장 코드·LLM 파서·익명화)
+
 ## 배포
 
 - **GitHub Pages** — `main` 브랜치 root 배포
 - 접속 주소: `https://junyeong-nero.github.io/hanwha-ai-solution/src/`
 - `main`에 push하면 자동 재배포되므로, **push = 배포**임을 인지하고 동작 확인 후 push할 것
+- Supabase·Edge Function·OpenRouter 설정 절차와 발표 전 체크리스트는 [docs/deployment.md](docs/deployment.md)
 
 ## Git 규칙
 
 - 브랜치: `main` 직접 push (과제용 소규모 저장소)
 - 커밋 메시지: 한국어, `feat:` / `docs:` / `fix:` 프리픽스 사용
-- `src/달빛한화_PeerLink_v5.html`과 `assets/` 안내 PDF는 수정·삭제하지 말 것
+- `assets/` 안내 PDF와 폰트 파일은 수정·삭제하지 말 것
+- `.env`, 실제 키 값, Supabase 대시보드에서 만든 입장 코드는 커밋하지 말 것
