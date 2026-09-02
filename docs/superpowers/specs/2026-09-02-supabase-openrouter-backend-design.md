@@ -22,12 +22,13 @@
 ### 2.1 발표 인증
 
 - 모든 사용자는 하나의 공용 QR로 GitHub Pages의 앱 주소에 접속한다.
-- 발표 화면에 6자리 임시 입장 코드를 표시한다.
-- 입장 코드는 서버에서 만료 시간과 활성화 여부를 확인한다.
-- 클라이언트가 Supabase 익명 세션을 먼저 만든 뒤, 그 세션의 JWT와 함께 코드를 Edge Function에 제출하고, 함수가 해당 세션과 코드를 결합한다.
-- 코드 통과 후 사용자는 **본명과 닉네임**을 입력한다. **발표 단계에서는 사번을 수집하지 않는다.** 공용 QR로 누구나 접속할 수 있는 화면에서 실제 사번을 받는 것은 수집 최소화 원칙과 맞지 않고 발표 시연에 불필요하다. 본명은 베일 벗기기(익명→실명) 기능에 필요하므로 수집하되, 연결이 성사된 상대에게만 노출된다.
-- 사번은 파일럿 단계(2.2)의 신원 확인에서만 다룬다. `profiles.employee_no`는 nullable로 두고 발표 단계에서는 항상 비워 둔다.
-- 이 방식은 발표용 접근 제어이지 강한 신원 인증이 아니다. 화면에 발표용 체험이라는 점을 명시한다.
+- 발표 화면에 6자리 임시 입장 코드를 표시한다. 입장 코드는 서버에서 만료 시간·활성화 여부·사용 횟수·레이트리밋을 확인한다.
+- 사용자는 **입장 코드 + 계열사 + 사번 + 이름**(처음이면 닉네임)을 입력한다. 익명 세션은 브라우저마다 다른 사용자가 되어 **동명이인을 구분할 수 없고 다른 기기에서 이어 쓸 수도 없으므로** 쓰지 않는다.
+- `demo-login` Edge Function이 (계열사, 사번)으로 **결정적 계정**을 만들거나 찾는다. 로그인 이메일은 `계열사.사번@demo.moonlight.local`, 비밀번호는 서버 비밀키 `DEMO_LOGIN_SECRET`로 파생한 HMAC 값이라 클라이언트는 알 수 없다. 함수가 서버에서 대신 로그인해 세션(access/refresh token)만 내려주고, 클라이언트는 `setSession`으로 받는다.
+- 같은 (계열사, 사번)이면 어느 기기·브라우저에서든 같은 계정이라 **프로필·참가 모임·채팅·연결 이력이 그대로 복원**된다.
+- (계열사, 사번)에 이미 프로필이 있는데 입력한 이름이 다르면 `NAME_MISMATCH`로 거부한다. 사번만 아는 제3자가 남의 계정에 들어가는 것을 어느 정도 막는다.
+- **사번 보호:** `profiles.employee_no`는 본인 행에만 저장되고 RLS로 본인만 조회한다. 다른 사용자에게 노출되는 RPC(`room_members`, `my_connections`)와 LLM 프롬프트에는 사번을 넣지 않는다. `(company_id, employee_no)` 유니크 인덱스로 한 사번에 프로필 하나만 대응한다.
+- 이 방식은 발표용 접근 제어이지 사내 SSO 수준의 신원 인증은 아니다. 화면에 발표용 체험이라는 점과 사번의 용도(본인 확인·데이터 복원)를 명시한다.
 
 ### 2.2 파일럿 인증 확장
 
@@ -54,13 +55,13 @@
 
 ```text
 GitHub Pages의 단일 HTML  (설정이 비면 로컬 데모 모드로 동작)
-  ├─ Supabase Auth 익명 세션
+  ├─ Supabase Auth 세션 (demo-login 이 발급한 이메일·비밀번호 계정 세션)
   ├─ Supabase Database 조회·변경 (RLS 적용)
   ├─ Supabase Realtime 채팅·약속 구독
   └─ supabase-js (백엔드 모드에서만 CDN 동적 로드)
 
 Supabase Edge Functions
-  ├─ verify-demo-entry      임시 입장 코드 검증·세션 결합
+  ├─ demo-login             입장 코드 검증 + (계열사, 사번, 이름) 결정적 계정 로그인
   ├─ recommend-meetings     프로필 기반 LLM 매칭
   ├─ suggest-meeting-plan   채팅 기반 약속 추천
   ├─ complete-meeting       만남 성사·연결 이력·사진첩 처리
@@ -102,11 +103,12 @@ OpenRouter API
 
 ### 5.1 발표 입장
 
-1. QR로 앱에 접속한다.
-2. 클라이언트가 `signInAnonymously()`로 Supabase 익명 세션을 만든다.
-3. 클라이언트가 그 세션의 JWT와 함께 `verify-demo-entry`에 입장 코드를 보낸다.
-4. 함수가 코드의 유효 기간·활성 상태·호출 횟수·레이트리밋을 확인하고 현재 익명 사용자와 `demo_sessions`로 결합한다.
-5. 본명·닉네임과 프로필 설정을 저장한 뒤 홈 탭을 연다. 새로고침 시 익명 세션과 프로필이 복원된다.
+1. QR로 앱에 접속한다. 저장된 세션이 있으면 바로 프로필을 불러오고 입장 화면을 건너뛴다.
+2. 클라이언트가 `demo-login`에 `{ code, company_id, employee_no, real_name, nickname? }`를 보낸다 (로그인 전이므로 JWT 없음, 함수는 `verify_jwt=false`).
+3. 함수가 레이트리밋 → 계열사 존재 → 입장 코드(만료·활성·횟수) → 기존 프로필의 이름 일치 순으로 검사한다.
+4. 함수가 `계열사.사번` 이메일과 서버 파생 비밀번호로 계정을 만들거나(`auth.admin.createUser`) 기존 계정의 비밀번호를 맞춘 뒤, 서버에서 `signInWithPassword`로 세션을 받는다. 처음 입장이면 프로필 행(사번·계열사·이름·닉네임)을 만든다.
+5. 함수가 `demo_sessions`에 코드와 계정을 결합하고 `{ session, is_new, expires_at }`를 돌려준다.
+6. 클라이언트가 `setSession`으로 세션을 설정하고 프로필·연결·채팅 목록을 불러온 뒤 홈 탭을 연다. 다른 기기에서 같은 정보로 로그인해도 같은 데이터가 복원된다.
 
 ### 5.2 AI 매칭
 
@@ -225,11 +227,12 @@ LLM 응답은 다음 필드를 필수로 한다.
 
 문서만 보고 구현하면 빠뜨리기 쉬운 Supabase·OpenRouter 설정을 모아 둔다. 상세 절차는 `docs/deployment.md`에 둔다.
 
-- Supabase Dashboard → Authentication → Providers에서 **Anonymous sign-ins 활성화**. 켜지 않으면 `signInAnonymously()`가 실패한다.
+- Supabase Dashboard → Authentication → Providers에서 **Email 제공자가 켜져 있어야** 한다(기본값). 계정은 `demo-login`이 admin API로 만들고 `email_confirm: true`로 생성하므로 확인 메일 설정은 무관하다. 익명 로그인은 쓰지 않는다.
+- `demo-login`은 로그인 전에 호출되므로 `--no-verify-jwt`로 배포한다. `DEMO_LOGIN_SECRET`은 길고 무작위여야 하며, 바꾸면 기존 계정 비밀번호가 다음 로그인 때 자동으로 새 파생값으로 갱신된다.
 - 마이그레이션에 `alter publication supabase_realtime add table public.messages, public.meeting_plans;`를 포함해야 Realtime `postgres_changes`가 동작한다.
 - 모든 Edge Function은 `OPTIONS` 프리플라이트에 응답하고 `Access-Control-Allow-Origin` 등 CORS 헤더를 반환한다.
 - `connections`는 `(least(a,b), greatest(a,b))` 순서로 저장하고 유니크 제약을 건다.
 - 레이트리밋은 `demo_entry_attempts` 테이블 카운트로 구현한다.
-- Edge Function 비밀값: `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `DEMO_RESET_TOKEN`만 `supabase secrets set`으로 등록한다. `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`는 플랫폼이 자동 주입하며 `SUPABASE_` 접두사는 직접 등록할 수 없다.
+- Edge Function 비밀값: `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `DEMO_RESET_TOKEN`, `DEMO_LOGIN_SECRET`만 `supabase secrets set`으로 등록한다. `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`는 플랫폼이 자동 주입하며 `SUPABASE_` 접두사는 직접 등록할 수 없다.
 - OpenRouter: 크레딧 충전 여부, 모델 ID 유효성, 발표 직전 남은 한도.
 - GitHub Pages `src/index.html`의 `CONFIG`에는 URL과 anon 키만 넣는다. secret key·OpenRouter 키가 들어가면 `tests/backend-contract.test.mjs`가 실패한다.

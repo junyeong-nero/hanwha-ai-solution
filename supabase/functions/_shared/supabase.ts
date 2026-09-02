@@ -18,6 +18,11 @@ export function callerClient(req: Request): SupabaseClient {
   });
 }
 
+/** 세션 없는 anon 클라이언트 — demo-login 이 서버에서 대신 signInWithPassword 할 때 쓴다 */
+export function anonClient(): SupabaseClient {
+  return createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_ANON_KEY'), clientOptions);
+}
+
 /** 서비스 역할 클라이언트 (RLS 우회). SUPABASE_SECRET_KEY 가 없으면 SUPABASE_SERVICE_ROLE_KEY 를 쓴다. */
 export function serviceClient(): SupabaseClient {
   const key = Deno.env.get('SUPABASE_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');

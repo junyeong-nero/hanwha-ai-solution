@@ -39,11 +39,12 @@ additional_redirect_urls = ["https://junyeong-nero.github.io/hanwha-ai-solution/
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 enable_signup = true
-# 공용 QR 입장은 익명 세션을 먼저 만들어야 하므로 반드시 켠다.
-# 호스팅 프로젝트에서는 Dashboard → Authentication → Providers 에서 별도로 켜야 한다.
-enable_anonymous_sign_ins = true
+# 사번 기반 데모 로그인은 demo-login 함수가 서비스 역할로 계정을 만들고 이메일·비밀번호로 로그인한다.
+# 익명 로그인은 쓰지 않는다.
+enable_anonymous_sign_ins = false
 
 [auth.email]
+# 계정 생성은 서버(admin API)만 하므로 공개 가입은 막고, 확인 메일도 보내지 않는다.
 enable_signup = false
 enable_confirmations = false
 
@@ -51,10 +52,11 @@ enable_confirmations = false
 enabled = true
 policy = "oneshot"
 
-# 사용자 JWT를 요구하는 함수들 (기본값 유지)
-[functions.verify-demo-entry]
-verify_jwt = true
+# demo-login 은 로그인 전에 호출되므로 JWT 를 요구하지 않는다 (입장 코드 + 레이트리밋으로 보호).
+[functions.demo-login]
+verify_jwt = false
 
+# 사용자 JWT를 요구하는 함수들 (기본값 유지)
 [functions.recommend-meetings]
 verify_jwt = true
 

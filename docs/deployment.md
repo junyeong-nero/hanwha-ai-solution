@@ -18,8 +18,8 @@ MoonLight Hanwha를 GitHub Pages + Supabase + OpenRouter 조합으로 배포하�
    - `Project URL` → `SUPABASE_URL`
    - `anon` / `publishable` key → `SUPABASE_ANON_KEY`
    - `service_role` / `secret` key → `SUPABASE_SECRET_KEY` (**브라우저에 절대 넣지 않음**)
-3. **Authentication → Providers → Anonymous sign-ins 를 켭니다.** 이걸 켜지 않으면 입장 화면에서 `signInAnonymously()`가 실패합니다.
-4. (선택) Authentication → Rate Limits에서 익명 가입 한도를 발표 인원(예: 시간당 100)에 맞게 조정합니다.
+3. **Authentication → Providers → Email**이 켜져 있는지 확인합니다(기본값 켜짐). 계정은 `demo-login` 함수가 서버에서 만들고 바로 확인 처리하므로 확인 메일 설정은 상관없습니다. 익명 로그인은 쓰지 않으니 꺼 두어도 됩니다.
+4. (선택) Authentication → Rate Limits에서 로그인(token) 한도를 발표 인원(예: 시간당 300)에 맞게 조정합니다.
 
 파일럿 단계에서는 같은 절차로 `moonlight-pilot` 프로젝트를 하나 더 만들어 데이터를 분리합니다.
 
@@ -47,21 +47,24 @@ npx supabase db push
 npx supabase secrets set OPENROUTER_API_KEY=<sk-or-v1-...>
 npx supabase secrets set OPENROUTER_MODEL=openrouter/free
 npx supabase secrets set DEMO_RESET_TOKEN=<길고 무작위인 문자열>
+npx supabase secrets set DEMO_LOGIN_SECRET=<길고 무작위인 다른 문자열>
 ```
+
+`DEMO_LOGIN_SECRET`은 사번 기반 계정의 비밀번호를 파생하는 서버 비밀키입니다. 유출되면 사번만으로 남의 세션을 만들 수 있으니 32자 이상 무작위 값을 쓰고 저장소에 넣지 않습니다.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`는 Supabase가 Edge Function에 **자동으로 주입**합니다. `SUPABASE_` 접두사는 `secrets set`으로 등록할 수 없으니 직접 넣지 않습니다 (코드는 `SUPABASE_SECRET_KEY`가 없으면 자동 주입된 `SUPABASE_SERVICE_ROLE_KEY`를 사용합니다).
 
 함수 배포:
 
 ```bash
-npx supabase functions deploy verify-demo-entry
+npx supabase functions deploy demo-login --no-verify-jwt
 npx supabase functions deploy recommend-meetings
 npx supabase functions deploy suggest-meeting-plan
 npx supabase functions deploy complete-meeting
 npx supabase functions deploy reset-demo --no-verify-jwt
 ```
 
-`reset-demo`만 JWT 검증을 끄고 자체 토큰 헤더(`x-demo-reset-token`)로 보호합니다. 나머지는 익명 세션의 JWT가 필요합니다.
+`demo-login`은 로그인 전에 호출되므로 JWT 검증을 끄고 입장 코드·레이트리밋으로 보호합니다. `reset-demo`는 자체 토큰 헤더(`x-demo-reset-token`)로 보호합니다. 나머지 세 함수는 로그인 세션의 JWT가 필요합니다.
 
 ## 4. 발표용 입장 코드 만들기
 
@@ -94,7 +97,8 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 ## 7. 발표 전 회귀 체크리스트 (375×812, 실제 아이폰 권장)
 
 1. QR 접속 → 입장 화면에서 잘못된 코드 → 한국어 오류 문구 확인
-2. 올바른 코드 + 본명 + 닉네임 → 홈 탭 진입, 새로고침 후에도 세션·프로필 유지
+2. 올바른 코드 + 계열사 + 사번 + 이름 + 닉네임 → 홈 탭 진입, 새로고침 후에도 세션·프로필 유지
+2-1. **다른 기기**에서 같은 계열사·사번·이름으로 로그인 → 같은 프로필·참가 모임·채팅이 복원되는지, 같은 사번에 **다른 이름**을 넣으면 "사번과 이름이 일치하지 않아요"가 나오는지
 3. 매칭 탭 → LLM 추천 카드에 **추천 이유**가 보이고 fallback 안내가 **없음**
 4. 모임 `참가` → 채팅 탭에 방 생성, 두 번째 기기로 같은 모임 참가 후 양방향 메시지 수신
 5. `＋` → `AI 추천 약속 잡기` → 카드 도착 (다른 기기에도 Realtime으로 표시) → `이 약속으로 확정`
@@ -106,6 +110,6 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 
 ## 8. 발표 후 정리
 
-- `reset-demo`로 발표 데이터를 비우거나, 발표용 프로젝트를 일시 정지(Pause)합니다.
+- `reset-demo`로 발표 데이터를 비우거나, 발표용 프로젝트를 일시 정지(Pause)합니다. `reset-demo`는 프로필·채팅은 지우지만 Auth 계정(`계열사.사번@demo.moonlight.local`)은 남깁니다. 계정까지 지우려면 Dashboard → Authentication → Users에서 삭제합니다. 남아 있어도 다음 로그인 때 자동으로 재사용됩니다.
 - 입장 코드를 만료(`update demo_access_codes set active=false`)시킵니다.
 - 파일럿으로 넘어갈 때는 별도 프로젝트(`moonlight-pilot`)와 별도 OpenRouter 키를 사용하고, 실행 계획 Task 8의 동의·삭제 절차를 먼저 붙입니다.

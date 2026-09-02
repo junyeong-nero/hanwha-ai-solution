@@ -57,7 +57,8 @@
 - `supabase/functions/_shared/llm.ts`: OpenRouter 호출, 타임아웃, 1회 재시도
 - `supabase/functions/_shared/recommendation.ts`: 매칭 프롬프트 생성·응답 파서·결정적 fallback 정렬 (순수 함수)
 - `supabase/functions/_shared/chat.ts`: 채팅 익명화·약속 프롬프트 생성·응답 파서 (순수 함수)
-- `supabase/functions/verify-demo-entry/index.ts`: 임시 입장 코드 검증과 세션 결합
+- `supabase/functions/demo-login/index.ts`: 입장 코드 검증 + (계열사, 사번, 이름) 결정적 계정 로그인 (JWT 불필요)
+- `supabase/migrations/0002_employee_identity.sql`: `(company_id, employee_no)` 유니크 인덱스
 - `supabase/functions/recommend-meetings/index.ts`: 후보 필터링, LLM 호출, 응답 검증
 - `supabase/functions/suggest-meeting-plan/index.ts`: 최근 채팅 기반 약속 추천, `meeting_plans` 저장
 - `supabase/functions/complete-meeting/index.ts`: `complete_meeting_tx` 호출
@@ -188,7 +189,7 @@ Insert the existing `COMPANIES`, `MEETINGS` and `PLANS` values as Korean seed ro
 
 - [ ] **Step 5: Run schema and local database checks** _(코드·Node 테스트 완료 · Supabase 배포 후 라이브 검증 필요)_
 
-Run: `node --test tests/edge-functions.test.mjs`; expected PASS. When Supabase CLI is available, run `supabase db reset` and confirm the migration applies without SQL errors and seeded companies/meetings are visible in the local Table Editor. Enable **Anonymous sign-ins** in the Dashboard (Authentication → Providers) — the migration cannot do this.
+Run: `node --test tests/edge-functions.test.mjs`; expected PASS. When Supabase CLI is available, run `supabase db reset` and confirm the migration applies without SQL errors and seeded companies/meetings are visible in the local Table Editor. Confirm the **Email** provider is enabled in the Dashboard (Authentication → Providers, default on); anonymous sign-ins are not used.
 
 - [x] **Step 6: Commit**
 
@@ -197,49 +198,52 @@ git add supabase/migrations/0001_initial.sql supabase/seed.sql tests/edge-functi
 git commit -m "feat: 네트워킹 데이터 스키마와 RLS 추가"
 ```
 
-### Task 3: 발표용 공용 QR 입장과 프로필 저장
+### Task 3: 사번 기반 발표 로그인과 프로필 저장
+
+> 2026-09-02 변경: 익명 세션 + 본명·닉네임 방식은 동명이인을 구분하지 못하고 다른 기기에서 이어 쓸 수 없어, **입장 코드 + 계열사 + 사번 + 이름**으로 결정적 계정에 로그인하는 방식으로 바꿨다. 사번은 본인 행에만 저장되고 다른 사용자·LLM에 노출되지 않는다 (spec §2.1).
 
 **Files:**
 - Create: `supabase/functions/_shared/cors.ts`
-- Create: `supabase/functions/_shared/supabase.ts`
+- Create: `supabase/functions/_shared/supabase.ts` (`callerClient`, `anonClient`, `serviceClient`, `requireUser`)
 - Create: `supabase/functions/_shared/auth.ts`
-- Create: `supabase/functions/verify-demo-entry/index.ts`
+- Create: `supabase/functions/demo-login/index.ts`
+- Create: `supabase/migrations/0002_employee_identity.sql` (`(company_id, employee_no)` 유니크 인덱스)
 - Modify: `src/index.html`
 - Modify: `tests/backend-contract.test.mjs`, `tests/edge-functions.test.mjs`
 
 **Interfaces:**
-- `POST /functions/v1/verify-demo-entry` request: `{ code: string }`; the caller must already have a Supabase anonymous JWT.
-- Success response: `{ expires_at: string }`; the function binds the caller’s `auth.uid()` to `demo_sessions`.
-- Error response: `{ error_code: "INVALID_CODE" | "EXPIRED_CODE" | "RATE_LIMITED" | "CODE_EXHAUSTED" }` with HTTP 401/429.
-- Pure helpers in `_shared/auth.ts`: `hashCode(code): Promise<string>` (SHA-256 hex), `evaluateCode(row, now): 'ok'|'INVALID_CODE'|'EXPIRED_CODE'|'CODE_EXHAUSTED'`, `isRateLimited(attemptTimestamps, now, limit=20, windowMs=600000): boolean`.
-- Browser functions: `enterDemo(code, realName, nick)`, `saveProfile()`, `loadProfile()`.
+- `POST /functions/v1/demo-login` request: `{ code, company_id, employee_no, real_name, nickname? }`; no JWT (function deployed with `--no-verify-jwt`).
+- Success response: `{ session: { access_token, refresh_token }, is_new: boolean, expires_at: string }`.
+- Error response: `{ error_code: "INVALID_CODE" | "EXPIRED_CODE" | "CODE_EXHAUSTED" | "NAME_MISMATCH" | "RATE_LIMITED" | "BAD_REQUEST" }` with HTTP 401/429/400.
+- Pure helpers in `_shared/auth.ts`: `hashCode`, `evaluateCode`, `isRateLimited`, `sessionExpiry`, `normalizeEmployeeNo`, `normalizeName`, `syntheticEmail(company_id, employee_no)`, `derivePassword(secret, email)` (HMAC-SHA256).
+- Browser functions: `enterDemo()` → `callFn('demo-login')` → `sb.auth.setSession(session)` → `loadProfile()` → `afterLogin()`; `saveProfile()`, `loadProfile()`.
 
 - [x] **Step 1: Add failing contract tests**
 
-Extend `tests/backend-contract.test.mjs` to require `src/index.html` to contain `verify-demo-entry`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `signInAnonymously`, and a visible Korean error message for expired codes. Assert the entry overlay has inputs for 본명·닉네임·코드 but **no 사번 input**. Extend `tests/edge-functions.test.mjs` with `evaluateCode`/`isRateLimited` cases.
+Extend `tests/backend-contract.test.mjs` to require `src/index.html` to call `demo-login` and `setSession`, to have inputs for 입장 코드·계열사(select)·사번·이름·닉네임, to lock the profile company select in backend mode, and to show Korean messages for expired code and name mismatch; assert `signInAnonymously` is absent. Extend `tests/edge-functions.test.mjs` with `normalizeEmployeeNo`/`normalizeName`/`syntheticEmail`/`derivePassword` cases.
 
 - [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/backend-contract.test.mjs tests/edge-functions.test.mjs`
-Expected: FAIL because the current file has no Supabase client or entry screen.
+Expected: FAIL because the login function and entry screen do not exist.
 
-- [x] **Step 3: Implement server verification**
+- [x] **Step 3: Implement server login**
 
-In `enterDemo`, call `supabase.auth.signInAnonymously()` first, then call `verify-demo-entry` with the code. In the function, respond to `OPTIONS` with CORS headers, hash the code with SHA-256, count `demo_entry_attempts` for the IP hash in the last 10 minutes (reject with 429 above 20), query `demo_access_codes`, reject inactive/expired/exhausted codes, increment the use count atomically, and insert a short-lived `demo_sessions` row for the caller’s `auth.uid()`. Return only `expires_at`.
+In `demo-login`: respond to `OPTIONS`; rate-limit by IP hash via `demo_entry_attempts` (20 per 10 min → 429); validate `company_id` against `companies`; verify the code hash and `evaluateCode`; look up the existing profile by `(company_id, employee_no)` and reject `NAME_MISMATCH` if the stored `real_name` differs; `consume_demo_code`; build `syntheticEmail` and `derivePassword(DEMO_LOGIN_SECRET, email)`; create the auth user with `auth.admin.createUser({ email_confirm: true })` or update the existing user's password; sign in server-side with `anonClient().auth.signInWithPassword`; insert the profile on first login; insert `demo_sessions`; return the session tokens.
 
 - [x] **Step 4: Add the entry screen without changing existing tab markup**
 
-Add an initial overlay in `src/index.html` (shown only when `BACKEND`) with QR 안내 문구, 6자리 코드 input, 본명·닉네임 inputs, and a 48px CTA. On success, hide the overlay, upsert the profile (`saveProfile`), load it into `S.profile`, and call existing `go('home')`/`renderProfile()`. On failure, show one of the specified Korean messages and keep the user on the overlay. On page load with an existing session and profile, skip the overlay.
+Add an initial overlay in `src/index.html` (shown only when `BACKEND` and no stored session/profile) with QR 안내 문구, 6자리 코드 input, 계열사 select, 사번·이름·닉네임 inputs, and a 48px CTA. On success, `setSession`, load the profile into `S.profile`, hide the overlay, and call `afterLogin()`. Show `is_new`-dependent welcome toast. Lock the profile tab's company select in backend mode and show "이름 · 계열사 (로그인 정보)".
 
 - [ ] **Step 5: Run browser contract and manual flow checks** _(코드·Node 테스트 완료 · Supabase 배포 후 라이브 검증 필요)_
 
-Run: `node --test tests/*.mjs`. Manual (after deployment): open the GitHub Pages URL, submit an invalid code, submit the seeded code, save a nickname, refresh, and confirm the session/profile are restored. Confirm the overlay and inputs remain usable at 375×812.
+Run: `node --test tests/*.mjs`. Manual (after deployment): submit an invalid code, then a valid code with 계열사·사번·이름; refresh and confirm the session/profile are restored; log in from a second device with the same 3 values and confirm the same rooms appear; log in with the same 사번 but a different 이름 and confirm `NAME_MISMATCH`.
 
-- [x] **Step 6: Commit**
+- [x] **Step 6: Commit** _(커밋 완료)_
 
 ```bash
-git add src/index.html supabase/functions/verify-demo-entry supabase/functions/_shared tests
-git commit -m "feat: 발표용 QR 입장과 프로필 저장 연결"
+git add src/index.html supabase/functions/demo-login supabase/functions/_shared supabase/migrations/0002_employee_identity.sql tests
+git commit -m "feat: 사번 기반 발표 로그인으로 전환"
 ```
 
 ### Task 4: LLM 매칭 Edge Function
@@ -413,7 +417,7 @@ Add a global network error toast with "다시 시도" wording, session-expired h
 
 - [x] **Step 4: Document deployment and QR creation**
 
-In `docs/deployment.md`, document: create two Supabase projects, enable Anonymous sign-ins, apply migrations, seed only development data, set Edge Function secrets, deploy functions, fill `CONFIG` in `src/index.html`, create a QR for the public URL, create a short-lived demo code via SQL, charge OpenRouter credit and check model ID/limits, and perform the five-step regression flow from `AGENTS.md`. Explicitly state that no secret key belongs in GitHub Pages.
+In `docs/deployment.md`, document: create two Supabase projects, confirm the Email provider, apply migrations, seed only development data, set Edge Function secrets, deploy functions, fill `CONFIG` in `src/index.html`, create a QR for the public URL, create a short-lived demo code via SQL, charge OpenRouter credit and check model ID/limits, and perform the five-step regression flow from `AGENTS.md`. Explicitly state that no secret key belongs in GitHub Pages.
 
 - [x] **Step 5: Verify and commit** _(커밋 완료 · 배포 후 수동 검증 항목은 docs/deployment.md §7)_
 

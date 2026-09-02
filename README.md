@@ -51,7 +51,7 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 
 - `src/index.html` 한 파일에 HTML·CSS·JavaScript를 모두 포함하며, 빌드 도구 없이 동작합니다.
 - **로컬 데모 모드(기본):** 파일 상단 `CONFIG`가 비어 있으면 외부 라이브러리·네트워크 요청 없이 브라우저에서 바로 실행됩니다. 데모 데이터는 `COMPANIES`, `PEOPLE`, `MEETINGS`, `PLANS` 상수에, 사용자 상태는 전역 `S` 객체에만 저장되며 새로고침하면 초기화됩니다.
-- **백엔드 모드:** `CONFIG`에 Supabase URL과 anon 키를 채우면 supabase-js(CDN)를 불러와 익명 세션·프로필 저장·실시간 채팅을 사용하고, Supabase Edge Function이 OpenRouter LLM을 호출해 모임 추천과 약속 제안을 만듭니다. 설계는 [백엔드 설계 문서](docs/superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md), 배포 절차는 [deployment.md](docs/deployment.md)를 참고하세요.
+- **백엔드 모드:** `CONFIG`에 Supabase URL과 anon 키를 채우면 supabase-js(CDN)를 불러와 사번 기반 데모 로그인(계열사·사번·이름으로 어느 기기에서든 같은 프로필·채팅 복원)·실시간 채팅을 사용하고, Supabase Edge Function이 OpenRouter LLM을 호출해 모임 추천과 약속 제안을 만듭니다. 설계는 [백엔드 설계 문서](docs/superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md), 배포 절차는 [deployment.md](docs/deployment.md)를 참고하세요.
 - 백엔드 코드는 `supabase/` (마이그레이션·시드·Edge Functions)에 있고, 테스트는 `node --test tests/*.mjs`로 실행합니다.
 
 ## 실행 방법

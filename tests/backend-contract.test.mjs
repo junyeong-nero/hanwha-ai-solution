@@ -29,24 +29,31 @@ test('이중 모드: CONFIG가 비어 있으면 로컬 데모 모드로 남는�
 
 /* ===== Task 3: 발표 입장 화면 ===== */
 
-test('입장 화면은 익명 세션 후 verify-demo-entry를 호출한다', () => {
-  assert.match(html, /signInAnonymously\(\)/);
-  assert.match(html, /callFn\('verify-demo-entry'/);
+test('입장 화면은 demo-login 으로 세션을 받아 설정한다 (익명 세션 사용 안 함)', () => {
+  assert.match(html, /callFn\('demo-login',\{code,company_id:coId,employee_no:emp,real_name:name,nickname:nick\}\)/);
+  assert.match(html, /sb\.auth\.setSession\(d\.session\)/);
+  assert.doesNotMatch(html, /signInAnonymously/);
   assert.match(html, /SUPABASE_URL/);
   assert.match(html, /SUPABASE_ANON_KEY/);
 });
 
-test('입장 화면은 본명·닉네임·코드만 받고 사번은 받지 않는다', () => {
+test('입장 화면은 입장 코드·계열사·사번·이름을 받는다 (동명이인 구분·데이터 복원)', () => {
   assert.match(html, /<input id="e-code"/);
+  assert.match(html, /<select id="e-co"/);
+  assert.match(html, /<input id="e-emp"/);
   assert.match(html, /<input id="e-name"/);
   assert.match(html, /<input id="e-nick"/);
-  assert.doesNotMatch(html, /<input[^>]*(employee|사번)/);
-  assert.match(html, /사번은 수집하지 않아요/);
+  assert.match(html, /사번은 본인 확인과 데이터 복원에만 쓰이며/);
 });
 
-test('만료된 입장 코드에는 한국어 안내가 보인다', () => {
+test('백엔드 모드에서는 계열사가 로그인 정보로 고정된다', () => {
+  assert.match(html, /\$\('f-co'\)\.disabled=!!\(BACKEND&&ME\)/);
+});
+
+test('입장 오류마다 한국어 안내가 보인다', () => {
   assert.match(html, /입장 코드가 만료됐어요/);
   assert.match(html, /입장 코드가 올바르지 않아요/);
+  assert.match(html, /사번과 이름이 일치하지 않아요/);
 });
 
 test('입력 요소는 iOS 확대 방지를 위해 16px 이상이다', () => {

@@ -289,6 +289,12 @@ nav#nav svg{width:23px;height:23px}
 .elb small{font-weight:500;color:var(--tx3);margin-left:6px}
 #entry input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;color:var(--tx);outline:none;min-height:48px}
 #entry input:focus{border-color:var(--orange)}
+#entry select{
+  width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;color:var(--tx);outline:none;min-height:48px;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239AA1BC' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 15px center;
+}
 .eerr{min-height:20px;font-size:12.5px;color:#FF8A80;margin:10px 0 6px}
 #matchnote:empty{display:none}
 #matchnote{font-size:12.5px;color:var(--orange-soft);background:rgba(243,115,33,.08);border:1px solid rgba(243,115,33,.25);border-radius:11px;padding:9px 12px;margin-bottom:12px}
@@ -410,6 +416,7 @@ nav#nav svg{width:23px;height:23px}
           <div>
             <input id="nick" maxlength="8" autocomplete="off">
             <small>익명 채팅에서 쓰이는 닉네임 · 사진을 눌러 변경</small>
+            <small id="pfident" style="color:var(--tx2)"></small>
           </div>
         </div>
       </div>
@@ -579,16 +586,20 @@ nav#nav svg{width:23px;height:23px}
     <div class="ecard">
       <div class="emoon"></div>
       <h1 class="app" style="text-align:center">MoonLight <em>Hanwha</em></h1>
-      <p class="sub" style="text-align:center">발표용 체험 화면이에요.<br>화면에 표시된 6자리 입장 코드를 입력해 주세요.</p>
+      <p class="sub" style="text-align:center">발표용 체험 화면이에요.<br>입장 코드와 본인 정보로 로그인하면 프로필·채팅이 어디서든 이어져요.</p>
       <label class="elb" for="e-code">입장 코드</label>
-      <input id="e-code" inputmode="numeric" maxlength="6" placeholder="6자리 숫자" autocomplete="one-time-code">
-      <label class="elb" for="e-name">본명<small>베일 벗기기 때만 공개돼요</small></label>
+      <input id="e-code" inputmode="numeric" maxlength="6" placeholder="발표 화면의 6자리 숫자" autocomplete="one-time-code">
+      <label class="elb" for="e-co">계열사</label>
+      <select id="e-co" class="frow-select"></select>
+      <label class="elb" for="e-emp">사번<small>동명이인 구분과 데이터 복원에만 쓰여요</small></label>
+      <input id="e-emp" maxlength="20" placeholder="예: 2024001" autocomplete="off" autocapitalize="characters">
+      <label class="elb" for="e-name">이름<small>베일 벗기기 때만 공개돼요</small></label>
       <input id="e-name" maxlength="10" placeholder="홍길동" autocomplete="off">
-      <label class="elb" for="e-nick">닉네임<small>익명 채팅에서 쓰여요</small></label>
+      <label class="elb" for="e-nick">닉네임<small>처음 입장할 때만 · 익명 채팅용</small></label>
       <input id="e-nick" maxlength="8" placeholder="달토끼" autocomplete="off" onkeydown="if(event.key==='Enter')enterDemo()">
       <p class="eerr" id="e-err"></p>
       <button class="cta" id="e-btn" onclick="enterDemo()">입장하기</button>
-      <p class="hint" style="text-align:center;margin-top:14px">사번은 수집하지 않아요 · 강한 신원 인증이 아닌 발표용 접근 제어입니다</p>
+      <p class="hint" style="text-align:center;margin-top:14px">사번은 본인 확인과 데이터 복원에만 쓰이며 다른 사용자와 AI에게 공개되지 않아요</p>
     </div>
   </div>
 
@@ -1034,7 +1045,9 @@ function renderProfile(){
   const P=S.profile;
   $('pfav').textContent=P.av;
   if(document.activeElement!==$('nick'))$('nick').value=P.nick;
+  $('pfident').textContent=P.realName?P.realName+' · '+(co(P.company)||{}).name+' (로그인 정보)':'';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
+  $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
   $('f-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(P.region===r?' on':'')+'" onclick="setP(\'region\',\''+r+'\')">'+esc(r)+'</button>').join('')
     +'<button class="chip add" onclick="openAdd(\'region\')">＋ 직접 추가</button>';
   $('f-age').textContent=P.age+'세';
@@ -1099,13 +1112,18 @@ const ENTRY_MSG={
   EXPIRED_CODE:'입장 코드가 만료됐어요. 발표 화면의 새 코드를 확인해 주세요',
   RATE_LIMITED:'시도가 너무 많아요. 잠시 후 다시 시도해 주세요',
   CODE_EXHAUSTED:'입장 코드 사용 횟수를 초과했어요',
+  NAME_MISMATCH:'사번과 이름이 일치하지 않아요. 입력 내용을 확인해 주세요',
+  BAD_REQUEST:'계열사·사번·이름을 모두 입력해 주세요',
   UNAUTHORIZED:'세션이 만료됐어요. 다시 입장해 주세요',
   NETWORK:'네트워크 연결을 확인해 주세요 · 다시 시도',
 };
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('script'));document.head.appendChild(s)})}
 function fmtT(iso){const d=new Date(iso);if(isNaN(d))return '';const h=d.getHours();return (h<12?'오전 ':'오후 ')+((h%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')}
 function netFail(what){toast('네트워크 오류',(what||'요청')+'에 실패했어요 · 연결을 확인하고 다시 시도해 주세요')}
-function showEntry(){$('entry').classList.add('on');entryErr('')}
+function showEntry(){
+  if(!$('e-co').options.length)$('e-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
+  $('entry').classList.add('on');entryErr('');
+}
 function hideEntry(){$('entry').classList.remove('on')}
 function entryErr(m){$('e-err').textContent=m||''}
 
@@ -1136,20 +1154,21 @@ async function callFn(name,body,headers){
   }
   return data;
 }
-/* 발표 입장: 익명 세션 → 입장 코드 검증 → 프로필 저장 */
+/* 발표 로그인: 입장 코드 + 계열사 + 사번 + 이름 → demo-login 이 결정적 계정을 만들거나 찾아 세션을 준다.
+   같은 사번이면 어느 기기에서든 같은 프로필·채팅이 복원되고, 사번은 맞는데 이름이 다르면 거부된다. */
 async function enterDemo(){
-  const code=$('e-code').value.trim(), name=$('e-name').value.trim(), nick=$('e-nick').value.trim();
+  const code=$('e-code').value.trim(), coId=$('e-co').value, emp=$('e-emp').value.trim(), name=$('e-name').value.trim(), nick=$('e-nick').value.trim();
   if(!/^\d{6}$/.test(code))return entryErr('입장 코드 6자리를 입력해 주세요');
-  if(!name||!nick)return entryErr('본명과 닉네임을 입력해 주세요');
+  if(!coId||!emp||!name)return entryErr('계열사·사번·이름을 모두 입력해 주세요');
   const btn=$('e-btn'); btn.disabled=true; btn.textContent='확인 중…'; entryErr('');
   try{
-    let {data:{session}}=await sb.auth.getSession();
-    if(!session){const r=await sb.auth.signInAnonymously(); if(r.error)throw r.error; session=r.data.session}
+    const d=await callFn('demo-login',{code,company_id:coId,employee_no:emp,real_name:name,nickname:nick});
+    const {error}=await sb.auth.setSession(d.session); if(error)throw error;
+    const {data:{session}}=await sb.auth.getSession(); if(!session)throw new Error('NO_SESSION');
     ME=session.user.id;
-    await callFn('verify-demo-entry',{code});
-    S.profile.nick=nick; S.profile.realName=name;
-    await saveProfile(true);
+    if(!(await loadProfile()))throw Object.assign(new Error('NO_PROFILE'),{code:'NO_PROFILE'});
     hideEntry(); await afterLogin();
+    toast(d.is_new?'환영해요 🌙':'다시 오셨네요 🌙',d.is_new?'프로필 탭에서 관심사와 선호 지역을 설정해 보세요':'저장된 프로필과 채팅을 불러왔어요');
   }catch(e){ entryErr(ENTRY_MSG[e.code]||'입장에 실패했어요. 다시 시도해 주세요') }
   finally{btn.disabled=false;btn.textContent='입장하기'}
 }

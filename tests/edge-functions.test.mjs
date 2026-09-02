@@ -343,3 +343,43 @@ test('chatJson: 내용이 비어 있으면 EMPTY LlmError', async () => {
     (err) => err instanceof LlmError && err.code === 'EMPTY',
   );
 });
+
+/* ===== 사번 기반 데모 로그인 helpers ===== */
+import {
+  normalizeEmployeeNo,
+  normalizeName,
+  syntheticEmail,
+  derivePassword,
+} from '../supabase/functions/_shared/auth.ts';
+
+test('normalizeEmployeeNo: 공백 제거·대문자화, 허용 문자 밖이면 null', () => {
+  assert.equal(normalizeEmployeeNo(' hw-2024 001 '), 'HW-2024001');
+  assert.equal(normalizeEmployeeNo('12345'), '12345');
+  assert.equal(normalizeEmployeeNo('사번!'), null);
+  assert.equal(normalizeEmployeeNo(''), null);
+  assert.equal(normalizeEmployeeNo('A'.repeat(21)), null);
+  assert.equal(normalizeEmployeeNo(123), null);
+});
+
+test('normalizeName: 앞뒤 공백 제거·내부 공백 축약, 1~10자 밖이면 null', () => {
+  assert.equal(normalizeName('  홍  길동 '), '홍 길동');
+  assert.equal(normalizeName('김서연'), '김서연');
+  assert.equal(normalizeName(''), null);
+  assert.equal(normalizeName('가'.repeat(11)), null);
+});
+
+test('syntheticEmail: 계열사·사번으로 결정적 소문자 이메일', () => {
+  assert.equal(syntheticEmail('inv', 'HW-2024001'), 'inv.hw-2024001@demo.moonlight.local');
+  assert.equal(syntheticEmail('INV', 'HW-2024001'), syntheticEmail('inv', 'hw-2024001'));
+});
+
+test('derivePassword: 비밀키·이메일에 결정적, 64자 hex, 비밀키가 다르면 다르다', async () => {
+  const a = await derivePassword('secret-1', 'inv.1@demo.moonlight.local');
+  const b = await derivePassword('secret-1', 'inv.1@demo.moonlight.local');
+  const c = await derivePassword('secret-2', 'inv.1@demo.moonlight.local');
+  const d = await derivePassword('secret-1', 'inv.2@demo.moonlight.local');
+  assert.equal(a, b);
+  assert.match(a, /^[0-9a-f]{64}$/);
+  assert.notEqual(a, c);
+  assert.notEqual(a, d);
+});

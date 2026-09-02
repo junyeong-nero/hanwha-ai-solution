@@ -52,6 +52,40 @@ export function isRateLimited(attemptTimestamps: Date[], now: Date, limit = 20, 
   return count >= limit;
 }
 
+/* ===== 사번 기반 데모 로그인 ===== */
+
+/** 사번 정규화: 공백 제거·대문자화. 영문·숫자·하이픈 1~20자만 허용, 아니면 null */
+export function normalizeEmployeeNo(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const v = raw.replace(/\s+/g, '').toUpperCase();
+  return /^[A-Z0-9-]{1,20}$/.test(v) ? v : null;
+}
+
+/** 이름 정규화: 앞뒤 공백 제거·내부 공백 하나로. 1~10자 아니면 null */
+export function normalizeName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const v = raw.trim().replace(/\s+/g, ' ');
+  return v.length >= 1 && v.length <= 10 ? v : null;
+}
+
+/** 계열사·사번으로 결정적 로그인 이메일을 만든다 (실제 메일함은 없다) */
+export function syntheticEmail(companyId: string, employeeNo: string): string {
+  return `${companyId.toLowerCase()}.${employeeNo.toLowerCase()}@demo.moonlight.local`;
+}
+
+/**
+ * 서버 비밀키(DEMO_LOGIN_SECRET)로만 파생되는 비밀번호 (HMAC-SHA256 hex).
+ * 클라이언트는 이 값을 알 수 없고, 서버가 대신 로그인해 세션만 내려준다.
+ */
+export async function derivePassword(secret: string, email: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(email));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 /** 세션 만료 시각 (기본 12시간 뒤) ISO 문자열 */
 export function sessionExpiry(now: Date, hours = 12): string {
   return new Date(now.getTime() + hours * 3600 * 1000).toISOString();
