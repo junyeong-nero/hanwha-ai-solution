@@ -284,7 +284,12 @@ nav#nav svg{width:23px;height:23px}
 /* mobile: compact phone and narrow foldable layouts */
 @media (max-width:599px){
   #app{width:100%;max-width:520px;}
-  .tabpane{padding-left:clamp(18px,5vw,24px);padding-right:clamp(18px,5vw,24px);}
+}
+@media (max-width:430px){
+  .tabpane{padding-left:18px;padding-right:18px;}
+}
+@media (min-width:431px) and (max-width:599px){
+  .tabpane{padding-left:24px;padding-right:24px;}
 }
 
 /* web: tablet and browser-sized layouts */

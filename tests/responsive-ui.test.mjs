@@ -12,6 +12,7 @@ test('responsive layout defines mobile, web, and pc ranges', () => {
 
 test('intermediate device widths use the available frame width', () => {
   assert.match(html, /@media\s*\(max-width:\s*599px\)[\s\S]*#app[\s\S]*max-width:\s*520px/);
+  assert.match(html, /@media\s*\(max-width:\s*430px\)[\s\S]*\.tabpane[\s\S]*padding-left:\s*18px/);
 });
 
 test('pc layout expands the app frame and uses a side navigation rail', () => {
@@ -21,6 +22,6 @@ test('pc layout expands the app frame and uses a side navigation rail', () => {
 
 test('web layout provides two columns and pc overlays stay bounded', () => {
   assert.match(html, /@media\s*\(min-width:\s*600px\)\s*and\s*\(max-width:\s*1023px\)[\s\S]*\.spacestats[\s\S]*grid-template-columns/);
-  assert.match(html, /@media\s*\(min-width:\s*600px\)\s*and\s*\(max-width:\s*1023px\)[\s\S]*\.meetgrid[\s\S]*grid-template-columns/);
+  assert.match(html, /@media\s*\(min-width:\s*600px\)\s*and\s*\(max-width:\s*1023px\)[\s\S]*\.meetgrid[\s\S]*grid-template-columns:\s*repeat\(2\s*,/);
   assert.match(html, /@media\s*\(min-width:\s*1024px\)[\s\S]*\.sheet[\s\S]*max-width:\s*640px/);
 });
