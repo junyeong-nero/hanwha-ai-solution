@@ -1433,6 +1433,7 @@ async function submitCreate(){
       const {data,error}=await sb.from('meetings').insert({title:name,emoji:C.em,tags:C.tags,region:C.region,when_label:C.when,capacity:C.cap,created_by:ME}).select('id').single();
       if(error)throw error; id=data.id;
       const m=ensureMeeting(id,{em:C.em,name,region:C.region,when:C.when,cap:C.cap,tags:[...C.tags],memberCount:0,knownCount:0,mine:true,ai:'내가 만든 모임 — 관심사가 맞는 동료에게 AI가 추천해요'});
+      while(R.recLoading)await new Promise(r=>setTimeout(r,200));   // 추천 로딩 중이면 끝난 뒤에 카드를 끼워 넣는다 (덮어쓰기 방지)
       if(R.rec){R.rec.list=[m,...R.rec.list.filter(x=>x.id!==id)]}
       await joinMeet(id);   // 만든 사람은 바로 참가 · 채팅방 생성
     }else{
