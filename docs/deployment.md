@@ -51,9 +51,9 @@ npx supabase db push
 
 `db push`는 `supabase/migrations/0001_initial.sql`을 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
 
-시드 데이터(계열사 25개, 모임 6개)는 Dashboard → **SQL Editor**에서 `supabase/seed.sql` 내용을 붙여 넣어 실행합니다. 시드에 들어 있는 로컬용 입장 코드 `123456`은 **발표에서 쓰지 말고** 아래 4단계에서 새 코드를 만듭니다.
+시드 데이터(계열사 25개, 모임 7개)는 Dashboard → **SQL Editor**에서 `supabase/seed.sql` 내용을 붙여 넣어 실행합니다. 시드에 들어 있는 로컬용 입장 코드 `123456`은 **발표에서 쓰지 말고** 아래 4단계에서 새 코드를 만듭니다.
 
-확인: Table Editor에서 `companies` 25행, `meetings` 6행이 보이면 됩니다.
+확인: Table Editor에서 `companies` 25행, `meetings` 7행이 보이면 됩니다.
 
 ## 3. Edge Function 배포
 

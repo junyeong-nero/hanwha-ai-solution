@@ -70,11 +70,11 @@ test('계획에 명시된 RLS 정책 이름을 그대로 쓴다', () => {
   }
 });
 
-test('시드는 기존 핵심 계열사와 안정적인 UUID의 모임 6개를 넣는다', () => {
+test('시드는 기존 핵심 계열사와 안정적인 UUID의 모임 7개를 넣는다', () => {
   for (const id of ['aero', 'sol', 'life', 'inv', 'sys', 'ocean', 'hotel', 'gal']) {
     assert.ok(seed.includes(`('${id}',`), `계열사 ${id} 시드가 없습니다`);
   }
-  for (let n = 1; n <= 6; n++) {
+  for (let n = 1; n <= 7; n++) {
     assert.ok(seed.includes(`00000000-0000-4000-8000-00000000000${n}`), `모임 ${n} 시드가 없습니다`);
   }
   assert.ok(seed.includes('on conflict'), '시드는 재실행 가능해야 합니다');
@@ -675,17 +675,42 @@ test('0003 마이그레이션: meetings.created_by 와 직접 만들기 정책',
   assert.match(sql, /with check \(created_by = auth\.uid\(\)\)/);
 });
 
-test('주요 계열사 25곳이 프론트·시드·마이그레이션에 동일하게 등록된다', () => {
-  const companyIds = [
-    'corp', 'aero', 'sys', 'vision', 'semitech', 'momentum', 'robotics',
-    'sol', 'ocean', 'energy', 'impact', 'power', 'total', 'engine', 'advanced', 'yeocheon',
-    'life', 'ins', 'asset', 'inv', 'savings', 'life-fs',
-    'hotel', 'gal', 'connect',
+test('주요 계열사 25곳의 ID·이름·색상·정렬 순서가 세 데이터 소스에서 일치한다', () => {
+  const expectedIds = [
+    'aero', 'sol', 'life', 'inv', 'sys', 'ocean', 'hotel', 'gal',
+    'corp', 'vision', 'semitech', 'momentum', 'robotics', 'energy', 'impact', 'power',
+    'total', 'engine', 'advanced', 'yeocheon', 'ins', 'asset', 'savings', 'life-fs', 'connect',
   ];
-  assert.equal(companyIds.length, 25);
-  for (const id of companyIds) {
-    assert.match(html, new RegExp(`\\{id:'${id}'`), `HTML 계열사 ${id}가 없습니다`);
-    assert.ok(seed.includes(`('${id}',`), `시드 계열사 ${id}가 없습니다`);
-    assert.ok(migration0005.includes(`('${id}',`), `마이그레이션 계열사 ${id}가 없습니다`);
+  const expected = new Set(expectedIds);
+  const companyBlock = html.match(/const COMPANIES=\[([\s\S]*?)\];\s*const PEOPLE=/)?.[1] ?? '';
+  const htmlRows = [...companyBlock.matchAll(/\{id:'([^']+)',\s*name:'([^']*)',\s*c:'(#[0-9A-Fa-f]{6})'/g)]
+    .map(([, id, name, color]) => ({ id, name, color }));
+  const sqlRows = (sql) => [...sql.matchAll(/\('([^']+)',\s*'([^']*)',\s*'(#[0-9A-Fa-f]{6})',\s*(\d+)\)/g)]
+    .map(([, id, name, color, sort]) => ({ id, name, color, sort: Number(sort) }));
+  const seedRows = sqlRows(seed);
+  const migrationRows = sqlRows(migration0005);
+
+  assert.equal(htmlRows.length, expectedIds.length);
+  assert.deepEqual(new Set(htmlRows.map((row) => row.id)), expected);
+  assert.deepEqual(new Set(seedRows.map((row) => row.id)), expected);
+  assert.deepEqual(new Set(migrationRows.map((row) => row.id)), expected);
+
+  const htmlById = new Map(htmlRows.map((row) => [row.id, row]));
+  const seedById = new Map(seedRows.map((row) => [row.id, row]));
+  const migrationById = new Map(migrationRows.map((row) => [row.id, row]));
+  for (const id of expectedIds) {
+    const htmlRow = htmlById.get(id);
+    const seedRow = seedById.get(id);
+    const migrationRow = migrationById.get(id);
+    assert.deepEqual(
+      { name: htmlRow.name, color: htmlRow.color },
+      { name: seedRow.name, color: seedRow.color },
+      `HTML과 시드의 ${id} 정보가 다릅니다`,
+    );
+    assert.deepEqual(
+      { name: seedRow.name, color: seedRow.color, sort: seedRow.sort },
+      { name: migrationRow.name, color: migrationRow.color, sort: migrationRow.sort },
+      `시드와 마이그레이션의 ${id} 정보가 다릅니다`,
+    );
   }
 });

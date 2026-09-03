@@ -25,3 +25,9 @@ test('web layout provides two columns and pc overlays stay bounded', () => {
   assert.match(html, /@media\s*\(min-width:\s*600px\)\s*and\s*\(max-width:\s*1023px\)[\s\S]*\.meetgrid[\s\S]*grid-template-columns:\s*repeat\(2\s*,/);
   assert.match(html, /@media\s*\(min-width:\s*1024px\)[\s\S]*\.sheet[\s\S]*max-width:\s*640px/);
 });
+
+test('홈 행성 배치는 계열사 수가 늘어나도 우주 영역 안에 들어온다', () => {
+  assert.doesNotMatch(html, /const r=44\+i\*15\.6/);
+  assert.match(html, /Math\.ceil\(Math\.sqrt\(COMPANIES\.length\)\)/);
+  assert.match(html, /clientWidth/);
+});

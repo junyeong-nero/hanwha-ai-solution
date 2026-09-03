@@ -859,8 +859,11 @@ function activeCompanies(){
 function renderHome(){
   const act=activeCompanies();
   let h='<div id="sun">한화</div>';
+  const rings=Math.ceil(Math.sqrt(COMPANIES.length));
+  const maxR=Math.max(80,Math.min(188,(($('space').clientWidth||320)/2)-22));
   COMPANIES.forEach((c,i)=>{
-    const r=44+i*15.6, d=34+i*9, del=-(d*(i*.37%1));
+    const ring=Math.floor(i/rings);
+    const r=Math.max(44,maxR*(ring+1)/rings), d=34+ring*9, del=-(d*((i%rings)/rings));
     h+='<div class="orbit" style="width:'+(r*2)+'px;height:'+(r*2)+'px"></div>';
     const lit=act.has(c.id), mine=c.id===S.profile.company;
     h+='<div class="holder" style="--d:'+d+'s;--del:'+del+'s">'
