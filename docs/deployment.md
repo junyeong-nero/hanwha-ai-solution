@@ -6,11 +6,17 @@ MoonLight Hanwha를 GitHub Pages + Supabase + OpenRouter 조합으로 배포하�
 
 ## 빠른 방법 — 스크립트 한 번
 
-§1의 프로젝트 생성만 대시보드에서 마친 뒤, 저장소 루트의 PowerShell에서:
+§1의 프로젝트 생성만 대시보드에서 마친 뒤, **저장소 루트(`hanwha-ai-solution` 폴더) 안에서** 실행합니다. 상위 폴더에서 실행하면 "-File 매개 변수에 대한 인수 ... 이(가) 없습니다" 오류가 납니다.
 
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts/deploy-supabase.ps1
+cd C:\Users\user\AI\Games\hanwha-ai-solution
 ```
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts\deploy-supabase.ps1 -ProjectRef <프로젝트 ref>
+```
+
+`-ProjectRef`를 생략하면 실행 중에 물어봅니다.
 
 프로젝트 ref와 OpenRouter 키(화면에 안 보임)를 물어본 뒤 §2~§3(로그인·연결·마이그레이션·비밀값·함수 배포)을 순서대로 실행합니다. 끝나면 초기화 토큰을 한 번 보여주고 남은 수동 단계(§2 시드, §4 입장 코드, §5 `CONFIG`)를 안내합니다. 아래는 같은 내용을 손으로 할 때의 절차입니다.
 
