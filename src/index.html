@@ -1397,6 +1397,10 @@ async function initBackend(){
   try{
     await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js');
     sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+    sb.auth.onAuthStateChange((ev,sess)=>{   // 갱신 실패로 로그아웃되면 로그인 화면으로
+      if(ev==='SIGNED_OUT'){ME=null;showEntry()}
+      else if(sess&&sess.user)ME=sess.user.id;
+    });
     const {data:{session}}=await sb.auth.getSession();
     if(session){ME=session.user.id; if(await loadProfile()){await afterLogin();return}}
   }catch(e){netFail('초기화')}
@@ -1407,11 +1411,18 @@ async function fnCode(error){
   try{ if(error&&error.context&&typeof error.context.json==='function'){const j=await error.context.json();return j.error_code||'UNKNOWN'} }catch(_){}
   return error&&error.name==='FunctionsFetchError'?'NETWORK':'UNKNOWN';
 }
-async function callFn(name,body,headers){
+async function callFn(name,body,headers,retried){
   const {data,error}=await sb.functions.invoke(name,{body:body||{},headers:headers||{}});
   if(error){
     const code=await fnCode(error);
-    if(code==='UNAUTHORIZED'){toast('세션 만료',ENTRY_MSG.UNAUTHORIZED);showEntry()}
+    if(code==='UNAUTHORIZED'){
+      // 토큰이 막 만료된 경우: 세션을 갱신하고 한 번만 재시도한다. 갱신도 안 되면 그때 로그인 화면으로
+      if(!retried){
+        const {data:rs}=await sb.auth.refreshSession().catch(()=>({data:null}));
+        if(rs&&rs.session){ME=rs.session.user.id;return callFn(name,body,headers,true)}
+      }
+      toast('세션 만료',ENTRY_MSG.UNAUTHORIZED);showEntry();
+    }
     throw Object.assign(new Error(code),{code});
   }
   return data;
