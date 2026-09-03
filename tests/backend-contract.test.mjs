@@ -102,6 +102,29 @@ test('AI 전송 안내 문구가 + 메뉴에 있다', () => {
   assert.match(html, /최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요/);
 });
 
+/* ===== 추가 기능: 직접 추가 삭제 · 모임 만들기 · 채팅 중 탭 전환 ===== */
+
+test('직접 추가한 프로필 항목은 삭제할 수 있다', () => {
+  assert.match(html, /function removeItem\(kind,v\)/);
+  assert.match(html, /class="chipx"/);
+  assert.match(html, /const BASE=\{region:/);
+});
+
+test('모임 만들기: 시트·검증·양쪽 모드 생성', () => {
+  assert.match(html, /function openCreate\(\)/);
+  assert.match(html, /from\('meetings'\)\.insert\(\{title:name,emoji:C\.em,tags:C\.tags,region:C\.region,when_label:C\.when,capacity:C\.cap,created_by:ME\}\)/);
+  assert.match(html, /관심사나 취미를 1개 이상 골라 주세요/);
+  assert.match(html, /내가 만든 모임/);
+});
+
+test('채팅방·사진첩·내 행성 화면은 탭 바를 덮지 않고, 탭 이동 시 닫힌다', () => {
+  assert.match(html, /#roomview\{position:absolute;top:0;left:0;right:0;bottom:var\(--nav-h\);z-index:35/);
+  assert.match(html, /#album\{position:absolute;top:0;left:0;right:0;bottom:var\(--nav-h\);z-index:36/);
+  assert.match(html, /#satview\{position:absolute;top:0;left:0;right:0;bottom:var\(--nav-h\);z-index:35/);
+  assert.match(html, /nav#nav\{[^}]*z-index:40/);
+  assert.match(html, /function go\(t\)\{\s*\/\/[^\n]*\n\s*if\(CUR\)closeRoom\(\);/);
+});
+
 /* ===== Task 7: 장애 안내 · 초기화 ===== */
 
 test('장애 상황마다 한국어 안내와 다시 시도 문구가 있다', () => {

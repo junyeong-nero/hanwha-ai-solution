@@ -85,6 +85,11 @@ nav#nav svg{width:23px;height:23px}
 }
 .chip.on{background:rgba(243,115,33,.16);border-color:var(--orange);color:var(--orange-soft)}
 .chip.add{border-style:dashed;color:var(--tx3)}
+/* 직접 추가한 항목: 칩 오른쪽에 삭제(×) 버튼 */
+.chipwrap{display:inline-flex;align-items:stretch;margin:0 6px 8px 0}
+.chipwrap .chip{margin:0;border-radius:999px 0 0 999px;border-right:0}
+.chipx{border:1px solid var(--line);border-radius:0 999px 999px 0;background:var(--card);color:var(--tx3);padding:0 11px 0 8px;font-size:15px;min-height:34px;min-width:34px}
+.chipwrap .chip.on+.chipx{border-color:var(--orange);color:var(--orange-soft);background:rgba(243,115,33,.16)}
 .cta{
   display:block;width:100%;padding:14px;border-radius:13px;background:var(--orange);color:#fff;
   font-size:15px;font-weight:700;text-align:center;min-height:48px;
@@ -132,8 +137,8 @@ nav#nav svg{width:23px;height:23px}
 .corow .st{font-size:11.5px;color:var(--tx3)}
 .corow .st.lit{color:var(--orange-soft)}
 
-/* 내 행성(위성) 뷰 */
-#satview{position:absolute;inset:0;z-index:45;background:linear-gradient(180deg,#0B0E1A,#131838);display:none;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom))}
+/* 내 행성(위성) 뷰 — 탭 바 위에 놓여 탭 전환이 가능하다 */
+#satview{position:absolute;top:0;left:0;right:0;bottom:var(--nav-h);z-index:35;background:linear-gradient(180deg,#0B0E1A,#131838);display:none;flex-direction:column;overflow-y:auto;padding:calc(14px + env(safe-area-inset-top)) 18px 18px}
 #satview.on{display:flex}
 .back{display:inline-flex;align-items:center;gap:6px;color:var(--tx2);font-size:14px;font-weight:600;padding:8px 0;min-height:44px}
 .mespace{position:relative;width:290px;height:290px;margin:10px auto}
@@ -192,8 +197,8 @@ nav#nav svg{width:23px;height:23px}
 .empty{padding:44px 0;text-align:center;color:var(--tx3);font-size:13.5px;line-height:1.7}
 .empty i{font-style:normal;font-size:34px;display:block;margin-bottom:10px}
 
-/* ===== 채팅방 ===== */
-#roomview{position:absolute;inset:0;z-index:55;background:var(--bg);display:none;flex-direction:column}
+/* ===== 채팅방 — 탭 바를 덮지 않아 채팅 중에도 다른 탭으로 이동할 수 있다 ===== */
+#roomview{position:absolute;top:0;left:0;right:0;bottom:var(--nav-h);z-index:35;background:var(--bg);display:none;flex-direction:column}
 #roomview.on{display:flex}
 #rhead{
   display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
@@ -221,7 +226,7 @@ nav#nav svg{width:23px;height:23px}
 .plan .row i{font-style:normal;flex-shrink:0}
 .plan button{width:100%;margin-top:10px;background:var(--orange);color:#fff;font-size:13px;font-weight:700;padding:10px;border-radius:9px}
 .plan button:disabled{background:var(--card2);color:var(--tx3)}
-#composer{display:flex;gap:8px;align-items:center;padding:9px 12px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(13,16,32,.94)}
+#composer{display:flex;gap:8px;align-items:center;padding:9px 12px;border-top:1px solid var(--line);background:rgba(13,16,32,.94)}
 #composer .plus{width:38px;height:38px;border-radius:50%;background:var(--card2);font-size:20px;color:var(--tx2);flex-shrink:0;display:flex;align-items:center;justify-content:center}
 #composer input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px 15px;color:var(--tx);outline:none;min-width:0}
 #composer .send{width:38px;height:38px;border-radius:50%;background:var(--orange);flex-shrink:0;display:flex;align-items:center;justify-content:center}
@@ -233,7 +238,7 @@ nav#nav svg{width:23px;height:23px}
 .typing{font-size:12px;color:var(--tx3);padding:4px 14px}
 
 /* 사진첩 */
-#album{position:absolute;inset:0;z-index:58;background:var(--bg);display:none;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
+#album{position:absolute;top:0;left:0;right:0;bottom:var(--nav-h);z-index:36;background:var(--bg);display:none;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 16px 16px}
 #album.on{display:flex}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px;overflow-y:auto}
 .photo{aspect-ratio:1;border-radius:13px;display:flex;align-items:flex-end;padding:9px;font-size:11px;color:rgba(255,255,255,.9);font-weight:600}
@@ -368,9 +373,22 @@ nav#nav svg{width:23px;height:23px}
   #tab-profile > .cta,
   #tab-profile > .hint,
   #tab-profile > .t{max-width:920px;}
-  #roomview,#album,#satview{left:112px;}
+  #roomview,#album,#satview{left:112px;bottom:0;}
   #toast{left:128px;right:32px;max-width:760px;margin:0 auto;}
 }
+
+/* ===== 모임 만들기 ===== */
+#createbox{display:flex;align-items:center;gap:12px;padding:13px 15px;margin-bottom:12px}
+#createbox .tx{flex:1;min-width:0}
+#createbox b{font-size:14px;display:block}
+#createbox span{font-size:12px;color:var(--tx2)}
+#createbox button{background:var(--orange);color:#fff;font-weight:700;font-size:13px;padding:10px 13px;border-radius:11px;min-height:44px;white-space:nowrap}
+.cwrap{max-height:calc(100dvh - 120px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.cwrap .frow label{font-size:13px}
+.cwrap input[type=text]{width:100%;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--tx);outline:none;min-height:46px}
+.emrow{display:flex;gap:6px;flex-wrap:wrap}
+.emrow button{width:44px;height:44px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:21px}
+.emrow button.on{border-color:var(--orange);background:rgba(243,115,33,.16)}
 </style>
 </head>
 <body>
@@ -393,6 +411,10 @@ nav#nav svg{width:23px;height:23px}
     <section class="tabpane" id="tab-match">
       <h1 class="app">AI 매칭</h1>
       <p class="sub" id="matchsub"></p>
+      <div class="card" id="createbox">
+        <div class="tx"><b>원하는 모임이 없나요?</b><span>관심사·지역을 정해 직접 열면 AI 추천 목록에도 올라가요</span></div>
+        <button onclick="openCreate()">＋ 새 모임 만들기</button>
+      </div>
       <div id="matchnote"></div>
       <div id="meets" class="meetgrid"></div>
       <p class="hint" style="margin-top:4px">주황 띠는 모임 안에 <b style="color:var(--orange-soft)">한 번 이상 만난 사람</b>이 얼마나 있는지를 보여줘요. 프로필 설정을 바꾸면 추천 순서가 달라집니다.</p>
@@ -566,6 +588,44 @@ nav#nav svg{width:23px;height:23px}
     <p id="veiltxt"></p>
   </div>
 
+  <!-- 모임 만들기 시트 -->
+  <div class="sheetwrap" id="createwrap">
+    <div class="dimbg" onclick="hideCreate()"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="cwrap">
+        <b style="font-size:16px">새 모임 만들기</b>
+        <p class="hint" style="margin:4px 0 14px">만들면 바로 참가되고 채팅방이 열려요. 관심사·지역이 맞는 동료에게 AI가 추천해요.</p>
+        <div class="frow">
+          <label>모임 이름<span class="req">필수</span></label>
+          <input type="text" id="c-name" maxlength="24" placeholder="예: 판교 점심 산책 크루" autocomplete="off">
+        </div>
+        <div class="frow">
+          <label>이모지</label>
+          <div class="emrow" id="c-emoji"></div>
+        </div>
+        <div class="frow">
+          <label>지역<span class="req">필수</span></label>
+          <div id="c-region"></div>
+        </div>
+        <div class="frow">
+          <label>관심사 · 취미<span class="req">1개 이상</span></label>
+          <div id="c-tags"></div>
+        </div>
+        <div class="frow">
+          <label>시간대</label>
+          <div id="c-when"></div>
+        </div>
+        <div class="frow">
+          <label>정원</label>
+          <div class="step"><button onclick="bumpCap(-1)">−</button><b id="c-cap"></b><button onclick="bumpCap(1)">+</button></div>
+        </div>
+        <p class="eerr" id="c-err"></p>
+        <button class="cta" id="c-btn" onclick="submitCreate()">모임 만들기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 직접 추가 시트 -->
   <div class="sheetwrap" id="addwrap">
     <div class="dimbg" onclick="hideAdd()"></div>
@@ -686,6 +746,9 @@ const AVATARS=['🌙','🌕','⭐','☄️','🪐','🌌'];
 let REGIONS=['판교','여의도','장교','대전','창원','서울숲'];
 let INTS=['러닝','자동화','주식','전시','야구','캠핑'];
 let HOBS=['위스키','사진','보드게임','커피','등산','요리'];
+const BASE={region:[...REGIONS],int:[...INTS],hob:[...HOBS]};   // 기본 항목 — 이 밖의 값은 직접 추가한 것이라 삭제 가능
+const WHENS=['평일 점심','평일 저녁','금요일 저녁','주말 오전','주말 오후','시간 미정'];
+const EMOJIS=['🌙','🏃','🍜','☕','🎲','📷','📚','🥃','🎬','⚽'];
 const co=id=>COMPANIES.find(c=>c.id===id);
 const myCo=()=>co(S.profile.company);
 const $=id=>document.getElementById(id);
@@ -700,6 +763,9 @@ function toast(a,b){$('toast').innerHTML='<b>'+a+'</b> · '+b;$('toast').classLi
 
 /* ================= 탭 전환 ================= */
 function go(t){
+  // 채팅방·사진첩·내 행성 화면이 열려 있어도 탭을 누르면 닫고 이동한다
+  if(CUR)closeRoom();
+  $('album').classList.remove('on'); $('satview').classList.remove('on');
   S.tab=t;
   document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
@@ -800,7 +866,7 @@ function renderMatchCards(list,note){
     return '<div class="card meet">'
       +'<div class="hd"><div class="em">'+m.em+'</div><div style="flex:1">'
       +'<h3>'+esc(m.name)+'</h3><div class="meta">'+esc(m.region)+' · '+esc(m.when)+' · '+total+'명 참여 중 / 정원 '+m.cap+'</div>'
-      +'<div style="margin-top:7px">'+m.tags.map(t=>'<span class="tag">#'+esc(t)+'</span>').join('')+'</div>'
+      +'<div style="margin-top:7px">'+(m.mine?'<span class="tag" style="color:var(--orange-soft);background:rgba(243,115,33,.14)">내가 만든 모임</span>':'')+m.tags.map(t=>'<span class="tag">#'+esc(t)+'</span>').join('')+'</div>'
       +'</div></div>'
       +'<div class="ai">🌙 <b>AI 추천 이유</b> — '+m.ai+'</div>'
       +'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div>'
@@ -1048,16 +1114,16 @@ function renderProfile(){
   $('pfident').textContent=P.realName?P.realName+' · '+(co(P.company)||{}).name+' (로그인 정보)':'';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
   $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
-  $('f-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(P.region===r?' on':'')+'" onclick="setP(\'region\',\''+r+'\')">'+esc(r)+'</button>').join('')
+  $('f-region').innerHTML=REGIONS.map(r=>chipHtml('region',r,P.region===r,'setP(\'region\',\''+r+'\')')).join('')
     +'<button class="chip add" onclick="openAdd(\'region\')">＋ 직접 추가</button>';
   $('f-age').textContent=P.age+'세';
   $('f-gender').innerHTML=[['m','남성'],['f','여성'],[null,'선택 안 함']].map(([v,l])=>
     '<button class="'+(P.gender===v?'on':'')+'" onclick="setP(\'gender\','+(v?'\''+v+'\'':'null')+')">'+l+'</button>').join('');
   const MB=['ISTJ','ISFJ','INFJ','INTJ','ISTP','ISFP','INFP','INTP','ESTP','ESFP','ENFP','ENTP','ESTJ','ESFJ','ENFJ','ENTJ'];
   $('f-mbti').innerHTML=MB.map(m=>'<option'+(m===P.mbti?' selected':'')+'>'+m+'</option>').join('');
-  $('f-int').innerHTML=INTS.map(v=>'<button class="chip'+(P.interests.includes(v)?' on':'')+'" onclick="tgl(S.profile.interests,\''+v+'\')">'+esc(v)+'</button>').join('')
+  $('f-int').innerHTML=INTS.map(v=>chipHtml('int',v,P.interests.includes(v),'tgl(S.profile.interests,\''+v+'\')')).join('')
     +'<button class="chip add" onclick="openAdd(\'int\')">＋ 직접 추가</button>';
-  $('f-hob').innerHTML=HOBS.map(v=>'<button class="chip'+(P.hobbies.includes(v)?' on':'')+'" onclick="tgl(S.profile.hobbies,\''+v+'\')">'+esc(v)+'</button>').join('')
+  $('f-hob').innerHTML=HOBS.map(v=>chipHtml('hob',v,P.hobbies.includes(v),'tgl(S.profile.hobbies,\''+v+'\')')).join('')
     +'<button class="chip add" onclick="openAdd(\'hob\')">＋ 직접 추가</button>';
   $('f-min').textContent=P.sizeMin+'명';$('f-max').textContent=P.sizeMax+'명';
   $('f-bal').classList.toggle('on',P.balance);
@@ -1067,6 +1133,21 @@ function renderProfile(){
     '<button class="'+(P.dir===v?'on':'')+'" onclick="setP(\'dir\',\''+v+'\')">'+l+'</button>').join('');
 }
 $('nick').addEventListener('input',e=>{S.profile.nick=e.target.value||'달토끼';profileChanged()});
+
+/* 칩 렌더링: 직접 추가한 항목은 × 삭제 버튼이 붙는다 */
+function chipHtml(kind,v,on,onclick){
+  const chip='<button class="chip'+(on?' on':'')+'" onclick="'+onclick+'">'+esc(v)+'</button>';
+  if(BASE[kind].includes(v))return chip;
+  return '<span class="chipwrap">'+chip+'<button class="chipx" aria-label="'+esc(v)+' 삭제" onclick="removeItem(\''+kind+'\',\''+v+'\')">×</button></span>';
+}
+function removeItem(kind,v){
+  const P=S.profile;
+  if(kind==='region'){REGIONS=REGIONS.filter(x=>x!==v); if(P.region===v)P.region=BASE.region[0];}
+  else if(kind==='int'){INTS=INTS.filter(x=>x!==v); P.interests=P.interests.filter(x=>x!==v);}
+  else{HOBS=HOBS.filter(x=>x!==v); P.hobbies=P.hobbies.filter(x=>x!==v);}
+  renderProfile();profileChanged();
+  toast('삭제 완료','<b>'+esc(v)+'</b> 항목을 지웠어요');
+}
 
 /* 직접 추가 */
 let ADDKIND=null;
@@ -1241,7 +1322,7 @@ async function loadRecommendations(){
     const byId={};
     (d.candidates||[]).forEach(c=>{
       byId[c.id]=ensureMeeting(c.id,{em:c.emoji||'🌙',name:c.title,region:c.region,when:c.when_label,cap:c.capacity,tags:c.tags||[],
-        memberCount:Math.max(0,(c.member_count||0)-(c.joined?1:0)),knownCount:c.known_count||0});
+        memberCount:Math.max(0,(c.member_count||0)-(c.joined?1:0)),knownCount:c.known_count||0,mine:!!c.mine});
       if(c.joined&&!S.joined.includes(c.id))S.joined.push(c.id);
     });
     const list=[];
@@ -1319,6 +1400,52 @@ async function resetDemo(){
   const tok=window.prompt('관리 토큰을 입력하세요'); if(!tok)return;
   try{ await callFn('reset-demo',{},{'x-demo-reset-token':tok}); toast('초기화 완료','발표 데이터를 비웠어요'); setTimeout(()=>location.reload(),900); }
   catch(e){ toast('초기화 실패',e.code==='FORBIDDEN'?'토큰이 올바르지 않아요':'다시 시도해 주세요') }
+}
+
+/* ================= 모임 만들기 ================= */
+const C={em:'🌙',region:null,tags:[],when:'평일 저녁',cap:6};
+function openCreate(){
+  C.em='🌙'; C.region=S.profile.region; C.tags=[]; C.when='평일 저녁'; C.cap=Math.max(2,Math.min(10,S.profile.sizeMax||6));
+  $('c-name').value=''; $('c-err').textContent='';
+  renderCreate(); $('createwrap').classList.add('on');
+}
+function hideCreate(){$('createwrap').classList.remove('on')}
+function cset(k,v){C[k]=v;renderCreate()}
+function ctag(v){const i=C.tags.indexOf(v);i<0?C.tags.push(v):C.tags.splice(i,1);renderCreate()}
+function bumpCap(d){C.cap=Math.max(2,Math.min(10,C.cap+d));renderCreate()}
+function renderCreate(){
+  $('c-emoji').innerHTML=EMOJIS.map(e=>'<button class="'+(C.em===e?'on':'')+'" onclick="cset(\'em\',\''+e+'\')">'+e+'</button>').join('');
+  $('c-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(C.region===r?' on':'')+'" onclick="cset(\'region\',\''+r+'\')">'+esc(r)+'</button>').join('');
+  const pool=[...new Set([...INTS,...HOBS])];
+  $('c-tags').innerHTML=pool.map(v=>'<button class="chip'+(C.tags.includes(v)?' on':'')+'" onclick="ctag(\''+v+'\')">'+esc(v)+'</button>').join('');
+  $('c-when').innerHTML=WHENS.map(w=>'<button class="chip'+(C.when===w?' on':'')+'" onclick="cset(\'when\',\''+w+'\')">'+w+'</button>').join('');
+  $('c-cap').textContent=C.cap+'명';
+}
+async function submitCreate(){
+  const name=$('c-name').value.trim().replace(/["'\\<>]/g,'');
+  if(!name)return $('c-err').textContent='모임 이름을 입력해 주세요';
+  if(!C.region)return $('c-err').textContent='지역을 선택해 주세요';
+  if(!C.tags.length)return $('c-err').textContent='관심사나 취미를 1개 이상 골라 주세요';
+  const btn=$('c-btn'); btn.disabled=true; btn.textContent='만드는 중…';
+  try{
+    let id;
+    if(BACKEND){
+      const {data,error}=await sb.from('meetings').insert({title:name,emoji:C.em,tags:C.tags,region:C.region,when_label:C.when,capacity:C.cap,created_by:ME}).select('id').single();
+      if(error)throw error; id=data.id;
+      const m=ensureMeeting(id,{em:C.em,name,region:C.region,when:C.when,cap:C.cap,tags:[...C.tags],memberCount:0,knownCount:0,mine:true,ai:'내가 만든 모임 — 관심사가 맞는 동료에게 AI가 추천해요'});
+      if(R.rec){R.rec.list=[m,...R.rec.list.filter(x=>x.id!==id)]}
+      await joinMeet(id);   // 만든 사람은 바로 참가 · 채팅방 생성
+    }else{
+      id='u'+Date.now();
+      MEETINGS.unshift({id,em:C.em,name,region:C.region,when:C.when,cap:C.cap,tags:[...C.tags],members:[],mine:true,ai:'내가 만든 모임 — 관심사가 맞는 동료가 참가하면 채팅이 시작돼요'});
+      S.joined.push(id);
+      S.rooms[id]={msgs:[{f:'sys',x:'모임을 열었어요. 관심사가 맞는 동료가 참가하면 여기서 익명으로 대화해요 🌙'}],unread:0,planned:null,revealed:false,photos:[]};
+      updateBdg(); renderMatch();
+      toast('모임 생성','<b>'+esc(name)+'</b> 채팅방이 열렸어요');
+    }
+    hideCreate();
+  }catch(e){ $('c-err').textContent='모임을 만들지 못했어요 · 다시 시도해 주세요' }
+  finally{btn.disabled=false;btn.textContent='모임 만들기'}
 }
 
 /* ================= 시작 ================= */

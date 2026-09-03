@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
       if (error) throw error;
     }
 
+    // 사용자가 직접 만든 모임은 지우고, 시드 모임은 open 으로 되돌린다
+    const { error: userMeetingsError } = await svc.from('meetings').delete().not('created_by', 'is', null);
+    if (userMeetingsError) throw userMeetingsError;
     const { error: meetingsError } = await svc.from('meetings').update({ status: 'open' }).neq('status', 'open');
     if (meetingsError) throw meetingsError;
 

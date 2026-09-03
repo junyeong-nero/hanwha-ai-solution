@@ -25,6 +25,8 @@ interface Candidate {
   member_count: number;
   known_count: number;
   joined: boolean;
+  /** 호출자가 직접 만든 모임 */
+  mine: boolean;
 }
 
 /** 오류를 ai_recommendation_runs.error_type 용 짧은 분류로 바꾼다 (원문은 남기지 않는다) */
@@ -55,7 +57,7 @@ Deno.serve(async (req) => {
     // 2. 열린 모임 · 멤버 · 내 연결
     const { data: meetings, error: meetingsError } = await svc
       .from('meetings')
-      .select('id, title, emoji, region, when_label, capacity, tags')
+      .select('id, title, emoji, region, when_label, capacity, tags, created_by')
       .eq('status', 'open');
     if (meetingsError) throw meetingsError;
 
@@ -100,6 +102,7 @@ Deno.serve(async (req) => {
           member_count: ids.length,
           known_count: knownCount,
           joined,
+          mine: m.created_by === user.id,
         };
       })
       .filter((c: Candidate) => c.joined || c.member_count < c.capacity);

@@ -409,3 +409,11 @@ test('derivePassword: 비밀키·이메일에 결정적, 64자 hex, 비밀키가
   assert.notEqual(a, c);
   assert.notEqual(a, d);
 });
+
+/* ===== 0003: 사용자 생성 모임 ===== */
+test('0003 마이그레이션: meetings.created_by 와 직접 만들기 정책', () => {
+  const sql = fs.readFileSync(new URL('../supabase/migrations/0003_user_meetings.sql', import.meta.url), 'utf8');
+  assert.match(sql, /add column if not exists created_by uuid references auth\.users\(id\)/);
+  assert.match(sql, /create policy "모임 직접 만들기" on public\.meetings/);
+  assert.match(sql, /with check \(created_by = auth\.uid\(\)\)/);
+});
