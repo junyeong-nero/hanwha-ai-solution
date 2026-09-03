@@ -686,3 +686,16 @@ test('0005 마이그레이션: meeting_feedback(0.5 단위 별점)·features 트
   // 실명·사번은 특성 스냅샷에 들어가지 않는다
   assert.doesNotMatch(sql, /real_name|employee_no/);
 });
+
+/* ===== 마이그레이션 0006 (메이저 이슈 #2 · #4) ===== */
+const migration0006 = fs.readFileSync(new URL('../supabase/migrations/0006_fix_major_issues.sql', import.meta.url), 'utf8');
+
+test('0006: 닉네임·이름 길이 제약과 attended 를 포함한 room_summaries', () => {
+  assert.ok(migration0006.includes('check (char_length(nickname) between 1 and 8)'));
+  assert.ok(migration0006.includes('check (char_length(real_name) between 1 and 10)'));
+  assert.ok(migration0006.includes('drop function if exists public.room_summaries();'));
+  assert.ok(migration0006.includes('create function public.room_summaries()'));
+  assert.ok(migration0006.includes('attended boolean'));
+  assert.ok(migration0006.includes('from public.meeting_attendance a'));
+  assert.ok(migration0006.includes('grant execute on function public.room_summaries() to authenticated, service_role;'));
+});

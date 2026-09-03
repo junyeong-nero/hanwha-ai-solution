@@ -206,3 +206,31 @@ test('프론트엔드에는 LLM 프롬프트나 OpenRouter 호출이 없다', ()
   assert.doesNotMatch(html, /chat\/completions/);
   assert.doesNotMatch(html, /"role"\s*:\s*"system"/);
 });
+
+/* ===== 메이저 이슈 회귀 방지 (#1 ~ #4) — 정규식 대신 문자열 포함 검사 ===== */
+
+test('#1 문서 안에 중복 id 가 없다 (별점 시트 id 는 ratestars)', () => {
+  const ids = html.split(' id="').slice(1).map((s) => s.split('"')[0]);
+  const dup = ids.filter((id, i) => ids.indexOf(id) !== i);
+  assert.deepEqual(dup, [], '중복 id: ' + dup.join(', '));
+  assert.ok(html.includes('<div class="stars" id="ratestars"></div>'));
+  assert.ok(html.includes("$('ratestars').innerHTML="));
+});
+
+test('#2 시스템 메시지도 이스케이프해서 렌더링한다', () => {
+  assert.ok(html.includes("if(m.f==='sys')return '<div class=\"msg sys\"><div class=\"bub\">'+esc(String(m.x||''))+'</div></div>';"));
+  assert.ok(!html.includes("<div class=\"bub\">'+m.x+'</div>"));
+});
+
+test('#3 매칭 카드의 참여 인원은 참가 중이면 나를 포함해 채팅 목록과 같은 수를 보여준다', () => {
+  assert.ok(html.includes('shown=others+(joined?1:0)'));
+  assert.ok(html.includes("'+shown+'명 참여 중 / 정원 '"));
+  assert.ok(html.includes("아는 얼굴 <b>'+kn+'명</b> / '+others+'명"));
+});
+
+test('#4 채팅 목록 배지는 내 체크인(iAttended) 기준이고 모임 상태는 completed 로 분리한다', () => {
+  assert.ok(html.includes("r.completed=x.status==='completed'"));
+  assert.ok(html.includes('r.iAttended=!!x.attended'));
+  assert.ok(html.includes("(r.iAttended?'<span class=\"full\">🌕</span>':'')"));
+  assert.ok(!html.includes("r.revealed=x.status==='completed'"));
+});
