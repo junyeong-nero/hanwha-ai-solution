@@ -207,6 +207,18 @@ nav#nav svg{width:23px;height:23px}
 #rhead .ttl{flex:1;min-width:0}
 #rhead b{font-size:15px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #rhead span{font-size:11.5px;color:var(--tx3)}
+.membtn{display:flex;align-items:center;gap:3px;padding:8px 6px;font-size:18px;min-height:44px}
+.membtn b{font-size:12px;color:var(--tx2);font-weight:700}
+.memrow{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid rgba(39,46,78,.55);min-height:52px}
+.memrow:last-child{border-bottom:0}
+.memrow .mav{width:38px;height:38px;border-radius:13px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.memrow .nm{flex:1;min-width:0}
+.memrow .nm b{font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.memrow .nm small{font-size:11.5px;color:var(--tx3)}
+.memrow .bd{display:flex;gap:4px;flex-shrink:0}
+.mbadge{font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:7px;background:var(--card2);color:var(--tx3)}
+.mbadge.on{background:rgba(243,115,33,.16);color:var(--orange-soft)}
+.mbadge.full{background:rgba(245,233,201,.14);color:var(--moon)}
 #rbanner{display:none;background:rgba(243,115,33,.1);border-bottom:1px solid rgba(243,115,33,.3);padding:9px 14px;font-size:12.5px;color:var(--orange-soft);align-items:center;gap:8px}
 #rbanner.on{display:flex}
 #rbanner button{margin-left:auto;background:var(--orange);color:#fff;font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:8px;flex-shrink:0}
@@ -567,6 +579,7 @@ nav#nav svg{width:23px;height:23px}
     <div id="rhead">
       <button class="back" style="padding:8px 6px" onclick="closeRoom()">‹</button>
       <div class="ttl"><b id="rname"></b><span id="rmeta"></span></div>
+      <button class="membtn" onclick="openMembers()" id="memBtn" aria-label="채팅방 멤버 보기">👥<b id="memCount"></b></button>
       <button style="padding:8px;font-size:18px" onclick="openAlbumBtn()" id="albBtn">🖼️</button>
     </div>
     <div id="rbanner"></div>
@@ -585,8 +598,21 @@ nav#nav svg{width:23px;height:23px}
     <div class="sheet">
       <div class="grip"></div>
       <button class="psheet-item" onclick="aiPlan()"><i>🌙</i><div>AI 추천 약속 잡기<small>채팅 내용을 읽고 장소·시간·활동·맛집까지 한 번에 · 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요</small></div></button>
+      <button class="psheet-item" onclick="hidePlus();openMembers()"><i>👥</i><div>채팅방 멤버 보기<small>누가 있는지 · 확정 투표 · 만남 완료 여부</small></div></button>
       <button class="psheet-item" id="plusAlbum" onclick="hidePlus();openAlbum()"><i>🖼️</i><div>모임 사진첩<small>만남이 성사되면 열려요</small></div></button>
       <button class="psheet-item" onclick="hidePlus();toast('모임 정보','이 모임은 <b>매칭 탭의 AI 추천</b>으로 만들어졌어요.')"><i>ℹ️</i><div>모임 정보</div></button>
+    </div>
+  </div>
+
+  <!-- 채팅방 멤버 시트 -->
+  <div class="sheetwrap" id="memwrap">
+    <div class="dimbg" onclick="hideMembers()"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <b style="font-size:16px">채팅방 멤버</b>
+      <p class="hint" id="memsum" style="margin:4px 0 10px"></p>
+      <div id="memlist" style="max-height:60dvh;overflow-y:auto"></div>
+      <p class="hint" style="margin-top:12px">실명은 서로 만남 완료를 한 사람에게만 보여요</p>
     </div>
   </div>
 
@@ -972,8 +998,30 @@ function renderMeta(id){
   $('rname').textContent=m.name;
   const anon=m.members.filter(p=>!S.met[p]).length, total=roomTotal(id);
   $('rmeta').textContent='멤버 '+total+' · 익명 '+anon+'명'+(r.attended.size?' · 만남 완료 '+r.attended.size+'/'+total:'');
+  $('memCount').textContent=total;
   $('albBtn').style.visibility=r.iAttended?'visible':'hidden';
 }
+/* 채팅방 멤버 보기: 표시 이름 · 확정 투표 · 만남 완료 여부 */
+async function openMembers(){
+  const id=CUR; if(!id)return;
+  if(BACKEND)await refreshMembers(id);
+  const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id]; if(!m||!r)return;
+  const ai=[...r.msgs].reverse().find(x=>x.f==='ai'), votes=ai?(r.votes[ai.planId]||new Set()):null;
+  const P=S.profile, myCo=co(P.company);
+  const rows=[{id:MYID(),av:P.av,name:P.realName||P.nick,sub:(myCo?myCo.name:'')+' · 나 ('+P.nick+')',me:true}]
+    .concat(m.members.map(pid=>{const p=PEOPLE[pid]||UNKNOWN, c=co(p.co), known=!!(S.met[pid]&&p.real);
+      return {id:pid,av:p.av,name:known?p.real:p.nick,sub:known?(c?c.name:''):'익명 · 만남 완료 후 실명이 보여요',known};}));
+  $('memlist').innerHTML=rows.map(x=>{
+    const att=r.attended.has(x.id), voted=!!(votes&&votes.has(x.id));
+    return '<div class="memrow"><div class="mav">'+x.av+'</div><div class="nm"><b>'+esc(x.name)+(x.me?' <small style="color:var(--orange)">ME</small>':'')+'</b><small>'+esc(x.sub)+'</small></div>'
+      +'<div class="bd">'+(ai?'<span class="mbadge'+(voted?' on':'')+'">'+(voted?'확정 ✓':'미확정')+'</span>':'')
+      +'<span class="mbadge'+(att?' full':'')+'">'+(att?'만남 완료':'만남 전')+'</span></div></div>';
+  }).join('');
+  const total=roomTotal(id), anon=m.members.filter(p=>!S.met[p]).length;
+  $('memsum').textContent='멤버 '+total+'명 · 익명 '+anon+'명'+(ai?' · 확정 '+(votes?votes.size:0)+'/'+total:'')+' · 만남 완료 '+r.attended.size+'/'+total;
+  $('memwrap').classList.add('on');
+}
+function hideMembers(){$('memwrap').classList.remove('on')}
 /* 전원이 확정 투표를 하면 약속이 잡힌다 */
 function checkPlanDone(id,msg){
   const r=S.rooms[id]; if(!r||!msg)return false;

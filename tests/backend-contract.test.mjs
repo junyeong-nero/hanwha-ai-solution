@@ -114,6 +114,13 @@ test('만남 완료는 개인별 체크인이고 실명은 서로 완료한 사�
   assert.match(html, /if\(S\.met\[pid\]&&p\.real\) return/);
 });
 
+test('채팅방 멤버 보기: 헤더 버튼·+ 메뉴·시트', () => {
+  assert.match(html, /async function openMembers\(\)/);
+  assert.match(html, /id="memlist"/);
+  assert.match(html, /onclick="openMembers\(\)" id="memBtn"/);
+  assert.match(html, /채팅방 멤버 보기/);
+});
+
 test('약속 카드는 웹 검색 후보지 목록을 보여준다', () => {
   assert.match(html, /class="cands"/);
   assert.match(html, /candidates:pl\.candidates\|\|\[\]/);
