@@ -1141,10 +1141,10 @@ async function doReveal(){
     if(BACKEND){
       await Promise.all([loadConnections(),loadRooms()]);
       await openRoom(id);
-      const rr=S.rooms[id], c=res?res.connection_count:0;
-      rr.msgs.push({f:'sys',x:'🌕 만남 완료 '+(res?res.attended_count:rr.attended.size)+'/'+(res?res.member_count:roomTotal(id))+(c?' — 함께 완료한 동료의 이름이 보여요':' — 다른 멤버도 완료하면 서로 이름이 보여요')});
+      const rr=S.rooms[id], others=res?Math.max(0,res.attended_count-1):rr.attended.size-1;
+      rr.msgs.push({f:'sys',x:'🌕 만남 완료 '+(res?res.attended_count:rr.attended.size)+'/'+(res?res.member_count:roomTotal(id))+(others>0?' — 함께 완료한 동료의 이름이 보여요':' — 다른 멤버도 완료하면 서로 이름이 보여요')});
       renderMsgs();renderBanner();renderMeta(id);
-      toast(c?'커넥션 활성화':'만남 완료',c?'연결 '+c+'개 · 홈에서 행성을 확인해 보세요 ✨':'상대가 완료하면 실명으로 바뀌어요');
+      toast(others>0?'커넥션 활성화':'만남 완료',others>0?'함께 완료한 동료 '+others+'명 · 홈에서 행성을 확인해 보세요 ✨':'상대가 완료하면 실명으로 바뀌어요');
       return;
     }
     // 로컬 데모: 다른 멤버들이 차례로 완료하는 상황을 시뮬레이션 — 완료한 사람부터 실명이 보인다
