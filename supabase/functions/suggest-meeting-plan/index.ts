@@ -1,10 +1,12 @@
-// suggest-meeting-plan — 최근 대화를 익명화해 OpenRouter LLM 에 보내고 약속 카드를 만든다.
+// suggest-meeting-plan — 웹 검색으로 실제 후보지를 찾고, 최근 대화를 익명화해 OpenRouter LLM 에 보내 약속 카드를 만든다.
 // 요청: POST { meeting_id }  (Authorization: Bearer <세션 JWT>)
-// 응답: 200 { plan: { id, place, time, activity, nearby }, fallback } / 403 NOT_MEMBER
+// 응답: 200 { plan: { id, place, time, activity, nearby, candidates }, fallback, search_used } / 403 NOT_MEMBER
+// search_used: 'kakao' | 'openrouter' | 'none' — 후보지를 어떤 검색으로 찾았는지
 import { preflight, json, fail, errorResponse, readJsonBody, isUuid } from '../_shared/cors.ts';
 import { requireUser, serviceClient } from '../_shared/supabase.ts';
 import { chatJson, LlmError } from '../_shared/llm.ts';
 import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan, type PlanSuggestion } from '../_shared/chat.ts';
+import { searchPlaces } from '../_shared/search.ts';
 
 const FN = 'suggest-meeting-plan';
 const MESSAGE_LIMIT = 30;
@@ -64,17 +66,30 @@ Deno.serve(async (req) => {
     if (messagesError) throw messagesError;
     const lines = anonymizeMessages(messages ?? [], { limit: MESSAGE_LIMIT, maxLen: MESSAGE_MAX_LEN });
 
-    // 3. LLM 호출 — JSON 검증 실패는 1회 재시도, 그래도 실패하면 정적 카드
     const model = Deno.env.get('OPENROUTER_MODEL') ?? 'openrouter/free';
     const apiKey = Deno.env.get('OPENROUTER_API_KEY') ?? '';
 
+    // 3. 웹 검색으로 실제 후보지 리스트업 — 태그를 키워드로, 첫 태그를 활동 힌트로 쓴다.
+    //    검색 실패는 약속 추천을 막지 않는다 (provider 'none', 빈 목록).
+    const activityHint = meetingForPrompt.tags[0] ? `${meetingForPrompt.tags[0]} 모임` : '모임 장소';
+    const keywords = [...new Set([...meetingForPrompt.tags, activityHint])];
+    const search = await searchPlaces({
+      region: meetingForPrompt.region,
+      keywords,
+      kakaoKey: Deno.env.get('KAKAO_REST_KEY') ?? undefined,
+      openRouterKey: apiKey || undefined,
+      model,
+    });
+    const places = search.places;
+
+    // 4. LLM 호출 — JSON 검증 실패는 1회 재시도, 그래도 실패하면 정적 카드
     let plan: PlanSuggestion | null = null;
     let errorType: string | null = null;
 
     if (!apiKey) {
       errorType = 'NO_API_KEY';
     } else {
-      const prompt = buildPlanPrompt(meetingForPrompt, lines);
+      const prompt = buildPlanPrompt(meetingForPrompt, lines, places);
       for (let attempt = 0; attempt < 2 && !plan; attempt++) {
         try {
           const raw = await chatJson({ apiKey, model, system: prompt.system, user: prompt.user });
@@ -87,9 +102,9 @@ Deno.serve(async (req) => {
     }
 
     const fallback = plan === null;
-    const finalPlan = plan ?? fallbackPlan(meetingForPrompt);
+    const finalPlan = plan ?? fallbackPlan(meetingForPrompt, places);
 
-    // 4. 저장 후 계약 형태로 반환 (time ↔ time_label 매핑)
+    // 5. 저장 후 계약 형태로 반환 (time ↔ time_label 매핑, candidates 는 jsonb)
     const { data: inserted, error: insertError } = await svc
       .from('meeting_plans')
       .insert({
@@ -99,13 +114,14 @@ Deno.serve(async (req) => {
         time_label: finalPlan.time,
         activity: finalPlan.activity,
         nearby: finalPlan.nearby,
+        candidates: finalPlan.candidates,
         source: fallback ? 'fallback' : 'llm',
       })
-      .select('id, place, time_label, activity, nearby')
+      .select('id, place, time_label, activity, nearby, candidates')
       .single();
     if (insertError || !inserted) throw insertError ?? new Error('약속 저장 실패');
 
-    // 5. 메타데이터만 기록 (대화 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
+    // 6. 메타데이터만 기록 (대화 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
     const { error: logError } = await svc.from('ai_recommendation_runs').insert({
       user_id: user.id,
       function_name: FN,
@@ -125,8 +141,10 @@ Deno.serve(async (req) => {
         time: inserted.time_label,
         activity: inserted.activity,
         nearby: Array.isArray(inserted.nearby) ? inserted.nearby : [],
+        candidates: Array.isArray(inserted.candidates) ? inserted.candidates : [],
       },
       fallback,
+      search_used: search.provider,
     });
   } catch (err) {
     return errorResponse(err, FN);

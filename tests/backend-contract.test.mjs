@@ -95,7 +95,46 @@ test('실명은 profiles를 직접 조회해 얻지 않는다 (RPC만 사용)', 
 test('AI 약속과 만남 완료는 Edge Function을 호출한다', () => {
   assert.match(html, /callFn\('suggest-meeting-plan'/);
   assert.match(html, /callFn\('complete-meeting'/);
-  assert.match(html, /from\('meeting_plans'\)\.update\(\{confirmed:true\}\)/);
+});
+
+test('약속 확정은 투표이며 전원이 눌러야 확정된다', () => {
+  assert.match(html, /from\('meeting_plan_votes'\)\.upsert\(\{plan_id:msg\.planId,meeting_id:id,user_id:ME\}/);
+  assert.match(html, /function checkPlanDone\(id,msg\)/);
+  assert.match(html, /table:'meeting_plan_votes'/);
+  assert.match(html, /전원 확정/);
+  assert.doesNotMatch(html, /from\('meeting_plans'\)\.update\(\{confirmed:true\}\)/);
+});
+
+test('만남 완료는 개인별 체크인이고 실명은 서로 완료한 사람에게만 보인다', () => {
+  assert.match(html, /from\('meeting_attendance'\)\.select\('user_id'\)/);
+  assert.match(html, /table:'meeting_attendance'/);
+  assert.match(html, />만남 완료<\/button>/);
+  assert.doesNotMatch(html, /만남 완료 \(데모\)/);
+  // 라벨은 room.revealed 가 아니라 연결(S.met) 기준
+  assert.match(html, /if\(S\.met\[pid\]&&p\.real\) return/);
+});
+
+test('약속 카드는 웹 검색 후보지 목록을 보여준다', () => {
+  assert.match(html, /class="cands"/);
+  assert.match(html, /candidates:pl\.candidates\|\|\[\]/);
+  assert.match(html, /target="_blank" rel="noopener"/);
+});
+
+test('프로필: 복수 선호 지역 · 저장 버튼 · 같은 성별 우선 · 인재경영원', () => {
+  assert.match(html, /regions:\['판교'\]/);
+  assert.match(html, /function tglRegion\(r\)/);
+  assert.match(html, /id="saveBtn"/);
+  assert.match(html, /async function saveProfileNow\(\)/);
+  assert.match(html, /regions:P\.regions/);
+  assert.match(html, /same_gender:P\.sameGender/);
+  assert.match(html, /같은 성별 우선 매칭/);
+  assert.doesNotMatch(html, /이성 간 성비 균형/);
+  assert.match(html, /'인재경영원'/);
+});
+
+test('매칭은 선호 지역 밖 모임을 제외한다 (로컬 모드 규칙)', () => {
+  assert.match(html, /MEETINGS\.filter\(m=>P\.regions\.includes\(m\.region\)\)/);
+  assert.match(html, /에 열린 모임이 없어요/);
 });
 
 test('AI 전송 안내 문구가 + 메뉴에 있다', () => {

@@ -9,7 +9,8 @@ export interface Recommendation {
 }
 
 export interface MatchingPreferences {
-  balance: boolean;
+  /** true 면 같은 성별 비율이 높은 모임을 우선한다 */
+  same_gender: boolean;
   scope: string;
   direction: string;
 }
@@ -17,8 +18,10 @@ export interface MatchingPreferences {
 /** LLM 에 보내는 익명 프로필. 실명 · 사번 · 사용자 ID 는 절대 포함하지 않는다. */
 export interface ProfileForLLM {
   company_id: string | null;
-  region: string | null;
+  /** 선호 지역 목록 — 서버가 이 목록 안의 모임만 후보로 넘긴다 */
+  regions: string[];
   age_band: string;
+  gender: string | null;
   interests: string[];
   hobbies: string[];
   group_size: [number, number];
@@ -36,9 +39,12 @@ export interface CandidateForLLM {
   member_count: number;
   known_count: number;
   joined: boolean;
+  /** 다른 멤버 중 호출자와 같은 성별의 비율 (0~1). 성별을 모르거나 멤버가 없으면 null */
+  same_gender_ratio: number | null;
 }
 
 export const FALLBACK_REASON = '기본 추천 — 선호 지역과 아는 얼굴 비율 기준으로 정렬했어요';
+export const FALLBACK_REASON_SAME_GENDER = '기본 추천 — 같은 성별 비율과 아는 얼굴 비율 기준으로 정렬했어요';
 const MAX_REASON_LEN = 160;
 
 /** 나이를 연령대 문자열로 바꾼다. 나이가 없으면 '비공개'. */
@@ -61,6 +67,12 @@ function toInt(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? Math.round(n) : fallback;
 }
 
+/** 0~1 비율이면 소수 둘째 자리로 반올림, 아니면 null */
+function toRatio(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
+}
+
 /** 프로필에서 허용된 필드만 뽑는다 (화이트리스트). */
 function sanitizeProfile(input: unknown): ProfileForLLM {
   const p = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
@@ -78,15 +90,23 @@ function sanitizeProfile(input: unknown): ProfileForLLM {
     size = [toInt(p.group_size_min, 4), toInt(p.group_size_max, 6)];
   }
 
+  // regions 가 없으면 단일 region 으로 대체한다
+  let regions = cleanStringArray(p.regions, 30, 10);
+  if (regions.length === 0) {
+    const single = cleanString(p.region, 30);
+    if (single) regions = [single];
+  }
+
   return {
     company_id: cleanString(p.company_id, 20) || null,
-    region: cleanString(p.region, 30) || null,
+    regions,
     age_band: band,
+    gender: cleanString(p.gender, 10) || null,
     interests: stringList(p.interests),
     hobbies: stringList(p.hobbies),
     group_size: size,
     matching_preferences: {
-      balance: prefs.balance === true,
+      same_gender: prefs.same_gender === true,
       scope: cleanString(prefs.scope, 10) || 'all',
       direction: cleanString(prefs.direction, 10) || 'wide',
     },
@@ -109,7 +129,13 @@ function sanitizeCandidate(input: unknown): CandidateForLLM & { known_member_rat
     known_count: knownCount,
     known_member_ratio: memberCount > 0 ? Math.round((knownCount / memberCount) * 100) / 100 : 0,
     joined: c.joined === true,
+    same_gender_ratio: toRatio(c.same_gender_ratio),
   };
+}
+
+/** 비율을 프롬프트용 백분율 문자열로 바꾼다. 모르면 '정보 없음'. */
+function ratioLabel(ratio: number | null): string {
+  return ratio === null ? '정보 없음' : `${Math.round(ratio * 100)}%`;
 }
 
 const SYSTEM_PROMPT = `당신은 한화그룹 계열사 임직원 소모임 앱 '달빛한화'의 매칭 도우미예요.
@@ -119,12 +145,15 @@ const SYSTEM_PROMPT = `당신은 한화그룹 계열사 임직원 소모임 앱 
 1. meeting_id 에는 반드시 candidates 배열에 있는 id 만 그대로 쓰세요. 없는 id 를 만들거나 바꾸지 마세요.
 2. 주어진 모든 후보에 rank(1부터 시작하는 정수, 중복 없음)를 부여하세요. 후보를 빠뜨리지 마세요.
 3. reason 은 사용자에게 보여줄 한국어 한 문장(60자 이내, "~해요"체)으로, 왜 이 모임이 맞는지 구체적으로 적으세요.
-4. cautions 는 걸리는 점(지역 불일치, 정원 임박, 이미 참가 중 등)을 짧은 한국어 문구 배열로 적고, 없으면 빈 배열로 두세요.
-5. 판단 기준: 선호 지역(region) 일치, interests·hobbies 와 모임 tags 의 겹침, 희망 인원(group_size)과 현재 인원(member_count·capacity),
+4. cautions 는 걸리는 점(정원 임박, 이미 참가 중, 성별 구성 등)을 짧은 한국어 문구 배열로 적고, 없으면 빈 배열로 두세요.
+5. 후보는 모두 사용자의 선호 지역 목록(profile.regions) 안의 모임이에요. 지역은 이미 맞으니 지역 불일치를 이유로 감점하지 마세요.
+6. 판단 기준: interests·hobbies 와 모임 tags 의 겹침, 희망 인원(group_size)과 현재 인원(member_count·capacity),
    matching_preferences.direction(wide = 새로운 사람 위주라 known_member_ratio 가 낮은 모임 선호, deep = 아는 얼굴 위주라 높은 모임 선호),
-   matching_preferences.scope(mine = 같은 계열사 위주, all = 계열사 무관), matching_preferences.balance(true 면 계열사 구성이 다양한 모임 선호).
-6. joined 가 true 인 모임은 이미 참가 중이므로 순위를 뒤로 미루되 목록에서 빼지는 마세요.
-7. 다른 설명이나 마크다운 없이 아래 형태의 JSON 객체 하나만 출력하세요.
+   matching_preferences.scope(mine = 같은 계열사 위주, all = 계열사 무관).
+7. matching_preferences.same_gender 가 true 면 "같은 성별 우선" 이에요. same_gender_ratio(다른 멤버 중 사용자와 같은 성별의 비율, 백분율 또는 '정보 없음')가 높은 모임을 앞에 두세요.
+   false 면 same_gender_ratio 는 참고만 하고 순위에 크게 반영하지 마세요.
+8. joined 가 true 인 모임은 이미 참가 중이므로 순위를 뒤로 미루되 목록에서 빼지는 마세요.
+9. 다른 설명이나 마크다운 없이 아래 형태의 JSON 객체 하나만 출력하세요.
 {"recommendations":[{"meeting_id":"candidates 의 id","rank":1,"reason":"한 문장 이유","cautions":[]}]}`;
 
 /**
@@ -135,9 +164,15 @@ export function buildRecommendationPrompt(profile: unknown, candidates: unknown[
   const safeProfile = sanitizeProfile(profile);
   const safeCandidates = (Array.isArray(candidates) ? candidates : [])
     .map(sanitizeCandidate)
-    .filter((c) => c.id);
+    .filter((c) => c.id)
+    .map((c) => ({ ...c, same_gender_ratio: ratioLabel(c.same_gender_ratio) }));
   const user = JSON.stringify({
     profile: safeProfile,
+    preferred_regions: safeProfile.regions,
+    same_gender_first: safeProfile.matching_preferences.same_gender,
+    note: safeProfile.regions.length > 0
+      ? `후보 모임은 모두 선호 지역(${safeProfile.regions.join(', ')}) 안에 있어요.`
+      : '선호 지역이 비어 있어 모든 지역의 모임이 후보예요.',
     candidates: safeCandidates,
     candidate_ids: safeCandidates.map((c) => c.id),
   });
@@ -193,39 +228,49 @@ export function parseRecommendations(raw: string, candidateIds: string[]): Recom
 
 export interface FallbackCandidate {
   id: string;
-  region: string;
   member_count: number;
   known_count: number;
+  same_gender_ratio?: number | null;
 }
 
 export interface FallbackProfile {
-  region: string | null;
-  matching_preferences: { direction?: string };
+  matching_preferences: { direction?: string; same_gender?: boolean };
 }
 
 /**
- * LLM 이 실패했을 때 쓰는 결정적 정렬.
- * 1) 선호 지역 일치 우선 2) 아는 얼굴 비율 (deep 이면 내림차순, 아니면 오름차순) 3) id
+ * LLM 이 실패했을 때 쓰는 결정적 정렬. 지역은 서버가 이미 걸러 두었으므로 정렬 기준이 아니다.
+ * 1) same_gender 가 true 일 때만: 같은 성별 비율 내림차순 (null 은 맨 뒤)
+ * 2) 아는 얼굴 비율 (deep 이면 내림차순, 아니면 오름차순)
+ * 3) id
  */
 export function deterministicOrder(candidates: FallbackCandidate[], profile: FallbackProfile): Recommendation[] {
   const deep = profile?.matching_preferences?.direction === 'deep';
-  const region = profile?.region ?? null;
-  const ratio = (c: FallbackCandidate) => (c.member_count > 0 ? c.known_count / c.member_count : 0);
+  const sameGender = profile?.matching_preferences?.same_gender === true;
+  const knownRatio = (c: FallbackCandidate) => (c.member_count > 0 ? c.known_count / c.member_count : 0);
+  const genderRatio = (c: FallbackCandidate) =>
+    typeof c.same_gender_ratio === 'number' && Number.isFinite(c.same_gender_ratio) ? c.same_gender_ratio : null;
 
   const sorted = [...candidates].sort((a, b) => {
-    const ra = a.region === region ? 0 : 1;
-    const rb = b.region === region ? 0 : 1;
-    if (ra !== rb) return ra - rb;
-    const ka = ratio(a);
-    const kb = ratio(b);
+    if (sameGender) {
+      const ga = genderRatio(a);
+      const gb = genderRatio(b);
+      if (ga !== gb) {
+        if (ga === null) return 1;
+        if (gb === null) return -1;
+        return gb - ga;
+      }
+    }
+    const ka = knownRatio(a);
+    const kb = knownRatio(b);
     if (ka !== kb) return deep ? kb - ka : ka - kb;
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
 
+  const reason = sameGender ? FALLBACK_REASON_SAME_GENDER : FALLBACK_REASON;
   return sorted.map((c, i) => ({
     meeting_id: c.id,
     rank: i + 1,
-    reason: FALLBACK_REASON,
+    reason,
     cautions: [],
   }));
 }

@@ -66,6 +66,12 @@ npx supabase secrets set DEMO_RESET_TOKEN=<길고 무작위인 문자열>
 npx supabase secrets set DEMO_LOGIN_SECRET=<길고 무작위인 다른 문자열>
 ```
 
+선택 — 약속 후보지 **실제 웹 검색**용 카카오 로컬 API 키 (https://developers.kakao.com → 앱 만들기 → REST API 키). 없으면 OpenRouter 웹 검색 플러그인(요청당 약 $0.02, 크레딧 필요)을, 그것도 안 되면 검색 없이 진행합니다:
+
+```bash
+npx supabase secrets set KAKAO_REST_KEY=<카카오 REST API 키>
+```
+
 `DEMO_LOGIN_SECRET`은 사번 기반 계정의 비밀번호를 파생하는 서버 비밀키입니다. 유출되면 사번만으로 남의 세션을 만들 수 있으니 32자 이상 무작위 값을 쓰고 저장소에 넣지 않습니다.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`는 Supabase가 Edge Function에 **자동으로 주입**합니다. `SUPABASE_` 접두사는 `secrets set`으로 등록할 수 없으니 직접 넣지 않습니다 (코드는 `SUPABASE_SECRET_KEY`가 없으면 자동 주입된 `SUPABASE_SERVICE_ROLE_KEY`를 사용합니다).

@@ -236,3 +236,15 @@ LLM 응답은 다음 필드를 필수로 한다.
 - Edge Function 비밀값: `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `DEMO_RESET_TOKEN`, `DEMO_LOGIN_SECRET`만 `supabase secrets set`으로 등록한다. `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`는 플랫폼이 자동 주입하며 `SUPABASE_` 접두사는 직접 등록할 수 없다.
 - OpenRouter: 크레딧 충전 여부, 모델 ID 유효성, 발표 직전 남은 한도.
 - GitHub Pages `src/index.html`의 `CONFIG`에는 URL과 anon 키만 넣는다. secret key·OpenRouter 키가 들어가면 `tests/backend-contract.test.mjs`가 실패한다.
+
+## 12. 2026-09-03 2차 변경 (사용자 피드백 반영)
+
+| 변경 | 설계 |
+| --- | --- |
+| 선호 지역 복수 선택 + 하드 필터 | `profiles.regions text[]` 추가(기존 `region`은 첫 항목으로 유지). `recommend-meetings`는 `region ∈ regions`인 열린 모임만 후보로 삼는다. 지역 밖 모임은 관심사가 맞아도 추천되지 않는다 |
+| 프로필 저장 버튼 | 자동 저장을 없애고 변경 시 `저장` 버튼이 켜진다. 저장 시에만 `profiles` upsert와 추천 캐시 무효화 |
+| 같은 성별 우선 | `matching_preferences.same_gender`(구 `balance` 대체). 서버가 후보별 `same_gender_ratio`(다른 멤버 중 같은 성별 비율)를 계산해 LLM 프롬프트와 결정적 정렬에 반영. 성별 미설정이면 무시 |
+| 약속 확정 = 전원 투표 | `meeting_plan_votes(plan_id, meeting_id, user_id)`. 멤버가 직접 insert(RLS). 트리거 `confirm_plan_when_unanimous`가 투표 수 ≥ 멤버 수일 때 `meeting_plans.confirmed=true`. Realtime publication에 등록해 모든 멤버의 바가 함께 차오른다 |
+| 만남 완료 = 개인별 체크인 | `meeting_attendance(meeting_id, user_id)` + RPC `attend_meeting_tx`. 내 출석을 기록하고 **이미 완료한 멤버와의 쌍만** `connections`에 넣는다. `room_members`는 연결된 상대에게만 `real_name`을 준다 → 같은 방이라도 사람마다 보이는 실명이 다르다. 전원 완료 시 `meetings.status='completed'`. `complete_meeting_tx`는 제거 |
+| 장소 후보 실제 웹 검색 | `_shared/search.ts`: `KAKAO_REST_KEY`가 있으면 카카오 로컬 키워드 검색, 없으면 OpenRouter 웹 검색 플러그인(`plugins:[{id:'web'}]`, 크레딧 필요), 둘 다 없으면 검색 없이 진행. 결과는 프롬프트에 후보로 넣고 `meeting_plans.candidates jsonb`에 저장, 카드에 이름·주소·링크·이유로 표시 |
+| 인재경영원 | 기본 지역 목록과 시드 모임(`…0007`)에 추가 |

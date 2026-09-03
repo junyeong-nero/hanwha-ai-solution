@@ -12,10 +12,14 @@ import {
   buildRecommendationPrompt,
   parseRecommendations,
   deterministicOrder,
+  FALLBACK_REASON,
+  FALLBACK_REASON_SAME_GENDER,
 } from '../supabase/functions/_shared/recommendation.ts';
 import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan } from '../supabase/functions/_shared/chat.ts';
+import { searchPlaces, KAKAO_ENDPOINT } from '../supabase/functions/_shared/search.ts';
 
 const migration = fs.readFileSync(new URL('../supabase/migrations/0001_initial.sql', import.meta.url), 'utf8');
+const migration0004 = fs.readFileSync(new URL('../supabase/migrations/0004_votes_attendance_regions.sql', import.meta.url), 'utf8');
 const seed = fs.readFileSync(new URL('../supabase/seed.sql', import.meta.url), 'utf8');
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -72,6 +76,48 @@ test('시드는 계열사 8곳과 안정적인 UUID의 모임 6개를 넣는다'
   }
   assert.ok(seed.includes('on conflict'), '시드는 재실행 가능해야 합니다');
   assert.doesNotMatch(seed, /sk-or-v1-[A-Za-z0-9]/);
+});
+
+test('시드: 인재경영원 모임 7이 안정적인 UUID로 들어간다', () => {
+  const line = seed.split('\n').find((l) => l.includes('00000000-0000-4000-8000-000000000007'));
+  assert.ok(line, '모임 7 시드가 없습니다');
+  assert.ok(line.includes('인재경영원'), '모임 7의 지역이 인재경영원이 아닙니다');
+  assert.ok(line.includes('🌿') && line.includes('산책') && line.includes('러닝'));
+});
+
+/* ================= 0004: 투표 · 체크인 · 다중 지역 ================= */
+
+test('0004 마이그레이션: 투표·체크인 테이블과 트리거·RPC 를 정의한다', () => {
+  assert.match(migration0004, /create table if not exists public\.meeting_plan_votes\s*\(/);
+  assert.match(migration0004, /create table if not exists public\.meeting_attendance\s*\(/);
+  assert.match(migration0004, /create or replace function public\.attend_meeting_tx\(p_meeting_id uuid\)/);
+  assert.match(migration0004, /create or replace function public\.confirm_plan_when_unanimous\(\)/);
+  assert.match(migration0004, /after insert on public\.meeting_plan_votes/);
+  assert.ok(migration0004.includes("raise exception '모임 멤버가 아닙니다' using errcode = '42501'"));
+});
+
+test('0004 마이그레이션: Realtime publication 에 투표·체크인 테이블을 등록한다', () => {
+  assert.ok(migration0004.includes('alter publication supabase_realtime add table public.meeting_plan_votes, public.meeting_attendance;'));
+});
+
+test('0004 마이그레이션: profiles.regions 와 meeting_plans.candidates 컬럼을 추가한다', () => {
+  assert.ok(migration0004.includes('regions text[]'));
+  assert.ok(migration0004.includes('candidates jsonb'));
+  assert.match(migration0004, /update public\.profiles set regions = array\[region\]/);
+});
+
+test('0004 마이그레이션: complete_meeting_tx 를 지우고 room_members 는 연결된 상대에게만 실명을 보여준다', () => {
+  assert.ok(migration0004.includes('drop function if exists public.complete_meeting_tx'));
+  assert.match(migration0004, /create or replace function public\.room_members\(p_meeting_id uuid\)/);
+  assert.ok(!migration0004.includes("m.status = 'completed'"), 'room_members 에 모임 완료 조건이 남아 있습니다');
+});
+
+test('0004 마이그레이션: 체크인은 브라우저가 직접 등록할 수 없고 RPC 권한은 로그인 사용자만', () => {
+  assert.ok(migration0004.includes('revoke insert, update, delete on table public.meeting_attendance from anon, authenticated'));
+  assert.ok(migration0004.includes('grant execute on function public.attend_meeting_tx(uuid) to authenticated, service_role'));
+  assert.ok(migration0004.includes('revoke all on function public.attend_meeting_tx(uuid) from public, anon'));
+  assert.match(migration0004, /create policy "참가 모임 투표 본인 등록"/);
+  assert.match(migration0004, /create policy "참가 모임 체크인 조회"/);
 });
 
 /* ================= auth.ts ================= */
@@ -142,12 +188,19 @@ test('preflight와 json 응답은 CORS 헤더를 포함한다', async () => {
 
 /* ================= recommendation.ts ================= */
 
+// 서버가 선호 지역으로 이미 거른 후보라는 전제. same_gender_ratio 는 다른 멤버 중 같은 성별 비율(모르면 null).
 const CANDIDATES = [
-  { id: '00000000-0000-4000-8000-000000000001', title: '러닝', emoji: '🏃', region: '판교', when_label: '평일 저녁', capacity: 6, tags: ['러닝'], member_count: 3, known_count: 0, joined: false },
-  { id: '00000000-0000-4000-8000-000000000002', title: '위스키', emoji: '🥃', region: '판교', when_label: '금요일 저녁', capacity: 5, tags: ['위스키'], member_count: 4, known_count: 2, joined: false },
-  { id: '00000000-0000-4000-8000-000000000003', title: '엑셀', emoji: '📊', region: '여의도', when_label: '수요일 점심', capacity: 6, tags: ['자동화'], member_count: 4, known_count: 4, joined: true },
+  { id: '00000000-0000-4000-8000-000000000001', title: '러닝', emoji: '🏃', region: '판교', when_label: '평일 저녁', capacity: 6, tags: ['러닝'], member_count: 3, known_count: 0, joined: false, same_gender_ratio: 0.5 },
+  { id: '00000000-0000-4000-8000-000000000002', title: '위스키', emoji: '🥃', region: '판교', when_label: '금요일 저녁', capacity: 5, tags: ['위스키'], member_count: 4, known_count: 2, joined: false, same_gender_ratio: null },
+  { id: '00000000-0000-4000-8000-000000000003', title: '엑셀', emoji: '📊', region: '여의도', when_label: '수요일 점심', capacity: 6, tags: ['자동화'], member_count: 4, known_count: 4, joined: true, same_gender_ratio: 1 },
 ];
 const CANDIDATE_IDS = CANDIDATES.map((c) => c.id);
+
+const PROFILE = {
+  company_id: 'inv', regions: ['판교', '여의도'], age_band: '20대 후반', gender: '여',
+  interests: ['러닝'], hobbies: ['위스키'], group_size: [4, 6],
+  matching_preferences: { same_gender: false, scope: 'all', direction: 'wide' },
+};
 
 test('ageBand: 나이를 연령대 문자열로 바꾼다', () => {
   assert.equal(ageBand(27), '20대 후반');
@@ -158,9 +211,8 @@ test('ageBand: 나이를 연령대 문자열로 바꾼다', () => {
 
 test('buildRecommendationPrompt: 실명·사번이 섞여 들어와도 프롬프트에 남지 않는다', () => {
   const dirtyProfile = {
+    ...PROFILE,
     real_name: '홍길동', employee_no: 'EMP-991', user_id: '11111111-2222-4333-8444-555555555555',
-    company_id: 'inv', region: '판교', age_band: '20대 후반', interests: ['러닝'], hobbies: ['위스키'],
-    group_size: [4, 6], matching_preferences: { balance: false, scope: 'all', direction: 'wide' },
   };
   const { system, user } = buildRecommendationPrompt(dirtyProfile, CANDIDATES);
   const all = system + '\n' + user;
@@ -170,6 +222,35 @@ test('buildRecommendationPrompt: 실명·사번이 섞여 들어와도 프롬프
   assert.ok(user.includes('판교') && user.includes('러닝'));
   assert.match(system, /JSON/);
   for (const id of CANDIDATE_IDS) assert.ok(user.includes(id));
+});
+
+test('buildRecommendationPrompt: 선호 지역 목록·같은 성별 우선·같은 성별 비율을 프롬프트에 넣는다', () => {
+  const { system, user } = buildRecommendationPrompt(
+    { ...PROFILE, matching_preferences: { same_gender: true, scope: 'mine', direction: 'deep' } },
+    CANDIDATES,
+  );
+  assert.ok(system.includes('선호 지역') && system.includes('같은 성별'), '시스템 지시에 선호 지역·같은 성별 언급이 없습니다');
+  const parsed = JSON.parse(user);
+  assert.deepEqual(parsed.profile.regions, ['판교', '여의도']);
+  assert.deepEqual(parsed.preferred_regions, ['판교', '여의도']);
+  assert.equal(parsed.profile.gender, '여');
+  assert.equal(parsed.profile.matching_preferences.same_gender, true);
+  assert.equal(parsed.same_gender_first, true);
+  assert.ok(user.includes('선호 지역') && user.includes('여의도'));
+  // 후보의 same_gender_ratio 는 백분율 또는 '정보 없음'
+  const byId = Object.fromEntries(parsed.candidates.map((c) => [c.id, c.same_gender_ratio]));
+  assert.equal(byId[CANDIDATE_IDS[0]], '50%');
+  assert.equal(byId[CANDIDATE_IDS[1]], '정보 없음');
+  assert.equal(byId[CANDIDATE_IDS[2]], '100%');
+});
+
+test('buildRecommendationPrompt: regions 가 없으면 단일 region 으로 대체하고 balance 는 넣지 않는다', () => {
+  const legacy = { ...PROFILE, regions: undefined, region: '장교', matching_preferences: { balance: true, scope: 'all', direction: 'wide' } };
+  const { user } = buildRecommendationPrompt(legacy, CANDIDATES);
+  const parsed = JSON.parse(user);
+  assert.deepEqual(parsed.profile.regions, ['장교']);
+  assert.equal(parsed.profile.matching_preferences.same_gender, false);
+  assert.equal('balance' in parsed.profile.matching_preferences, false);
 });
 
 test('parseRecommendations: 후보에 없는 id는 버린다', () => {
@@ -222,16 +303,47 @@ test('parseRecommendations: 잘못된 출력은 INVALID_LLM_OUTPUT', () => {
   assert.throws(() => parseRecommendations('{"recommendations": [{"meeting_id": "x", "rank": 1, "reason": "y"}]}', CANDIDATE_IDS), /INVALID_LLM_OUTPUT/);
 });
 
-test('deterministicOrder: 선호 지역 우선, direction에 따라 아는 얼굴 비율 정렬', () => {
-  const profile = { region: '판교', matching_preferences: { balance: false, scope: 'all', direction: 'wide' } };
+test('deterministicOrder: 지역은 정렬에 쓰지 않고 direction에 따라 아는 얼굴 비율로 정렬한다', () => {
+  const profile = { regions: ['판교'], matching_preferences: { same_gender: false, scope: 'all', direction: 'wide' } };
   const wide = deterministicOrder(CANDIDATES, profile);
   assert.deepEqual(wide.map((r) => r.meeting_id), [CANDIDATE_IDS[0], CANDIDATE_IDS[1], CANDIDATE_IDS[2]]);
   assert.deepEqual(wide.map((r) => r.rank), [1, 2, 3]);
-  assert.ok(wide[0].reason.length > 0);
+  assert.equal(wide[0].reason, FALLBACK_REASON);
   assert.deepEqual(wide[0].cautions, []);
 
+  // deep 이면 아는 얼굴 비율 내림차순 — 여의도 모임(3)도 선호 지역과 무관하게 맨 앞
   const deep = deterministicOrder(CANDIDATES, { ...profile, matching_preferences: { direction: 'deep' } });
-  assert.deepEqual(deep.map((r) => r.meeting_id), [CANDIDATE_IDS[1], CANDIDATE_IDS[0], CANDIDATE_IDS[2]]);
+  assert.deepEqual(deep.map((r) => r.meeting_id), [CANDIDATE_IDS[2], CANDIDATE_IDS[1], CANDIDATE_IDS[0]]);
+});
+
+test('deterministicOrder: same_gender=true 면 같은 성별 비율 내림차순, null 은 맨 뒤', () => {
+  const profile = { matching_preferences: { same_gender: true, scope: 'all', direction: 'wide' } };
+  const out = deterministicOrder(CANDIDATES, profile);
+  assert.deepEqual(out.map((r) => r.meeting_id), [CANDIDATE_IDS[2], CANDIDATE_IDS[0], CANDIDATE_IDS[1]]);
+  assert.equal(out[0].reason, FALLBACK_REASON_SAME_GENDER);
+
+  // 같은 비율끼리는 아는 얼굴 비율(direction)로 가른다
+  const tied = [
+    { id: 'b', member_count: 2, known_count: 2, same_gender_ratio: 1 },
+    { id: 'a', member_count: 2, known_count: 0, same_gender_ratio: 1 },
+    { id: 'c', member_count: 2, known_count: 1, same_gender_ratio: null },
+  ];
+  const wide = deterministicOrder(tied, profile);
+  assert.deepEqual(wide.map((r) => r.meeting_id), ['a', 'b', 'c']);
+  const deep = deterministicOrder(tied, { matching_preferences: { same_gender: true, direction: 'deep' } });
+  assert.deepEqual(deep.map((r) => r.meeting_id), ['b', 'a', 'c']);
+});
+
+test('deterministicOrder: same_gender=false 면 같은 성별 비율을 무시한다', () => {
+  const list = [
+    { id: 'x', member_count: 4, known_count: 4, same_gender_ratio: 0 },
+    { id: 'y', member_count: 4, known_count: 0, same_gender_ratio: 1 },
+  ];
+  const wide = deterministicOrder(list, { matching_preferences: { same_gender: false, direction: 'wide' } });
+  assert.deepEqual(wide.map((r) => r.meeting_id), ['y', 'x']);
+  assert.equal(wide[0].reason, FALLBACK_REASON);
+  const deep = deterministicOrder(list, { matching_preferences: { direction: 'deep' } });
+  assert.deepEqual(deep.map((r) => r.meeting_id), ['x', 'y']);
 });
 
 /* ================= chat.ts ================= */
@@ -242,6 +354,12 @@ const makeMessages = (n) => Array.from({ length: n }, (_, i) => ({
   body: `메시지 ${i}`,
   created_at: new Date(Date.UTC(2026, 8, 2, 10, 0, i)).toISOString(),
 }));
+
+const PLACES = [
+  { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페' },
+  { name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '공원' },
+  { name: '탄천 산책로', address: '경기 성남시 분당구', url: '', category: '' },
+];
 
 test('anonymizeMessages: 최신 30개만 시간순으로 남기고 발신자를 참가자N으로 바꾼다', () => {
   const out = anonymizeMessages(makeMessages(40));
@@ -277,6 +395,21 @@ test('buildPlanPrompt: 프롬프트에 발신자 UUID가 남지 않는다', () =
   assert.ok(!user.includes('employee_no'));
   assert.ok(user.includes('참가자1') && user.includes('판교'));
   assert.match(system, /JSON/);
+  assert.ok(system.includes('candidates'), '후보지 없이도 candidates 를 선택 사항으로 허용해야 합니다');
+  assert.ok(!user.includes('"places"'));
+});
+
+test('buildPlanPrompt: 검색된 후보지가 있으면 목록을 넣고 그 안에서 고르게 한다', () => {
+  const meeting = { title: '러닝', region: '판교', tags: ['러닝'], when_label: '평일 저녁' };
+  const { system, user } = buildPlanPrompt(meeting, [], PLACES);
+  assert.ok(system.includes('places') && system.includes('candidates'));
+  assert.match(system, /2~5/);
+  const parsed = JSON.parse(user);
+  assert.equal(parsed.places.length, 3);
+  assert.equal(parsed.places[0].name, '판교역 스타벅스');
+  assert.equal(parsed.places[0].url, 'https://place.map.kakao.com/1');
+  assert.equal(parsed.places[0].category, '카페');
+  assert.equal(parsed.places[2].url, undefined);
 });
 
 test('parsePlan: 필수 필드가 빠지면 INVALID_LLM_OUTPUT', () => {
@@ -284,16 +417,137 @@ test('parsePlan: 필수 필드가 빠지면 INVALID_LLM_OUTPUT', () => {
   assert.throws(() => parsePlan('{"place":"판교역","time":"목요일 19시","activity":"러닝"}'), /INVALID_LLM_OUTPUT/);
   assert.throws(() => parsePlan('그냥 텍스트'), /INVALID_LLM_OUTPUT/);
   const plan = parsePlan('```json\n{"place":"판교역 2번 출구","time":"목요일 19:30","activity":"3km 러닝","nearby":["곰탕집", 3, "카페"]}\n```');
-  assert.deepEqual(plan, { place: '판교역 2번 출구', time: '목요일 19:30', activity: '3km 러닝', nearby: ['곰탕집', '카페'] });
+  assert.deepEqual(plan, { place: '판교역 2번 출구', time: '목요일 19:30', activity: '3km 러닝', nearby: ['곰탕집', '카페'], candidates: [] });
 });
 
-test('fallbackPlan: 네 필드를 모두 채운다', () => {
+test('parsePlan: candidates 는 이름 없는 항목을 버리고 최대 5개만 남긴다', () => {
+  const candidates = [
+    { address: '이름 없음', url: 'https://x', why: '버려야 해요' },
+    { name: '후보 1', address: '주소 1', url: 'https://1', why: '가까워요' },
+    { name: '후보 2', why: '넓어요' },
+    { name: '후보 3' },
+    { name: '후보 4', address: '주소 4', url: 'https://4', why: '조용해요' },
+    { name: '후보 5', address: '주소 5', url: 'https://5', why: '싸요' },
+    { name: '후보 6', address: '주소 6', url: 'https://6', why: '잘려야 해요' },
+    'not-an-object',
+  ];
+  const plan = parsePlan(JSON.stringify({ place: '후보 1', time: '금요일 18시', activity: '산책', nearby: [], candidates }));
+  assert.equal(plan.candidates.length, 5);
+  assert.deepEqual(plan.candidates.map((c) => c.name), ['후보 1', '후보 2', '후보 3', '후보 4', '후보 5']);
+  assert.deepEqual(plan.candidates[0], { name: '후보 1', address: '주소 1', url: 'https://1', why: '가까워요' });
+  assert.deepEqual(plan.candidates[2], { name: '후보 3', address: '', url: '', why: '' });
+});
+
+test('fallbackPlan: 다섯 필드를 모두 채우고 후보지가 없으면 candidates 는 빈 배열', () => {
   const plan = fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝', '운동'], when_label: '평일 저녁' });
-  assert.deepEqual(Object.keys(plan).sort(), ['activity', 'nearby', 'place', 'time']);
+  assert.deepEqual(Object.keys(plan).sort(), ['activity', 'candidates', 'nearby', 'place', 'time']);
   assert.ok(plan.place.includes('판교'));
   assert.equal(plan.time, '평일 저녁');
   assert.ok(plan.activity.includes('러닝'));
   assert.ok(Array.isArray(plan.nearby) && plan.nearby.length >= 2);
+  assert.deepEqual(plan.candidates, []);
+});
+
+test('fallbackPlan: 검색된 후보지가 있으면 첫 장소를 만남 장소로 쓴다', () => {
+  const plan = fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝'], when_label: '평일 저녁' }, PLACES);
+  assert.equal(plan.place, '판교역 스타벅스');
+  assert.equal(plan.time, '평일 저녁');
+  assert.equal(plan.candidates.length, 3);
+  assert.deepEqual(plan.candidates[0], { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', why: '검색된 후보지예요' });
+  assert.ok(plan.nearby.includes('화랑공원'));
+  const many = fallbackPlan({ title: 'x', region: '판교', tags: [], when_label: '' }, Array.from({ length: 8 }, (_, i) => ({ name: `장소 ${i}`, address: '', url: '', category: '' })));
+  assert.equal(many.candidates.length, 5);
+});
+
+/* ================= search.ts ================= */
+
+const KAKAO_DOCS = [
+  { place_name: '판교역 스타벅스', road_address_name: '경기 성남시 분당구 판교역로 4', address_name: '경기 성남시 분당구 백현동 1', place_url: 'https://place.map.kakao.com/1', category_group_name: '카페', category_name: '음식점 > 카페 > 커피전문점' },
+  { place_name: '화랑공원', road_address_name: '', address_name: '경기 성남시 분당구 삼평동', place_url: 'https://place.map.kakao.com/2', category_group_name: '', category_name: '여행 > 공원' },
+  { place_name: '', place_url: 'https://place.map.kakao.com/3' },
+];
+
+test('searchPlaces: Kakao 키가 있으면 키워드 검색 결과를 후보지로 바꾼다', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify({ documents: KAKAO_DOCS }), { status: 200 });
+  };
+  const out = await searchPlaces({ region: '판교', keywords: ['러닝', '운동'], kakaoKey: 'test-kakao', openRouterKey: 'test-or', fetchImpl });
+  assert.equal(out.provider, 'kakao');
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].url.startsWith(KAKAO_ENDPOINT));
+  assert.ok(calls[0].url.includes(`query=${encodeURIComponent('판교 러닝')}`));
+  assert.ok(calls[0].url.includes('size=5'));
+  assert.equal(calls[0].init.headers.Authorization, 'KakaoAK test-kakao');
+  assert.deepEqual(out.places, [
+    { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페' },
+    { name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '여행 > 공원' },
+  ]);
+});
+
+test('searchPlaces: Kakao 첫 키워드 결과가 없으면 다음 키워드로 한 번 더 (최대 2회)', async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    const documents = calls.length === 1 ? [] : KAKAO_DOCS.slice(0, 1);
+    return new Response(JSON.stringify({ documents }), { status: 200 });
+  };
+  const out = await searchPlaces({ region: '판교', keywords: ['없는키워드', '카페', '세번째'], kakaoKey: 'k', fetchImpl, limit: 3 });
+  assert.equal(out.provider, 'kakao');
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1].includes(`query=${encodeURIComponent('판교 카페')}`));
+  assert.ok(calls[1].includes('size=3'));
+  assert.equal(out.places.length, 1);
+});
+
+test('searchPlaces: OpenRouter 웹 플러그인 경로는 plugins 를 보내고 JSON places 를 읽는다', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    const message = {
+      content: '검색 결과예요.\n```json\n{"places":[{"name":"판교역 스타벅스","address":"판교역로 4","category":"카페"},{"name":"화랑공원","address":"삼평동","url":"https://park.example/2","category":"공원"},{"address":"이름 없음"}]}\n```',
+      annotations: [
+        { type: 'url_citation', url_citation: { url: 'https://cafe.example/1', title: '판교역 스타벅스 매장 안내' } },
+      ],
+    };
+    return new Response(JSON.stringify({ choices: [{ message }] }), { status: 200 });
+  };
+  const out = await searchPlaces({ region: '판교', keywords: ['러닝'], openRouterKey: 'test-or', model: 'test/model', fetchImpl });
+  assert.equal(out.provider, 'openrouter');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://openrouter.ai/api/v1/chat/completions');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer test-or');
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.model, 'test/model');
+  assert.deepEqual(body.plugins, [{ id: 'web', max_results: 5 }]);
+  assert.equal(body.temperature, 0.2);
+  assert.ok(body.messages.some((m) => m.content.includes('판교') && m.content.includes('러닝')));
+  assert.deepEqual(out.places, [
+    { name: '판교역 스타벅스', address: '판교역로 4', url: 'https://cafe.example/1', category: '카페' },
+    { name: '화랑공원', address: '삼평동', url: 'https://park.example/2', category: '공원' },
+  ]);
+});
+
+test('searchPlaces: 키가 없으면 요청 없이 provider none', async () => {
+  let calls = 0;
+  const fetchImpl = async () => { calls++; return new Response('{}', { status: 200 }); };
+  const out = await searchPlaces({ region: '판교', keywords: ['러닝'], fetchImpl });
+  assert.deepEqual(out, { provider: 'none', places: [] });
+  assert.equal(calls, 0);
+});
+
+test('searchPlaces: fetch 가 던지거나 오류 응답이어도 provider none 으로 끝난다', async () => {
+  const throwing = async () => { throw new Error('network down'); };
+  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: throwing }), { provider: 'none', places: [] });
+  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], openRouterKey: 'o', fetchImpl: throwing }), { provider: 'none', places: [] });
+
+  const failing = async () => new Response('{"error":"quota"}', { status: 429 });
+  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: failing }), { provider: 'none', places: [] });
+
+  const hanging = () => new Promise(() => {});
+  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: hanging, timeoutMs: 50 }), { provider: 'none', places: [] });
 });
 
 /* ================= llm.ts ================= */

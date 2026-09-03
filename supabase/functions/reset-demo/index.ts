@@ -11,6 +11,8 @@ const FN = 'reset-demo';
 // 삭제 순서와 각 테이블의 "모든 행" 필터 컬럼 (supabase-js 는 필터 없는 delete 를 막는다)
 const TABLES: Array<{ table: string; column: string }> = [
   { table: 'messages', column: 'id' },
+  { table: 'meeting_plan_votes', column: 'plan_id' },
+  { table: 'meeting_attendance', column: 'meeting_id' },
   { table: 'meeting_plans', column: 'id' },
   { table: 'connections', column: 'id' },
   { table: 'albums', column: 'id' },
