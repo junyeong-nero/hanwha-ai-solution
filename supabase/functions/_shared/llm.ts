@@ -50,7 +50,23 @@ function extractContent(payload: unknown): string {
   return '';
 }
 
-async function attempt(opts: ChatJsonOptions, timeoutMs: number, fetchImpl: typeof fetch): Promise<string> {
+/**
+ * 요청 본문. `compat` 모드에서는 일부 무료 모델이 거부하는 `response_format` 과 system 역할을 빼고,
+ * 시스템 지시를 user 메시지 앞에 붙인다 (HTTP 400 대응).
+ */
+function buildBody(opts: ChatJsonOptions, compat: boolean): string {
+  const messages = compat
+    ? [{ role: 'user', content: `${opts.system}\n\n---\n\n${opts.user}` }]
+    : [
+        { role: 'system', content: opts.system },
+        { role: 'user', content: opts.user },
+      ];
+  const body: Record<string, unknown> = { model: opts.model, messages, temperature: 0.2 };
+  if (!compat) body.response_format = { type: 'json_object' };
+  return JSON.stringify(body);
+}
+
+async function attempt(opts: ChatJsonOptions, timeoutMs: number, fetchImpl: typeof fetch, compat = false): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -74,15 +90,7 @@ async function attempt(opts: ChatJsonOptions, timeoutMs: number, fetchImpl: type
           'HTTP-Referer': 'https://junyeong-nero.github.io/hanwha-ai-solution/',
           'X-Title': 'MoonLight Hanwha',
         },
-        body: JSON.stringify({
-          model: opts.model,
-          messages: [
-            { role: 'system', content: opts.system },
-            { role: 'user', content: opts.user },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.2,
-        }),
+        body: buildBody(opts, compat),
         signal: controller.signal,
       }),
       timeout,
@@ -116,7 +124,9 @@ async function attempt(opts: ChatJsonOptions, timeoutMs: number, fetchImpl: type
 
 /**
  * OpenRouter 에 JSON 전용 채팅 요청을 보내고 `choices[0].message.content` 문자열을 돌려준다.
- * TIMEOUT · HTTP 429 · HTTP 5xx · 네트워크 오류는 자동으로 1회 재시도한다.
+ * - TIMEOUT · HTTP 429 · HTTP 5xx · 네트워크 오류는 같은 요청으로 1회 재시도한다.
+ * - HTTP 400 은 모델이 `response_format` 이나 system 역할을 지원하지 않는 경우가 대부분이므로
+ *   호환 모드(둘 다 제거, 지시를 user 메시지에 합침)로 1회 재시도한다.
  */
 export async function chatJson(opts: ChatJsonOptions): Promise<string> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -126,6 +136,9 @@ export async function chatJson(opts: ChatJsonOptions): Promise<string> {
   } catch (err) {
     if (err instanceof LlmError && isRetryable(err)) {
       return await attempt(opts, timeoutMs, fetchImpl);
+    }
+    if (err instanceof LlmError && err.code === 'HTTP' && err.status === 400) {
+      return await attempt(opts, timeoutMs, fetchImpl, true);
     }
     throw err;
   }

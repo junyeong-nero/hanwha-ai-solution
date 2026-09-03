@@ -107,6 +107,8 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 
 - https://openrouter.ai/models 에서 `OPENROUTER_MODEL`에 넣은 모델 ID가 아직 유효한지 확인합니다. `openrouter/free`가 불안정하면 가용한 특정 `:free` 모델 ID로 secret을 바꾸고 함수를 재배포합니다.
 - https://openrouter.ai/settings/credits 에서 크레딧과 남은 한도를 확인합니다. 무료 한도만으로는 리허설 + 본방을 버티기 어렵습니다.
+- **실측 (2026-09-03):** 크레딧 없는 계정에서 `google/gemma-4-31b-it:free`는 첫 호출만 성공(18초)하고 연속 호출은 곧바로 `HTTP 429`(분당 한도)로 fallback이 났습니다. `openrouter/free` 라우터는 약속 추천에 24초 만에 성공했습니다. 발표 중 카드마다 20초 안팎이 걸리므로 **크레딧을 충전하고 유료 모델(예: `google/gemini-2.5-flash`)로 바꾸는 것이 가장 확실**합니다. 모델 변경은 `npx supabase secrets set OPENROUTER_MODEL=<모델 ID>` 한 줄이며 재배포는 필요 없습니다.
+- `response_format`이나 system 역할을 지원하지 않는 모델이 400을 내면 함수가 자동으로 호환 모드(둘 다 제거)로 한 번 더 시도합니다. 그래도 실패하면 fallback 추천이 뜹니다.
 - https://openrouter.ai/settings/privacy 에서 프롬프트 로깅이 꺼져 있는지, 가능하면 학습 거부(ZDR) 제공자만 쓰도록 설정합니다.
 - 응답에 `fallback: true`가 자주 나오면 매칭 탭 상단에 "AI 응답이 지연되어 기본 추천" 안내가 뜹니다. 이 상태로 발표하면 "AI 활용" 시연이 무너지므로 반드시 사전에 잡습니다.
 

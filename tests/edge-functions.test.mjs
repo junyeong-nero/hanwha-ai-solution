@@ -326,12 +326,38 @@ test('chatJson: 응답이 없으면 TIMEOUT LlmError', async () => {
   );
 });
 
-test('chatJson: 4xx(429 제외)는 재시도하지 않고 HTTP LlmError', async () => {
+test('chatJson: 400이면 response_format·system 없이 호환 모드로 1회 재시도한다', async () => {
+  const calls = [];
+  const fetchImpl = async (_url, init) => {
+    calls.push(JSON.parse(init.body));
+    if (calls.length === 1) return new Response('{"error":"response_format not supported"}', { status: 400 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }), { status: 200 });
+  };
+  const content = await chatJson({ apiKey: 'k', model: 'm', system: '시스템 지시', user: '사용자 입력', fetchImpl });
+  assert.equal(content, '{"ok":true}');
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].response_format, { type: 'json_object' });
+  assert.equal(calls[1].response_format, undefined);
+  assert.deepEqual(calls[1].messages.map((m) => m.role), ['user']);
+  assert.ok(calls[1].messages[0].content.includes('시스템 지시') && calls[1].messages[0].content.includes('사용자 입력'));
+});
+
+test('chatJson: 400이 두 번이면 HTTP LlmError (그 이상 재시도하지 않음)', async () => {
   let calls = 0;
   const fetchImpl = async () => { calls++; return new Response('{}', { status: 400 }); };
   await assert.rejects(
     chatJson({ apiKey: 'k', model: 'm', system: 's', user: 'u', fetchImpl }),
     (err) => err instanceof LlmError && err.code === 'HTTP' && err.status === 400,
+  );
+  assert.equal(calls, 2);
+});
+
+test('chatJson: 403 같은 그 외 4xx는 재시도하지 않는다', async () => {
+  let calls = 0;
+  const fetchImpl = async () => { calls++; return new Response('{}', { status: 403 }); };
+  await assert.rejects(
+    chatJson({ apiKey: 'k', model: 'm', system: 's', user: 'u', fetchImpl }),
+    (err) => err instanceof LlmError && err.code === 'HTTP' && err.status === 403,
   );
   assert.equal(calls, 1);
 });

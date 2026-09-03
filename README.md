@@ -76,9 +76,11 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 
 ### 남은 것 (마감 전)
 
-- [ ] **Supabase 배포** — 프로젝트 생성 → `db push`(마이그레이션 2개) → 시드 → Edge Function 5개 배포 → 비밀값 4개 등록 → `CONFIG` 채우기 (deployment.md §1~5)
-- [ ] **LLM 라이브 확인** — 매칭 탭에 fallback 안내 없이 추천 이유가 나오는지, OpenRouter 크레딧·모델 ID·남은 한도 (deployment.md §6)
-- [ ] **실기기 회귀** — 아이폰 Safari에서 deployment.md §7 체크리스트 10개 (다른 기기 로그인 복원·이름 불일치 거부 포함)
+- [x] **Supabase 배포** — 프로젝트 `nxqukthjluwoaqehpxtl` 연결, 마이그레이션 2개·시드 적용, Edge Function 5개 배포, `CONFIG` 채움. Pages가 백엔드 모드로 동작 중 (2026-09-03)
+- [x] **라이브 검증 (브라우저 에뮬레이션)** — 사번 로그인 신규/복원/이름 불일치, 두 사용자 채팅, LLM 매칭 추천 이유, AI 약속 추천, 만남 완료 → 베일 벗기기 → 행성 점등, 새로고침 복원
+- [ ] **OpenRouter 크레딧 충전 + 모델 확정** — 무료 모델은 연속 호출 시 429로 fallback이 남. 발표 전 크레딧 충전 후 `OPENROUTER_MODEL`을 유료 모델로 바꾸고 fallback 안내 없이 카드가 나오는지 재확인 (deployment.md §6)
+- [ ] **발표용 입장 코드 생성** — 시드 코드 `123456` 대신 새 코드를 SQL로 만들고 화면에 띄울 준비 (deployment.md §4)
+- [ ] **실기기 회귀** — 아이폰 Safari에서 deployment.md §7 체크리스트 (다른 기기 로그인 복원·이름 불일치 거부 포함)
 - [ ] **AI 활용 근거 정리** — 어떤 AI 툴을 왜 썼는지, 프롬프트(`supabase/functions/_shared/recommendation.ts`, `chat.ts`)·워크플로우·실제 응답 샘플을 PPT에 기록 (배점 25)
 - [ ] **발표 자료(PPT)** — 문제와 필요성([background.md](docs/background.md) 데이터 근거), 해결 방식, MVP 작동 화면, 기대효과(정량화), 현업 적용 방안과 제약
 - [ ] **소개 영상** — 실제 앱을 조작하며 문제·해결 방식·작동 장면·결과와 효과 설명
