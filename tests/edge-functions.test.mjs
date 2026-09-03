@@ -671,3 +671,18 @@ test('0003 마이그레이션: meetings.created_by 와 직접 만들기 정책',
   assert.match(sql, /create policy "모임 직접 만들기" on public\.meetings/);
   assert.match(sql, /with check \(created_by = auth\.uid\(\)\)/);
 });
+
+/* ===== 0005: 만남 평가 학습용 DB · 친구 초대 ===== */
+test('0005 마이그레이션: meeting_feedback(0.5 단위 별점)·features 트리거·학습 뷰·초대 RPC', () => {
+  const sql = fs.readFileSync(new URL('../supabase/migrations/0005_feedback_invites.sql', import.meta.url), 'utf8');
+  assert.match(sql, /create table if not exists public\.meeting_feedback/);
+  assert.match(sql, /rating >= 0\.5 and rating <= 5 and rating \* 2 = floor\(rating \* 2\)/);
+  assert.match(sql, /features jsonb not null default/);
+  assert.match(sql, /create or replace function public\.fill_feedback_features\(\)/);
+  assert.match(sql, /create or replace view public\.ai_training_examples/);
+  assert.match(sql, /revoke all on public\.ai_training_examples from anon, authenticated/);
+  assert.match(sql, /create or replace function public\.invite_to_meeting\(p_meeting_id uuid, p_user_ids uuid\[\]\)/);
+  assert.match(sql, /m\.created_by = v_uid/);
+  // 실명·사번은 특성 스냅샷에 들어가지 않는다
+  assert.doesNotMatch(sql, /real_name|employee_no/);
+});

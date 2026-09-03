@@ -248,3 +248,5 @@ LLM 응답은 다음 필드를 필수로 한다.
 | 만남 완료 = 개인별 체크인 | `meeting_attendance(meeting_id, user_id)` + RPC `attend_meeting_tx`. 내 출석을 기록하고 **이미 완료한 멤버와의 쌍만** `connections`에 넣는다. `room_members`는 연결된 상대에게만 `real_name`을 준다 → 같은 방이라도 사람마다 보이는 실명이 다르다. 전원 완료 시 `meetings.status='completed'`. `complete_meeting_tx`는 제거 |
 | 장소 후보 실제 웹 검색 | `_shared/search.ts`: `KAKAO_REST_KEY`가 있으면 카카오 로컬 키워드 검색, 없으면 OpenRouter 웹 검색 플러그인(`plugins:[{id:'web'}]`, 크레딧 필요), 둘 다 없으면 검색 없이 진행. 결과는 프롬프트에 후보로 넣고 `meeting_plans.candidates jsonb`에 저장, 카드에 이름·주소·링크·이유로 표시 |
 | 인재경영원 | 기본 지역 목록과 시드 모임(`…0007`)에 추가 |
+| 만남 평가 → 학습용 DB | `meeting_feedback(meeting_id, user_id, rating numeric(2,1) 0.5~5 단위 체크, comment, features jsonb)`. 본인 행만 읽고 쓰며(출석자만 등록), 트리거 `fill_feedback_features`가 평가 시점의 모임·평가자 프로필·아는 사람 수·같은 성별 비율·약속 출처를 `features`에 스냅샷한다(실명·사번 제외). 뷰 `ai_training_examples`(features, label=rating)는 서비스 역할만 조회 — 이후 학습 파이프라인의 입력 |
+| 새 모임 친구 초대 | RPC `invite_to_meeting(p_meeting_id, p_user_ids[])`: 호출자가 `meetings.created_by`이고 초대 대상이 `connections`로 연결된 사람일 때만 `meeting_members`에 추가. 프론트는 연결된 친구(실명이 보이는 사람)만 초대 칩으로 보여준다 |

@@ -207,6 +207,15 @@ nav#nav svg{width:23px;height:23px}
 #rhead .ttl{flex:1;min-width:0}
 #rhead b{font-size:15px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #rhead span{font-size:11.5px;color:var(--tx3)}
+/* 별점 (0.5 단위): 별마다 왼쪽 반 = .5, 오른쪽 반 = 1 */
+.stars{display:flex;justify-content:center;gap:2px;margin:6px 0 4px}
+.star{position:relative;width:50px;height:50px;font-size:38px;line-height:50px;text-align:center;color:#2A3050;user-select:none}
+.star .fillc{position:absolute;left:0;top:0;height:100%;overflow:hidden;color:var(--orange);width:0;pointer-events:none;white-space:nowrap;transition:width .12s}
+.star button{position:absolute;top:0;width:50%;height:100%;background:none;border:0;padding:0}
+.star button.l{left:0}.star button.r{right:0}
+.rateval{text-align:center;font-size:13px;color:var(--tx2);margin-bottom:12px;min-height:20px}
+.rateval b{color:var(--orange-soft);font-size:17px}
+#ratecmt{width:100%;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--tx);outline:none;min-height:46px}
 .membtn{display:flex;align-items:center;gap:3px;padding:8px 6px;font-size:18px;min-height:44px}
 .membtn b{font-size:12px;color:var(--tx2);font-weight:700}
 .memrow{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid rgba(39,46,78,.55);min-height:52px}
@@ -599,8 +608,25 @@ nav#nav svg{width:23px;height:23px}
       <div class="grip"></div>
       <button class="psheet-item" onclick="aiPlan()"><i>🌙</i><div>AI 추천 약속 잡기<small>채팅 내용을 읽고 장소·시간·활동·맛집까지 한 번에 · 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요</small></div></button>
       <button class="psheet-item" onclick="hidePlus();openMembers()"><i>👥</i><div>채팅방 멤버 보기<small>누가 있는지 · 확정 투표 · 만남 완료 여부</small></div></button>
+      <button class="psheet-item" id="plusRate" onclick="hidePlus();openRating(CUR)"><i>⭐</i><div>만남 평가하기<small>별 0.5~5점 · 매칭 정확도 학습에 쓰여요 · 만남 완료 후</small></div></button>
       <button class="psheet-item" id="plusAlbum" onclick="hidePlus();openAlbum()"><i>🖼️</i><div>모임 사진첩<small>만남이 성사되면 열려요</small></div></button>
       <button class="psheet-item" onclick="hidePlus();toast('모임 정보','이 모임은 <b>매칭 탭의 AI 추천</b>으로 만들어졌어요.')"><i>ℹ️</i><div>모임 정보</div></button>
+    </div>
+  </div>
+
+  <!-- 만남 평가 시트 (별 0.5~5) -->
+  <div class="sheetwrap" id="ratewrap">
+    <div class="dimbg" onclick="hideRating()"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <b style="font-size:16px">오늘 만남은 어땠나요?</b>
+      <p class="hint" style="margin:4px 0 12px">별점은 매칭 정확도를 높이는 학습 데이터로만 쓰이고, 다른 멤버에게는 보이지 않아요</p>
+      <div class="stars" id="stars"></div>
+      <div class="rateval" id="rateval"></div>
+      <input type="text" id="ratecmt" maxlength="120" placeholder="한 줄 코멘트 (선택)" autocomplete="off">
+      <p class="eerr" id="rateerr"></p>
+      <button class="cta" id="ratebtn" onclick="submitRating()" disabled>평가 보내기</button>
+      <button class="cta line" style="margin-top:8px" onclick="hideRating()">나중에 할게요</button>
     </div>
   </div>
 
@@ -662,6 +688,11 @@ nav#nav svg{width:23px;height:23px}
         <div class="frow">
           <label>정원</label>
           <div class="step"><button onclick="bumpCap(-1)">−</button><b id="c-cap"></b><button onclick="bumpCap(1)">+</button></div>
+        </div>
+        <div class="frow">
+          <label>친구 초대<span class="req" style="color:var(--tx3);border-color:var(--line)">선택</span></label>
+          <p class="hint" style="margin:-2px 0 8px">만남 완료로 연결된 친구를 방 멤버로 바로 초대해요</p>
+          <div id="c-invite"></div>
         </div>
         <p class="eerr" id="c-err"></p>
         <button class="cta" id="c-btn" onclick="submitCreate()">모임 만들기</button>
@@ -798,6 +829,7 @@ const S={
   },
   dirty:false,                           // 프로필 변경 후 저장 전 상태
   met:{p1:true,p2:true},                 // 한 번 이상 만난 사람
+  feedback:{},                           // 로컬 데모용 만남 평가 (meeting id -> {rating, comment})
   joined:[],                             // 참가한 모임 id
   rooms:{},                              // id -> {msgs, unread, planned, revealed, photos}
 };
@@ -1108,6 +1140,7 @@ function showTyping(p,room,cb){
 /* + 메뉴 */
 function openPlus(){
   $('plusAlbum').disabled=!S.rooms[CUR].iAttended;
+  $('plusRate').disabled=!S.rooms[CUR].iAttended;
   $('pluswrap').classList.add('on');
 }
 function hidePlus(){$('pluswrap').classList.remove('on')}
@@ -1193,11 +1226,13 @@ async function doReveal(){
       rr.msgs.push({f:'sys',x:'🌕 만남 완료 '+(res?res.attended_count:rr.attended.size)+'/'+(res?res.member_count:roomTotal(id))+(others>0?' — 함께 완료한 동료의 이름이 보여요':' — 다른 멤버도 완료하면 서로 이름이 보여요')});
       renderMsgs();renderBanner();renderMeta(id);
       toast(others>0?'커넥션 활성화':'만남 완료',others>0?'함께 완료한 동료 '+others+'명 · 홈에서 행성을 확인해 보세요 ✨':'상대가 완료하면 실명으로 바뀌어요');
+      setTimeout(()=>{if(CUR===id)openRating(id)},900);   // 만남 평가 (별 0.5~5)
       return;
     }
     // 로컬 데모: 다른 멤버들이 차례로 완료하는 상황을 시뮬레이션 — 완료한 사람부터 실명이 보인다
     r.msgs.push({f:'sys',x:'🌕 만남을 완료했어요 — 다른 멤버가 완료하면 서로 이름이 보여요'});
     if(CUR===id){renderMsgs();renderBanner();renderMeta(id)}
+    setTimeout(()=>{if(CUR===id)openRating(id)},900);   // 만남 평가 (별 0.5~5)
     m.members.forEach((pid,k)=>setTimeout(()=>{
       const rr=S.rooms[id]; if(!rr)return;
       rr.attended.add(pid); S.met[pid]=true;
@@ -1513,12 +1548,13 @@ function applyPlan(r,pl){
   }
 }
 async function loadRoom(id){
-  const [mem,msgs,plans,votes,att]=await Promise.all([
+  const [mem,msgs,plans,votes,att,fb]=await Promise.all([
     sb.rpc('room_members',{p_meeting_id:id}),
     sb.from('messages').select('id,sender_id,body,created_at').eq('meeting_id',id).order('created_at',{ascending:false}).limit(50),
     sb.from('meeting_plans').select('*').eq('meeting_id',id).order('created_at',{ascending:false}).limit(1),
     sb.from('meeting_plan_votes').select('plan_id,user_id').eq('meeting_id',id),
     sb.from('meeting_attendance').select('user_id').eq('meeting_id',id),
+    sb.from('meeting_feedback').select('rating').eq('meeting_id',id).eq('user_id',ME).maybeSingle(),
   ]);
   if(mem.error||msgs.error||plans.error||votes.error||att.error)throw new Error('load');
   const m=ensureMeeting(id,{}), r=ensureRoom(id);
@@ -1526,6 +1562,7 @@ async function loadRoom(id){
   m.memberCount=m.members.length;
   r.votes={}; (votes.data||[]).forEach(v=>{(r.votes[v.plan_id]||(r.votes[v.plan_id]=new Set())).add(v.user_id)});
   r.attended=new Set((att.data||[]).map(a=>a.user_id)); r.iAttended=r.attended.has(ME); r.revealed=r.iAttended;
+  r.myRating=(fb&&fb.data&&fb.data.rating)?Number(fb.data.rating):0;
   if(r.iAttended&&!r.photos.length)r.photos=placeholderPhotos(m);
   r.planned=null; r.plannedId=null;
   R.seen.clear();
@@ -1572,9 +1609,9 @@ async function resetDemo(){
 }
 
 /* ================= 모임 만들기 ================= */
-const C={em:'🌙',region:null,tags:[],when:'평일 저녁',cap:6};
+const C={em:'🌙',region:null,tags:[],when:'평일 저녁',cap:6,invite:[]};
 function openCreate(){
-  C.em='🌙'; C.region=S.profile.regions[0]||REGIONS[0]; C.tags=[]; C.when='평일 저녁'; C.cap=Math.max(2,Math.min(10,S.profile.sizeMax||6));
+  C.em='🌙'; C.region=S.profile.regions[0]||REGIONS[0]; C.tags=[]; C.when='평일 저녁'; C.cap=Math.max(2,Math.min(10,S.profile.sizeMax||6)); C.invite=[];
   $('c-name').value=''; $('c-err').textContent='';
   renderCreate(); $('createwrap').classList.add('on');
 }
@@ -1582,7 +1619,13 @@ function hideCreate(){$('createwrap').classList.remove('on')}
 function cset(k,v){C[k]=v;renderCreate()}
 function ctag(v){const i=C.tags.indexOf(v);i<0?C.tags.push(v):C.tags.splice(i,1);renderCreate()}
 function bumpCap(d){C.cap=Math.max(2,Math.min(10,C.cap+d));renderCreate()}
+function cinv(pid){const i=C.invite.indexOf(pid);i<0?C.invite.push(pid):C.invite.splice(i,1);renderCreate()}
 function renderCreate(){
+  // 친구 초대 후보 = 나와 연결된(서로 만남 완료한) 사람
+  const friends=Object.keys(S.met).filter(pid=>PEOPLE[pid]&&PEOPLE[pid].real);
+  $('c-invite').innerHTML=friends.length
+    ?friends.map(pid=>{const p=PEOPLE[pid],c=co(p.co);return '<button class="chip'+(C.invite.includes(pid)?' on':'')+'" onclick="cinv(\''+pid+'\')">'+p.av+' '+esc(p.real)+(c?' · '+esc(c.name):'')+'</button>'}).join('')
+    :'<p class="hint">아직 연결된 친구가 없어요. 만남을 완료해 연결되면 여기서 초대할 수 있어요.</p>';
   $('c-emoji').innerHTML=EMOJIS.map(e=>'<button class="'+(C.em===e?'on':'')+'" onclick="cset(\'em\',\''+e+'\')">'+e+'</button>').join('');
   $('c-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(C.region===r?' on':'')+'" onclick="cset(\'region\',\''+r+'\')">'+esc(r)+'</button>').join('');
   const pool=[...new Set([...INTS,...HOBS])];
@@ -1605,17 +1648,59 @@ async function submitCreate(){
       while(R.recLoading)await new Promise(r=>setTimeout(r,200));   // 추천 로딩 중이면 끝난 뒤에 카드를 끼워 넣는다 (덮어쓰기 방지)
       if(R.rec){R.rec.list=[m,...R.rec.list.filter(x=>x.id!==id)]}
       await joinMeet(id);   // 만든 사람은 바로 참가 · 채팅방 생성
+      if(C.invite.length){   // 연결된 친구 초대 (서버가 방장·연결 여부를 검증)
+        const {data:n,error:ie}=await sb.rpc('invite_to_meeting',{p_meeting_id:id,p_user_ids:C.invite});
+        if(ie)toast('초대 실패','친구 초대를 완료하지 못했어요 · 방은 만들어졌어요');
+        else {toast('초대 완료','친구 '+(n||0)+'명을 모임에 초대했어요'); await loadRooms(); if(R.rec)renderMatchCards(R.rec.list,R.rec.note);}
+      }
     }else{
       id='u'+Date.now();
-      MEETINGS.unshift({id,em:C.em,name,region:C.region,when:C.when,cap:C.cap,tags:[...C.tags],members:[],mine:true,ai:'내가 만든 모임 — 관심사가 맞는 동료가 참가하면 채팅이 시작돼요'});
+      const invited=[...C.invite], names=invited.map(p=>PEOPLE[p].real).join(', ');
+      MEETINGS.unshift({id,em:C.em,name,region:C.region,when:C.when,cap:C.cap,tags:[...C.tags],members:invited,mine:true,ai:'내가 만든 모임 — 관심사가 맞는 동료가 참가하면 채팅이 시작돼요'});
       S.joined.push(id);
-      S.rooms[id]={msgs:[{f:'sys',x:'모임을 열었어요. 관심사가 맞는 동료가 참가하면 여기서 익명으로 대화해요 🌙'}],unread:0,planned:null,revealed:false,photos:[],votes:{},attended:new Set(),iAttended:false};
+      S.rooms[id]={msgs:[{f:'sys',x:'모임을 열었어요. 관심사가 맞는 동료가 참가하면 여기서 익명으로 대화해요 🌙'+(invited.length?' · '+names+' 님을 초대했어요':'')}],unread:0,planned:null,revealed:false,photos:[],votes:{},attended:new Set(),iAttended:false};
       updateBdg(); renderMatch();
       toast('모임 생성','<b>'+esc(name)+'</b> 채팅방이 열렸어요');
     }
     hideCreate();
   }catch(e){ $('c-err').textContent='모임을 만들지 못했어요 · 다시 시도해 주세요' }
   finally{btn.disabled=false;btn.textContent='모임 만들기'}
+}
+
+/* ================= 만남 평가 (별 0.5~5 · 매칭 학습용 데이터) ================= */
+const RT={id:null,val:0};
+const RATE_TXT={1:'많이 아쉬웠어요',2:'아쉬웠어요',3:'조금 아쉬웠어요',4:'그냥 그랬어요',5:'보통이에요',6:'괜찮았어요',7:'좋았어요',8:'꽤 좋았어요',9:'아주 좋았어요',10:'최고였어요!'};
+function openRating(id){
+  const r=S.rooms[id]; if(!id||!r||!r.iAttended)return;
+  RT.id=id; RT.val=r.myRating||0; $('ratecmt').value=''; $('rateerr').textContent='';
+  renderStars(); $('ratewrap').classList.add('on');
+}
+function hideRating(){$('ratewrap').classList.remove('on')}
+function setRate(v){RT.val=v;renderStars()}
+function renderStars(){
+  $('stars').innerHTML=[1,2,3,4,5].map(n=>{
+    const w=RT.val>=n?100:RT.val>=n-.5?50:0;
+    return '<div class="star">★<span class="fillc" style="width:'+w+'%">★</span>'
+      +'<button class="l" aria-label="'+(n-.5)+'점" onclick="setRate('+(n-.5)+')"></button>'
+      +'<button class="r" aria-label="'+n+'점" onclick="setRate('+n+')"></button></div>';
+  }).join('');
+  $('rateval').innerHTML=RT.val?'<b>'+RT.val.toFixed(1)+'</b> / 5.0 · '+RATE_TXT[Math.round(RT.val*2)]:'별을 눌러 주세요 · 별의 왼쪽 반을 누르면 0.5점';
+  $('ratebtn').disabled=!RT.val;
+}
+async function submitRating(){
+  const id=RT.id, r=S.rooms[id]; if(!id||!RT.val)return;
+  const comment=$('ratecmt').value.trim().slice(0,120);
+  const btn=$('ratebtn'); btn.disabled=true; btn.textContent='보내는 중…';
+  try{
+    if(BACKEND){
+      // 트리거가 모임·프로필·연결 특성 스냅샷(features)을 함께 저장한다
+      const {error}=await sb.from('meeting_feedback').upsert({meeting_id:id,user_id:ME,rating:RT.val,comment:comment||null},{onConflict:'meeting_id,user_id'});
+      if(error)throw error;
+    }else S.feedback[id]={rating:RT.val,comment};
+    if(r)r.myRating=RT.val;
+    hideRating(); toast('평가 완료','별 '+RT.val.toFixed(1)+' · 매칭 학습 데이터로 저장했어요');
+  }catch(e){ $('rateerr').textContent='평가를 저장하지 못했어요 · 다시 시도해 주세요' }
+  finally{btn.disabled=!RT.val;btn.textContent='평가 보내기'}
 }
 
 /* ================= 시작 ================= */
