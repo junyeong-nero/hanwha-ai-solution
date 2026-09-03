@@ -3,3 +3,4 @@
 .env.local
 supabase/.temp/
 supabase/.branches/
+.playwright-mcp/

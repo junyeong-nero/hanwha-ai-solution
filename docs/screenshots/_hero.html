@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>MoonLight Hanwha — hero</title>
+<!-- README 대표 이미지(hero.png) 생성기.
+     저장소 루트에서 `python3 -m http.server 8899` 실행 후
+     1280x720 뷰포트로 /docs/screenshots/_hero.html 을 열어 캡처하면 hero.png가 된다. -->
+<style>
+@font-face{
+  font-family:'Pretendard';
+  src:url('../../assets/fonts/PretendardVariable.woff2') format('woff2-variations');
+  font-weight:45 920; font-display:block;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1280px;height:720px;overflow:hidden}
+body{
+  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;
+  background:#070A16; color:#EEF1FA; position:relative;
+}
+.bg{position:absolute;inset:0;
+  background:
+    radial-gradient(900px 620px at 78% 42%, rgba(243,115,33,.20), transparent 62%),
+    radial-gradient(760px 560px at 16% 22%, rgba(90,120,243,.18), transparent 60%),
+    linear-gradient(160deg,#0A0E20 0%,#070A16 52%,#0B0F24 100%);
+}
+/* 별밭 */
+.stars{position:absolute;inset:0;opacity:.75}
+.stars i{position:absolute;background:#fff;border-radius:50%}
+
+.wrap{position:relative;height:100%;display:flex;align-items:center;padding:0 0 0 84px;gap:0}
+
+.copy{width:470px;flex:none;z-index:2}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:13px;letter-spacing:.02em;color:#F9B27C;font-weight:600;
+  border:1px solid rgba(243,115,33,.38);background:rgba(243,115,33,.10);
+  padding:6px 13px;border-radius:999px;margin-bottom:24px;
+}
+h1{font-size:62px;line-height:1.04;font-weight:800;letter-spacing:-.028em}
+h1 em{font-style:normal;color:#F37321}
+.tag{margin-top:20px;font-size:20px;line-height:1.55;color:#AEB7D4;font-weight:500}
+.tag b{color:#EEF1FA;font-weight:700}
+.pills{margin-top:34px;display:flex;flex-wrap:wrap;gap:9px}
+.pill{
+  font-size:13.5px;font-weight:600;color:#C6CEE8;
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.045);
+  padding:8px 14px;border-radius:999px;
+}
+.pill span{color:#F9B27C}
+
+/* 폰 3대 */
+.shots{position:relative;flex:1;height:100%}
+.phone{
+  position:absolute;width:216px;
+  border-radius:32px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.16);
+  background:#0B0E1E;
+  box-shadow:0 40px 90px rgba(0,0,0,.62), 0 0 0 7px #14182C, 0 0 0 8px rgba(255,255,255,.07);
+}
+.phone img{display:block;width:100%}
+.phone{border-radius:28px}
+.p1{left:14px;  top:150px; transform:rotate(-7deg) }
+.p2{left:222px; top:104px; z-index:3; transform:rotate(0deg) }
+.p3{left:430px; top:150px; transform:rotate(7deg) }
+
+.glow{
+  position:absolute;left:240px;top:220px;width:400px;height:400px;
+  background:radial-gradient(circle, rgba(243,115,33,.30), transparent 66%);
+  filter:blur(22px);z-index:0;
+}
+.foot{
+  position:absolute;left:84px;bottom:40px;width:430px;font-size:13.5px;color:#6C769B;letter-spacing:.01em;
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="stars" id="sf"></div>
+
+<div class="wrap">
+  <div class="copy">
+    <div class="eyebrow">🌙 한화 그룹 사내 네트워킹</div>
+    <h1>MoonLight<br><em>Hanwha</em></h1>
+    <p class="tag">AI가 골라준 소모임에서 <b>익명으로</b> 시작해,<br>실제로 만나면 <b>서로의 이름이 밝혀집니다.</b></p>
+    <div class="pills">
+      <div class="pill"><span>AI</span> 모임 추천</div>
+      <div class="pill"><span>AI</span> 약속 잡기</div>
+      <div class="pill">익명 → 실명 <span>베일 벗기기</span></div>
+      <div class="pill">계열사 <span>행성 점등</span></div>
+    </div>
+  </div>
+
+  <div class="shots">
+    <div class="glow"></div>
+    <div class="phone p1"><img src="./02-matching.png" alt="AI 매칭"></div>
+    <div class="phone p2"><img src="./08-home-lit.png" alt="홈 — 나의 우주"></div>
+    <div class="phone p3"><img src="./04-ai-plan.png" alt="AI 추천 약속"></div>
+  </div>
+</div>
+
+<div class="foot">빌드 도구 없이 동작하는 단일 HTML · Supabase + OpenRouter 백엔드</div>
+
+<script>
+// 배경 별밭
+const sf=document.getElementById('sf');
+let h='';
+for(let i=0;i<170;i++){
+  const s=Math.random()<.16?2.2:Math.random()*1.3+.6;
+  h+='<i style="left:'+(Math.random()*100)+'%;top:'+(Math.random()*100)+'%;width:'+s+'px;height:'+s+'px;opacity:'+(Math.random()*.6+.2)+'"></i>';
+}
+sf.innerHTML=h;
+</script>
+</body>
+</html>
