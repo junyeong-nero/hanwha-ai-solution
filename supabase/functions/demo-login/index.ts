@@ -128,15 +128,16 @@ Deno.serve(async (req) => {
     if (!consumed) return fail(401, 'CODE_EXHAUSTED', MESSAGES.CODE_EXHAUSTED);
 
     // 6. 결정적 계정 준비 — 이메일은 계열사.사번, 비밀번호는 서버 비밀키로 파생
+    //    비밀번호를 바꾸면 그 사용자의 다른 기기 세션이 모두 끊기므로, 먼저 그대로 로그인해 보고
+    //    실패할 때(처음 입장 · 비밀키 교체 · reset 이후)만 계정을 만들거나 비밀번호를 맞춘다.
     const email = syntheticEmail(companyId, employeeNo);
     const password = await derivePassword(secret, email);
-    let userId: string | null = existing?.user_id ?? null;
+    const anon = anonClient();
 
-    if (userId) {
-      // 기존 계정: 비밀키가 바뀌었을 수 있으니 비밀번호를 파생값으로 맞춰 둔다 (멱등)
-      const { error } = await svc.auth.admin.updateUserById(userId, { password });
-      if (error) throw error;
-    } else {
+    let signIn = await anon.auth.signInWithPassword({ email, password });
+    let userId: string | null = signIn.data.session?.user.id ?? null;
+
+    if (!userId) {
       const { data: created, error: createError } = await svc.auth.admin.createUser({
         email,
         password,
@@ -145,24 +146,24 @@ Deno.serve(async (req) => {
       });
       if (createError) {
         if (!isEmailExists(createError)) throw createError;
-        // 프로필은 없는데 계정만 남은 경우 (예: reset-demo 이후) — 이메일로 계정을 찾아 비밀번호를 맞춘다
-        const { data: page, error: listError } = await svc.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        if (listError) throw listError;
-        const found = (page?.users ?? []).find((u: { email?: string }) => (u.email ?? '').toLowerCase() === email);
-        if (!found) throw new Error('계정 조회 실패');
-        userId = found.id;
-        const { error: pwError } = await svc.auth.admin.updateUserById(userId, { password });
+        // 계정은 있는데 비밀번호가 파생값과 다른 경우 — 비밀번호를 맞춘다 (이때만 다른 세션이 끊긴다)
+        let foundId: string | null = existing?.user_id ?? null;
+        if (!foundId) {
+          const { data: page, error: listError } = await svc.auth.admin.listUsers({ page: 1, perPage: 1000 });
+          if (listError) throw listError;
+          const found = (page?.users ?? []).find((u: { email?: string }) => (u.email ?? '').toLowerCase() === email);
+          if (!found) throw new Error('계정 조회 실패');
+          foundId = found.id;
+        }
+        const { error: pwError } = await svc.auth.admin.updateUserById(foundId, { password });
         if (pwError) throw pwError;
-      } else {
-        userId = created.user?.id ?? null;
       }
+      // 7. 서버에서 대신 로그인해 세션을 받는다
+      signIn = await anon.auth.signInWithPassword({ email, password });
+      userId = signIn.data.session?.user.id ?? null;
     }
-    if (!userId) throw new Error('계정 준비 실패');
-
-    // 7. 서버에서 대신 로그인해 세션을 받는다
-    const anon = anonClient();
-    const { data: signIn, error: signInError } = await anon.auth.signInWithPassword({ email, password });
-    if (signInError || !signIn.session) throw signInError ?? new Error('세션 발급 실패');
+    if (signIn.error || !signIn.data.session || !userId) throw signIn.error ?? new Error('세션 발급 실패');
+    if (existing && existing.user_id !== userId) throw new Error('계정·프로필 불일치');
 
     // 8. 프로필 생성 (처음 입장) — 기존 프로필은 건드리지 않는다 (닉네임·설정은 앱 안에서 바꾼다)
     const isNew = !existing;
@@ -189,7 +190,7 @@ Deno.serve(async (req) => {
     if (sessionError) throw sessionError;
 
     return json({
-      session: { access_token: signIn.session.access_token, refresh_token: signIn.session.refresh_token },
+      session: { access_token: signIn.data.session.access_token, refresh_token: signIn.data.session.refresh_token },
       is_new: isNew,
       expires_at: expiresAt,
     });
