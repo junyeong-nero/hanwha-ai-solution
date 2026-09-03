@@ -10,7 +10,24 @@ insert into public.companies (id, name, color, sort_order) values
   ('sys',   '한화시스템',         '#5A9CF3', 5),
   ('ocean', '한화오션',           '#2BB3C0', 6),
   ('hotel', '한화호텔앤드리조트', '#E86A8A', 7),
-  ('gal',   '한화갤러리아',       '#B49BE0', 8)
+  ('gal',   '한화갤러리아',       '#B49BE0', 8),
+  ('corp',  '㈜한화',             '#D6A84F', 9),
+  ('vision','한화비전',           '#7C83FD', 10),
+  ('semitech','한화세미텍',       '#4CC9F0', 11),
+  ('momentum','한화모멘텀',       '#F72585', 12),
+  ('robotics','한화로보틱스',     '#A855F7', 13),
+  ('energy','한화에너지',         '#22C55E', 14),
+  ('impact','한화임팩트',         '#F59E0B', 15),
+  ('power','한화파워',            '#EF4444', 16),
+  ('total','한화토탈에너지스',    '#14B8A6', 17),
+  ('engine','한화엔진',           '#64748B', 18),
+  ('advanced','한화첨단소재',     '#06B6D4', 19),
+  ('yeocheon','여천NCC',          '#84CC16', 20),
+  ('ins','한화손해보험',          '#FB7185', 21),
+  ('asset','한화자산운용',        '#C084FC', 22),
+  ('savings','한화저축은행',      '#38BDF8', 23),
+  ('life-fs','한화생명금융서비스', '#E879F9', 24),
+  ('connect','한화커넥트',        '#F43F5E', 25)
 on conflict (id) do nothing;
 
 -- 모임 (안정적인 UUID 를 써서 프론트·테스트가 같은 id 를 참조할 수 있게 한다)

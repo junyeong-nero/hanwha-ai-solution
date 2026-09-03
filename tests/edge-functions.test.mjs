@@ -18,8 +18,11 @@ import {
 import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan } from '../supabase/functions/_shared/chat.ts';
 import { searchPlaces, KAKAO_ENDPOINT } from '../supabase/functions/_shared/search.ts';
 
+const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/0001_initial.sql', import.meta.url), 'utf8');
 const migration0004 = fs.readFileSync(new URL('../supabase/migrations/0004_votes_attendance_regions.sql', import.meta.url), 'utf8');
+const migration0005Path = new URL('../supabase/migrations/0005_seed_companies.sql', import.meta.url);
+const migration0005 = fs.existsSync(migration0005Path) ? fs.readFileSync(migration0005Path, 'utf8') : '';
 const seed = fs.readFileSync(new URL('../supabase/seed.sql', import.meta.url), 'utf8');
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -67,7 +70,7 @@ test('계획에 명시된 RLS 정책 이름을 그대로 쓴다', () => {
   }
 });
 
-test('시드는 계열사 8곳과 안정적인 UUID의 모임 6개를 넣는다', () => {
+test('시드는 기존 핵심 계열사와 안정적인 UUID의 모임 6개를 넣는다', () => {
   for (const id of ['aero', 'sol', 'life', 'inv', 'sys', 'ocean', 'hotel', 'gal']) {
     assert.ok(seed.includes(`('${id}',`), `계열사 ${id} 시드가 없습니다`);
   }
@@ -670,4 +673,19 @@ test('0003 마이그레이션: meetings.created_by 와 직접 만들기 정책',
   assert.match(sql, /add column if not exists created_by uuid references auth\.users\(id\)/);
   assert.match(sql, /create policy "모임 직접 만들기" on public\.meetings/);
   assert.match(sql, /with check \(created_by = auth\.uid\(\)\)/);
+});
+
+test('주요 계열사 25곳이 프론트·시드·마이그레이션에 동일하게 등록된다', () => {
+  const companyIds = [
+    'corp', 'aero', 'sys', 'vision', 'semitech', 'momentum', 'robotics',
+    'sol', 'ocean', 'energy', 'impact', 'power', 'total', 'engine', 'advanced', 'yeocheon',
+    'life', 'ins', 'asset', 'inv', 'savings', 'life-fs',
+    'hotel', 'gal', 'connect',
+  ];
+  assert.equal(companyIds.length, 25);
+  for (const id of companyIds) {
+    assert.match(html, new RegExp(`\\{id:'${id}'`), `HTML 계열사 ${id}가 없습니다`);
+    assert.ok(seed.includes(`('${id}',`), `시드 계열사 ${id}가 없습니다`);
+    assert.ok(migration0005.includes(`('${id}',`), `마이그레이션 계열사 ${id}가 없습니다`);
+  }
 });
