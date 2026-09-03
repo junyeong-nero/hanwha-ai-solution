@@ -611,7 +611,7 @@ nav#nav svg{width:23px;height:23px}
    GitHub Pages 배포 시 Supabase 프로젝트 URL과 publishable(anon) 키만 채운다.
    비어 있으면 아래 하드코딩 데이터만으로 동작하는 로컬 데모 모드가 된다 (네트워크 요청 없음).
    secret key·OpenRouter 키는 절대 여기 넣지 않는다 — Edge Function 비밀값에만 둔다. */
-const CONFIG={SUPABASE_URL:'',SUPABASE_ANON_KEY:'',DEMO_MODE:true};
+const CONFIG={SUPABASE_URL:'https://nxqukthjluwoaqehpxtl.supabase.co',SUPABASE_ANON_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cXVrdGhqbHV3b2FxZWhweHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MjM3MjEsImV4cCI6MjEwMzk5OTcyMX0.2SZc2BZSGmN9VpM66MZs2UwkKmGzEHeGQLfQ3K7fmCg',DEMO_MODE:true};
 const BACKEND=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_ANON_KEY);
 
 /* ================= 데이터 (로컬 데모 모드 · 백엔드 모드에서는 서버 데이터로 대체됨) ================= */
