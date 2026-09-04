@@ -21,8 +21,8 @@ import { searchPlaces, KAKAO_ENDPOINT } from '../supabase/functions/_shared/sear
 const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/0001_initial.sql', import.meta.url), 'utf8');
 const migration0004 = fs.readFileSync(new URL('../supabase/migrations/0004_votes_attendance_regions.sql', import.meta.url), 'utf8');
-const migration0005Path = new URL('../supabase/migrations/0005_seed_companies.sql', import.meta.url);
-const migration0005 = fs.existsSync(migration0005Path) ? fs.readFileSync(migration0005Path, 'utf8') : '';
+const migration0006Path = new URL('../supabase/migrations/0006_seed_companies.sql', import.meta.url);
+const migration0006 = fs.existsSync(migration0006Path) ? fs.readFileSync(migration0006Path, 'utf8') : '';
 const seed = fs.readFileSync(new URL('../supabase/seed.sql', import.meta.url), 'utf8');
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -688,7 +688,7 @@ test('주요 계열사 25곳의 ID·이름·색상·정렬 순서가 세 데이�
   const sqlRows = (sql) => [...sql.matchAll(/\('([^']+)',\s*'([^']*)',\s*'(#[0-9A-Fa-f]{6})',\s*(\d+)\)/g)]
     .map(([, id, name, color, sort]) => ({ id, name, color, sort: Number(sort) }));
   const seedRows = sqlRows(seed);
-  const migrationRows = sqlRows(migration0005);
+  const migrationRows = sqlRows(migration0006);
 
   assert.equal(htmlRows.length, expectedIds.length);
   assert.deepEqual(new Set(htmlRows.map((row) => row.id)), expected);
@@ -713,4 +713,19 @@ test('주요 계열사 25곳의 ID·이름·색상·정렬 순서가 세 데이�
       `시드와 마이그레이션의 ${id} 정보가 다릅니다`,
     );
   }
+});
+
+/* ===== 0005: 만남 평가 학습용 DB · 친구 초대 ===== */
+test('0005 마이그레이션: meeting_feedback(0.5 단위 별점)·features 트리거·학습 뷰·초대 RPC', () => {
+  const sql = fs.readFileSync(new URL('../supabase/migrations/0005_feedback_invites.sql', import.meta.url), 'utf8');
+  assert.match(sql, /create table if not exists public\.meeting_feedback/);
+  assert.match(sql, /rating >= 0\.5 and rating <= 5 and rating \* 2 = floor\(rating \* 2\)/);
+  assert.match(sql, /features jsonb not null default/);
+  assert.match(sql, /create or replace function public\.fill_feedback_features\(\)/);
+  assert.match(sql, /create or replace view public\.ai_training_examples/);
+  assert.match(sql, /revoke all on public\.ai_training_examples from anon, authenticated/);
+  assert.match(sql, /create or replace function public\.invite_to_meeting\(p_meeting_id uuid, p_user_ids uuid\[\]\)/);
+  assert.match(sql, /m\.created_by = v_uid/);
+  // 실명·사번은 특성 스냅샷에 들어가지 않는다
+  assert.doesNotMatch(sql, /real_name|employee_no/);
 });

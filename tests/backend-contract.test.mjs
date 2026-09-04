@@ -123,6 +123,21 @@ test('만남 완료는 개인별 체크인이고 실명은 서로 완료한 사�
   assert.match(html, /if\(S\.met\[pid\]&&p\.real\) return/);
 });
 
+test('만남 평가: 별 0.5 단위 시트가 만남 완료 후 열리고 meeting_feedback에 저장된다', () => {
+  assert.match(html, /function openRating\(id\)/);
+  assert.match(html, /id="stars"/);
+  assert.match(html, /setRate\('\+\(n-\.5\)\+'\)/);
+  assert.match(html, /from\('meeting_feedback'\)\.upsert\(\{meeting_id:id,user_id:ME,rating:RT\.val,comment:comment\|\|null\}/);
+  assert.match(html, /openRating\(id\)\},900\)/);
+  assert.match(html, /매칭 학습 데이터로 저장했어요/);
+});
+
+test('새 모임 만들기: 연결된 친구 초대', () => {
+  assert.match(html, /id="c-invite"/);
+  assert.match(html, /rpc\('invite_to_meeting',\{p_meeting_id:id,p_user_ids:C\.invite\}\)/);
+  assert.match(html, /function cinv\(pid\)/);
+});
+
 test('채팅방 멤버 보기: 헤더 버튼·+ 메뉴·시트', () => {
   assert.match(html, /async function openMembers\(\)/);
   assert.match(html, /id="memlist"/);
