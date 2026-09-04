@@ -156,6 +156,19 @@ test('직접 추가한 프로필 항목은 삭제할 수 있다', () => {
   assert.match(html, /const BASE=\{region:/);
 });
 
+test('칩 값은 onclick에 직접 삽입하지 않고 data 속성과 위임 이벤트를 사용한다', () => {
+  assert.match(html, /function chipHtml\(kind,v,on\)/);
+  assert.match(html, /data-kind="\$\{esc\(kind\)\}"/);
+  assert.match(html, /data-v="\$\{esc\(v\)\}"/);
+  assert.doesNotMatch(html, /function chipHtml\(kind,v,on,onclick\)/);
+  assert.doesNotMatch(html, /onclick="'\+onclick\+'"/);
+  assert.match(html, /function bindChipEvents\(\)/);
+  assert.match(html, /document\.addEventListener\('click'/);
+  assert.doesNotMatch(html, /\.value\.trim\(\)\.replace\(\/\["'\\\\<>\]\/g,''\)/);
+  assert.match(html, /data-create-kind="region"/);
+  assert.match(html, /data-create-kind="tag"/);
+});
+
 test('모임 만들기: 시트·검증·양쪽 모드 생성', () => {
   assert.match(html, /function openCreate\(\)/);
   assert.match(html, /from\('meetings'\)\.insert\(\{title:name,emoji:C\.em,tags:C\.tags,region:C\.region,when_label:C\.when,capacity:C\.cap,created_by:ME\}\)/);
