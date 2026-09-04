@@ -52,7 +52,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 - 두 모드 모두에서 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지하고 `BACKEND` 플래그로만 분기
 - 브라우저에는 anon 키만. secret key·OpenRouter 키가 HTML에 들어가면 `tests/backend-contract.test.mjs`가 실패함
 - 화면 전환은 섹션 show/hide 방식 (SPA 라우터 없음)
-- Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않아 Node 24 이상에서 그대로 테스트됨 (`npm test`). Node 24 미만에서는 `.ts` 타입 제거를 지원하지 않으므로 테스트를 실행할 수 없음
+- Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않으며, 이 저장소의 테스트 실행 요건인 Node 24 이상에서 그대로 테스트됨 (`npm test`).
 
 ### iOS Safari 대응 (수정 시 반드시 유지)
 - `viewport-fit=cover` + `env(safe-area-inset-*)` 패딩 — 노치·홈 인디케이터 대응

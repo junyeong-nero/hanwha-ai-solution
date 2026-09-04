@@ -13,7 +13,13 @@ const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import
 test('테스트 실행에 필요한 Node.js 최소 버전을 프로젝트 설정에 명시한다', () => {
   assert.equal(MIN_NODE_MAJOR, 24);
   assert.equal(packageJson.engines.node, '>=24.0.0');
-  assert.match(packageJson.scripts.test, /check-node-version\.mjs/);
+  const testCommand = packageJson.scripts.test;
+  const guardIndex = testCommand.indexOf('node scripts/check-node-version.mjs');
+  const runnerIndex = testCommand.indexOf('node --test tests/*.mjs');
+  assert.notEqual(guardIndex, -1);
+  assert.notEqual(runnerIndex, -1);
+  assert.ok(guardIndex < runnerIndex, 'Node 버전 검사가 테스트 실행보다 먼저 와야 합니다');
+  assert.match(testCommand.slice(guardIndex), /check-node-version\.mjs\s+&&/);
 });
 
 test('Node.js 24 미만은 한국어 안내와 함께 거부한다', () => {
