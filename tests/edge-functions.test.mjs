@@ -873,3 +873,73 @@ test('0008: 닉네임·이름 길이 제약과 attended 를 포함한 room_summa
   assert.ok(migration0008.includes('from public.meeting_attendance a'));
   assert.ok(migration0008.includes('grant execute on function public.room_summaries() to authenticated, service_role;'));
 });
+
+/* ===== 마이그레이션 0009 (이슈 #11: 임의 참가 · 참가 이전 대화 · 즉시 실명 노출) ===== */
+const migration0009 = fs.readFileSync(new URL('../supabase/migrations/0009_join_and_reveal_guard.sql', import.meta.url), 'utf8');
+const completeMeeting = fs.readFileSync(new URL('../supabase/functions/complete-meeting/index.ts', import.meta.url), 'utf8');
+
+test('0009: joined_at 은 메시지 가시성의 기준선이므로 비어 있을 수 없다', () => {
+  assert.ok(migration0009.includes('update public.meeting_members set joined_at = now() where joined_at is null;'));
+  assert.ok(migration0009.includes('alter table public.meeting_members alter column joined_at set not null;'));
+});
+
+test('0009: 참가는 열려 있고 정원이 남은 모임에만 가능하다', () => {
+  // 정원은 RLS 를 타지 않는 security definer 함수로 센다 (정책 안에서 세면 보이는 행만 세어 늘 0 이 된다)
+  assert.ok(migration0009.includes('create or replace function public.can_join_meeting(p_meeting_id uuid)'));
+  assert.ok(migration0009.includes("and m.status = 'open'"));
+  assert.ok(migration0009.includes('< m.capacity'));
+  assert.ok(migration0009.includes('grant execute on function public.can_join_meeting(uuid) to authenticated, service_role;'));
+  // insert 정책이 그 함수를 쓴다. 이미 멤버인 경우는 upsert 재시도를 위해 통과시킨다.
+  assert.ok(migration0009.includes('drop policy if exists "모임 참가 본인 등록" on public.meeting_members;'));
+  assert.ok(migration0009.includes('public.can_join_meeting(meeting_id)'));
+  assert.ok(migration0009.includes('public.is_meeting_member(meeting_id, auth.uid())'));
+});
+
+test('0009: 동시 참가 경합은 모임 행을 잠그는 트리거로 막는다', () => {
+  assert.ok(migration0009.includes('create or replace function public.guard_meeting_capacity()'));
+  assert.ok(migration0009.includes('for update'));
+  assert.ok(migration0009.includes('create trigger meeting_members_guard_capacity'));
+  assert.ok(migration0009.includes('before insert on public.meeting_members'));
+  // 클라이언트가 RLS 거부와 같은 코드로 처리하도록 42501 로 던진다
+  assert.ok(migration0009.includes("using errcode = '42501'"));
+  // 방장 초대도 남은 자리만큼만 넣어 트리거에 걸리지 않게 한다
+  assert.ok(migration0009.includes('create or replace function public.invite_to_meeting(p_meeting_id uuid, p_user_ids uuid[])'));
+  assert.ok(migration0009.includes('limit v_remaining'));
+});
+
+test('0009: 참가 이전 대화는 보이지 않는다 (정책 · 채팅 목록 미리보기 모두)', () => {
+  assert.ok(migration0009.includes('drop policy if exists "참가 모임 메시지 조회" on public.messages;'));
+  assert.ok(migration0009.includes('and messages.created_at >= mm.joined_at'));
+  assert.ok(migration0009.includes('create or replace function public.room_summaries()'));
+  assert.ok(migration0009.includes('and msg.created_at >= mm.joined_at'));
+});
+
+test('0009: 체크인은 약속이 확정되기 전부터 멤버였던 사람만 — 즉시 실명 노출을 막는다', () => {
+  assert.ok(migration0009.includes('alter table public.meeting_plans add column if not exists confirmed_at timestamptz;'));
+  assert.ok(migration0009.includes('create or replace function public.stamp_plan_confirmed_at()'));
+  assert.ok(migration0009.includes('create trigger meeting_plans_stamp_confirmed_at'));
+  assert.ok(migration0009.includes('create or replace function public.attend_meeting_tx(p_meeting_id uuid)'));
+  assert.ok(migration0009.includes('coalesce(p.confirmed_at, p.created_at) >= mm.joined_at'));
+  assert.ok(migration0009.includes("using errcode = '55000'"));
+});
+
+test('0009: 시간 경과로 확정된 카드의 확정 시각은 정리가 돈 시각이 아니라 약속 시각이다', () => {
+  // 정리 시각을 쓰면 지나간 약속이 있는 방에 방금 들어와도 곧바로 체크인이 열린다
+  assert.ok(migration0009.includes('create or replace function public.settle_due_plans(p_meeting_id uuid)'));
+  assert.ok(migration0009.includes('create or replace function public.settle_all_due_plans()'));
+  assert.ok(!/set confirmed = true, confirm_reason = 'due'\n/.test(migration0009));
+  const dueUpdates = migration0009.match(/set confirmed = true, confirm_reason = 'due', confirmed_at = meet_at/g) ?? [];
+  assert.equal(dueUpdates.length, 2, 'settle_due_plans · settle_all_due_plans 모두 약속 시각을 확정 시각으로 쓴다');
+  assert.ok(migration0009.includes("when confirm_reason = 'due' then coalesce(meet_at, created_at)"));
+});
+
+test('complete-meeting: 확정된 약속이 없으면 409 PLAN_NOT_CONFIRMED 로 답한다', () => {
+  assert.ok(completeMeeting.includes("error.code === '55000'"));
+  assert.ok(completeMeeting.includes("fail(409, 'PLAN_NOT_CONFIRMED'"));
+});
+
+test('suggest-meeting-plan: AI 프롬프트에도 호출자가 참가한 뒤의 대화만 넣는다', () => {
+  const suggest = fs.readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts', import.meta.url), 'utf8');
+  assert.ok(suggest.includes(".select('meeting_id, joined_at')"));
+  assert.ok(suggest.includes(".gte('created_at', membership.joined_at)"));
+});

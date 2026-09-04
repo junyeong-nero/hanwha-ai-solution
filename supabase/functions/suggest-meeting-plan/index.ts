@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     // 1. 멤버 확인
     const { data: membership, error: membershipError } = await svc
       .from('meeting_members')
-      .select('meeting_id')
+      .select('meeting_id, joined_at')
       .eq('meeting_id', meetingId)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -58,10 +58,13 @@ Deno.serve(async (req) => {
     };
 
     // 2. 최근 메시지 익명화 (발신자 UUID → 참가자N, 300자 제한)
+    // 호출자가 참가한 뒤의 대화만 넣는다 — 참가 이전 대화는 본인이 읽을 수 없으므로
+    // AI 약속 카드를 통해 요약돼 돌아오는 경로도 막는다 (이슈 #11)
     const { data: messages, error: messagesError } = await svc
       .from('messages')
       .select('sender_id, body, created_at')
       .eq('meeting_id', meetingId)
+      .gte('created_at', membership.joined_at)
       .order('created_at', { ascending: false })
       .limit(MESSAGE_LIMIT);
     if (messagesError) throw messagesError;
