@@ -57,6 +57,12 @@ test('백엔드 모드에서는 계열사가 로그인 정보로 고정된다', 
   assert.match(html, /\$\('f-co'\)\.disabled=!!\(BACKEND&&ME\)/);
 });
 
+test('백엔드 모드는 로그인 전에 로컬 데모 홈을 렌더링하지 않는다', () => {
+  const startup = html.match(/\/\* ================= 시작 ================= \*\/([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(startup, '시작 시퀀스가 있어야 한다');
+  assert.match(startup, /^\s*if\(BACKEND\)initBackend\(\);\s*else\{renderHome\(\);renderProfile\(\);updateBdg\(\);\}\s*$/);
+});
+
 test('입장 오류마다 한국어 안내가 보인다', () => {
   assert.match(html, /입장 코드가 만료됐어요/);
   assert.match(html, /입장 코드가 올바르지 않아요/);
