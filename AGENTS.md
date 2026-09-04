@@ -27,6 +27,9 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ├── AGENTS.md               ← 이 문서
 ├── README.md               ← 과제 안내·평가표
 ├── .env.example            ← 공개 설정 키 이름만 (실제 값 커밋 금지)
+├── package.json            ← `npm test` 스크립트와 engines(Node >=24)
+├── scripts/
+│   └── check-node-version.mjs  ← 테스트 전 Node 버전 검사
 ├── assets/
 │   ├── fonts/PretendardVariable.woff2
 │   └── 한화 AI 솔루션 챌린지 프로젝트 과제 안내.pdf (스캔본, 텍스트 추출 불가)

@@ -978,7 +978,7 @@ async function joinMeet(id){
   ];
   S.rooms[id]={msgs:seed,unread:2,planned:null,revealed:false,photos:[],votes:{},attended:new Set(),iAttended:false};
   updateBdg();renderMatch();
-  toast('참가 완료','<b>'+m.name+'</b> 채팅방이 열렸어요');
+  toast('참가 완료','<b>'+esc(m.name)+'</b> 채팅방이 열렸어요');
 }
 
 /* ================= 채팅 리스트 ================= */
