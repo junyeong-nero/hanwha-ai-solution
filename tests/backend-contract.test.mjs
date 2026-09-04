@@ -114,6 +114,23 @@ test('약속 확정은 투표이며 전원이 눌러야 확정된다', () => {
   assert.doesNotMatch(html, /from\('meeting_plans'\)\.update\(\{confirmed:true\}\)/);
 });
 
+test('약속 시간이 지나면 투표 없이도 자동 확정된다', () => {
+  // 서버: 방을 열 때와 1분 주기 감시에서 settle_due_plans 로 지난 약속을 확정한다
+  assert.match(html, /sb\.rpc\('settle_due_plans',\{p_meeting_id:id\}\)/);
+  assert.match(html, /function startDueWatch\(\)/);
+  assert.match(html, /function stopDueWatch\(\)/);
+  assert.match(html, /startDueWatch\(\);/);
+  assert.match(html, /stopDueWatch\(\);/);
+  // 클라이언트: meet_at 이 지난 카드는 확정으로 본다
+  assert.match(html, /function planDue\(plan\)/);
+  assert.match(html, /meetAt:pl\.meet_at\|\|null/);
+  // 확정 경로(vote/due)에 따라 안내 문구가 다르다
+  assert.match(html, /function planDoneMsg\(reason,plan\)/);
+  assert.match(html, /pl\.confirm_reason==='due'/);
+  assert.match(html, /약속 시간이 지나 자동으로 확정했어요/);
+  assert.match(html, /시간 지나 자동 확정/);
+});
+
 test('만남 완료는 개인별 체크인이고 실명은 서로 완료한 사람에게만 보인다', () => {
   assert.match(html, /from\('meeting_attendance'\)\.select\('user_id'\)/);
   assert.match(html, /table:'meeting_attendance'/);

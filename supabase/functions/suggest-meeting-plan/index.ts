@@ -1,6 +1,7 @@
 // suggest-meeting-plan — 웹 검색으로 실제 후보지를 찾고, 최근 대화를 익명화해 OpenRouter LLM 에 보내 약속 카드를 만든다.
 // 요청: POST { meeting_id }  (Authorization: Bearer <세션 JWT>)
-// 응답: 200 { plan: { id, place, time, activity, nearby, candidates }, fallback, search_used } / 403 NOT_MEMBER
+// 응답: 200 { plan: { id, place, time, meet_at, activity, nearby, candidates }, fallback, search_used } / 403 NOT_MEMBER
+// meet_at: 약속 시각(KST ISO 8601) 또는 null — 시간이 지나면 settle_due_plans 가 이 값을 보고 자동 확정한다
 // search_used: 'kakao' | 'openrouter' | 'none' — 후보지를 어떤 검색으로 찾았는지
 import { preflight, json, fail, errorResponse, readJsonBody, isUuid } from '../_shared/cors.ts';
 import { requireUser, serviceClient } from '../_shared/supabase.ts';
@@ -66,6 +67,9 @@ Deno.serve(async (req) => {
     if (messagesError) throw messagesError;
     const lines = anonymizeMessages(messages ?? [], { limit: MESSAGE_LIMIT, maxLen: MESSAGE_MAX_LEN });
 
+    // 프롬프트 · 파서 · 폴백이 같은 "지금"을 쓰도록 한 번만 잡는다
+    const now = new Date();
+
     const model = Deno.env.get('OPENROUTER_MODEL') ?? 'openrouter/free';
     const apiKey = Deno.env.get('OPENROUTER_API_KEY') ?? '';
 
@@ -89,11 +93,11 @@ Deno.serve(async (req) => {
     if (!apiKey) {
       errorType = 'NO_API_KEY';
     } else {
-      const prompt = buildPlanPrompt(meetingForPrompt, lines, places);
+      const prompt = buildPlanPrompt(meetingForPrompt, lines, places, now);
       for (let attempt = 0; attempt < 2 && !plan; attempt++) {
         try {
           const raw = await chatJson({ apiKey, model, system: prompt.system, user: prompt.user });
-          plan = parsePlan(raw);
+          plan = parsePlan(raw, now);
         } catch (err) {
           errorType = classifyError(err);
           if (errorType !== 'INVALID_LLM_OUTPUT') break;
@@ -102,9 +106,9 @@ Deno.serve(async (req) => {
     }
 
     const fallback = plan === null;
-    const finalPlan = plan ?? fallbackPlan(meetingForPrompt, places);
+    const finalPlan = plan ?? fallbackPlan(meetingForPrompt, places, now);
 
-    // 5. 저장 후 계약 형태로 반환 (time ↔ time_label 매핑, candidates 는 jsonb)
+    // 5. 저장 후 계약 형태로 반환 (time ↔ time_label 매핑, candidates 는 jsonb, meet_at 은 자동 확정용 시각)
     const { data: inserted, error: insertError } = await svc
       .from('meeting_plans')
       .insert({
@@ -112,12 +116,13 @@ Deno.serve(async (req) => {
         created_by: user.id,
         place: finalPlan.place,
         time_label: finalPlan.time,
+        meet_at: finalPlan.meet_at,
         activity: finalPlan.activity,
         nearby: finalPlan.nearby,
         candidates: finalPlan.candidates,
         source: fallback ? 'fallback' : 'llm',
       })
-      .select('id, place, time_label, activity, nearby, candidates')
+      .select('id, place, time_label, meet_at, activity, nearby, candidates')
       .single();
     if (insertError || !inserted) throw insertError ?? new Error('약속 저장 실패');
 
@@ -139,6 +144,7 @@ Deno.serve(async (req) => {
         id: inserted.id,
         place: inserted.place,
         time: inserted.time_label,
+        meet_at: inserted.meet_at ?? null,
         activity: inserted.activity,
         nearby: Array.isArray(inserted.nearby) ? inserted.nearby : [],
         candidates: Array.isArray(inserted.candidates) ? inserted.candidates : [],

@@ -16,16 +16,21 @@ import {
   FALLBACK_REASON_SAME_GENDER,
 } from '../supabase/functions/_shared/recommendation.ts';
 import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan } from '../supabase/functions/_shared/chat.ts';
+import { parseMeetAt, acceptMeetAt, nowHint, MAX_HORIZON_DAYS } from '../supabase/functions/_shared/plantime.ts';
 import { searchPlaces, KAKAO_ENDPOINT } from '../supabase/functions/_shared/search.ts';
 
 const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/0001_initial.sql', import.meta.url), 'utf8');
 const migration0004 = fs.readFileSync(new URL('../supabase/migrations/0004_votes_attendance_regions.sql', import.meta.url), 'utf8');
+const migration0007 = fs.readFileSync(new URL('../supabase/migrations/0007_plan_meet_at_auto_confirm.sql', import.meta.url), 'utf8');
 const migration0006Path = new URL('../supabase/migrations/0006_seed_companies.sql', import.meta.url);
 const migration0006 = fs.existsSync(migration0006Path) ? fs.readFileSync(migration0006Path, 'utf8') : '';
 const seed = fs.readFileSync(new URL('../supabase/seed.sql', import.meta.url), 'utf8');
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+// 약속 시각 파서 테스트의 고정 기준 — 2026년 9월 4일 (금요일) 12:00 KST
+const PLAN_NOW = '2026-09-04T12:00:00+09:00';
 
 /* ================= 마이그레이션 스키마 ================= */
 
@@ -121,6 +126,44 @@ test('0004 마이그레이션: 체크인은 브라우저가 직접 등록할 수
   assert.ok(migration0004.includes('revoke all on function public.attend_meeting_tx(uuid) from public, anon'));
   assert.match(migration0004, /create policy "참가 모임 투표 본인 등록"/);
   assert.match(migration0004, /create policy "참가 모임 체크인 조회"/);
+});
+
+/* ================= 0007: 약속 시각 · 시간 경과 자동 확정 ================= */
+
+test('0007 마이그레이션: meet_at 과 confirm_reason 컬럼을 추가한다', () => {
+  assert.match(migration0007, /add column if not exists meet_at timestamptz/);
+  assert.match(migration0007, /add column if not exists confirm_reason text/);
+  assert.ok(migration0007.includes("check (confirm_reason is null or confirm_reason in ('vote', 'due'))"));
+  assert.match(migration0007, /create index if not exists meeting_plans_due_idx/);
+});
+
+test('0007 마이그레이션: 시간이 지난 미확정 카드만 자동 확정한다', () => {
+  assert.match(migration0007, /create or replace function public\.settle_due_plans\(p_meeting_id uuid\)/);
+  assert.match(migration0007, /create or replace function public\.settle_all_due_plans\(\)/);
+  // meet_at 이 없는 카드는 대상이 아니고, 이미 확정된 카드는 건드리지 않는다
+  for (const clause of ['not confirmed', 'meet_at is not null', 'meet_at <= now()']) {
+    assert.ok(migration0007.includes(clause), `자동 확정 조건 "${clause}" 이 없습니다`);
+  }
+  assert.ok(migration0007.includes("set confirmed = true, confirm_reason = 'due'"));
+});
+
+test('0007 마이그레이션: 자동 확정은 멤버 확인을 거치고 브라우저는 confirmed 만 쓸 수 있다', () => {
+  assert.ok(migration0007.includes("raise exception '모임 멤버가 아닙니다' using errcode = '42501'"));
+  assert.ok(migration0007.includes('grant execute on function public.settle_due_plans(uuid) to authenticated, service_role'));
+  // 전체 정리는 서비스 역할 전용 (pg_cron)
+  assert.ok(migration0007.includes('revoke all on function public.settle_all_due_plans() from public, anon, authenticated'));
+  assert.ok(migration0007.includes('grant execute on function public.settle_all_due_plans() to service_role'));
+  // meet_at · confirm_reason 은 서버 전용 — 브라우저 update 권한은 confirmed 뿐이다
+  assert.ok(migration0007.includes('revoke update on table public.meeting_plans from anon, authenticated'));
+  assert.ok(migration0007.includes('grant update (confirmed) on table public.meeting_plans to authenticated'));
+  const grants = migration0007.match(/grant update \([^)]*\)/g) ?? [];
+  assert.deepEqual([...new Set(grants)], ['grant update (confirmed)']);
+});
+
+test('0007 마이그레이션: 전원 투표 확정에는 confirm_reason 을 vote 로 남긴다', () => {
+  assert.match(migration0007, /create or replace function public\.confirm_plan_when_unanimous\(\)/);
+  assert.ok(migration0007.includes("set confirmed = true, confirm_reason = coalesce(confirm_reason, 'vote')"));
+  assert.ok(migration0007.includes("update public.meeting_plans set confirm_reason = 'vote' where confirmed and confirm_reason is null"));
 });
 
 /* ================= auth.ts ================= */
@@ -419,8 +462,11 @@ test('parsePlan: 필수 필드가 빠지면 INVALID_LLM_OUTPUT', () => {
   assert.throws(() => parsePlan('{"place":"판교역","time":"목요일 19시","nearby":[]}'), /INVALID_LLM_OUTPUT/);
   assert.throws(() => parsePlan('{"place":"판교역","time":"목요일 19시","activity":"러닝"}'), /INVALID_LLM_OUTPUT/);
   assert.throws(() => parsePlan('그냥 텍스트'), /INVALID_LLM_OUTPUT/);
-  const plan = parsePlan('```json\n{"place":"판교역 2번 출구","time":"목요일 19:30","activity":"3km 러닝","nearby":["곰탕집", 3, "카페"]}\n```');
-  assert.deepEqual(plan, { place: '판교역 2번 출구', time: '목요일 19:30', activity: '3km 러닝', nearby: ['곰탕집', '카페'], candidates: [] });
+  const plan = parsePlan('```json\n{"place":"판교역 2번 출구","time":"목요일 19:30","activity":"3km 러닝","nearby":["곰탕집", 3, "카페"]}\n```', PLAN_NOW);
+  assert.deepEqual(plan, {
+    place: '판교역 2번 출구', time: '목요일 19:30', activity: '3km 러닝',
+    nearby: ['곰탕집', '카페'], candidates: [], meet_at: '2026-09-10T19:30:00+09:00',
+  });
 });
 
 test('parsePlan: candidates 는 이름 없는 항목을 버리고 최대 5개만 남긴다', () => {
@@ -443,7 +489,7 @@ test('parsePlan: candidates 는 이름 없는 항목을 버리고 최대 5개만
 
 test('fallbackPlan: 다섯 필드를 모두 채우고 후보지가 없으면 candidates 는 빈 배열', () => {
   const plan = fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝', '운동'], when_label: '평일 저녁' });
-  assert.deepEqual(Object.keys(plan).sort(), ['activity', 'candidates', 'nearby', 'place', 'time']);
+  assert.deepEqual(Object.keys(plan).sort(), ['activity', 'candidates', 'meet_at', 'nearby', 'place', 'time']);
   assert.ok(plan.place.includes('판교'));
   assert.equal(plan.time, '평일 저녁');
   assert.ok(plan.activity.includes('러닝'));
@@ -460,6 +506,90 @@ test('fallbackPlan: 검색된 후보지가 있으면 첫 장소를 만남 장소
   assert.ok(plan.nearby.includes('화랑공원'));
   const many = fallbackPlan({ title: 'x', region: '판교', tags: [], when_label: '' }, Array.from({ length: 8 }, (_, i) => ({ name: `장소 ${i}`, address: '', url: '', category: '' })));
   assert.equal(many.candidates.length, 5);
+});
+
+/* ================= plantime.ts — 약속 시각 파서 ================= */
+
+test('parseMeetAt: 요일·시간대 문구를 KST ISO 8601 로 바꾼다', () => {
+  // 기준은 2026-09-04 (금) 12:00 KST
+  assert.equal(parseMeetAt('목요일 19:30', PLAN_NOW), '2026-09-10T19:30:00+09:00');        // 수식어 없으면 다가오는 요일
+  assert.equal(parseMeetAt('이번 주 목요일 19:30', PLAN_NOW), '2026-09-03T19:30:00+09:00'); // 이번 주 = 이미 지난 목요일
+  assert.equal(parseMeetAt('다음 주 금요일 저녁 7시', PLAN_NOW), '2026-09-11T19:00:00+09:00');
+  assert.equal(parseMeetAt('토요일 15:00', PLAN_NOW), '2026-09-05T15:00:00+09:00');
+  assert.equal(parseMeetAt('화요일 11:50', PLAN_NOW), '2026-09-08T11:50:00+09:00');
+  assert.equal(parseMeetAt('주말 오전 10시', PLAN_NOW), '2026-09-05T10:00:00+09:00');       // 주말 = 토요일
+});
+
+test('parseMeetAt: 상대 날짜와 절대 날짜도 읽는다', () => {
+  assert.equal(parseMeetAt('오늘 저녁', PLAN_NOW), '2026-09-04T19:00:00+09:00');
+  assert.equal(parseMeetAt('내일 점심', PLAN_NOW), '2026-09-05T12:00:00+09:00');
+  assert.equal(parseMeetAt('모레 아침', PLAN_NOW), '2026-09-06T08:00:00+09:00');
+  assert.equal(parseMeetAt('9월 11일 오후 7시 반', PLAN_NOW), '2026-09-11T19:30:00+09:00');
+  assert.equal(parseMeetAt('2026-12-24 18:00', PLAN_NOW), '2026-12-24T18:00:00+09:00');
+  assert.equal(parseMeetAt('2026-09-11T19:00:00+09:00', PLAN_NOW), '2026-09-11T19:00:00+09:00');
+});
+
+test('parseMeetAt: 오전·오후가 없으면 저녁 모임으로 본다', () => {
+  assert.equal(parseMeetAt('목요일 7시', PLAN_NOW), '2026-09-10T19:00:00+09:00');   // 1~8시는 오후로
+  assert.equal(parseMeetAt('목요일 11시', PLAN_NOW), '2026-09-10T11:00:00+09:00');  // 9시 이후는 그대로
+  assert.equal(parseMeetAt('목요일 오전 7시', PLAN_NOW), '2026-09-10T07:00:00+09:00');
+  assert.equal(parseMeetAt('목요일', PLAN_NOW), '2026-09-10T19:00:00+09:00');       // 시각이 없으면 저녁 7시
+});
+
+test('parseMeetAt: 날짜를 짚을 수 없는 문구는 null', () => {
+  for (const label of ['평일 저녁', '교육 마친 날 18:30', '시간 미정', '', null, undefined, 42]) {
+    assert.equal(parseMeetAt(label, PLAN_NOW), null, `"${label}" 은 null 이어야 합니다`);
+  }
+});
+
+test('acceptMeetAt: 과거·너무 먼 시각·잘못된 값은 버린다', () => {
+  assert.equal(acceptMeetAt('2026-09-10T19:30:00+09:00', PLAN_NOW), '2026-09-10T19:30:00+09:00');
+  assert.equal(acceptMeetAt('2026-09-03T19:30:00+09:00', PLAN_NOW), null, '지난 시각은 버려야 합니다');
+  assert.equal(acceptMeetAt(PLAN_NOW, PLAN_NOW), null, '지금과 같은 시각도 미래가 아닙니다');
+  const tooFar = new Date(Date.parse(PLAN_NOW) + (MAX_HORIZON_DAYS + 1) * 86400000).toISOString();
+  assert.equal(acceptMeetAt(tooFar, PLAN_NOW), null, `${MAX_HORIZON_DAYS}일보다 먼 시각은 버려야 합니다`);
+  for (const bad of ['', '내일 저녁', null, 123, {}]) assert.equal(acceptMeetAt(bad, PLAN_NOW), null);
+});
+
+/* ================= chat.ts — meet_at 연결 ================= */
+
+test('buildPlanPrompt: LLM 이 상대 날짜를 풀 수 있게 now 를 넣고 meet_at 을 요구한다', () => {
+  const { system, user } = buildPlanPrompt({ title: '러닝', region: '판교', tags: ['러닝'], when_label: '평일 저녁' }, [], [], PLAN_NOW);
+  assert.ok(system.includes('meet_at'), '시스템 프롬프트가 meet_at 을 요구하지 않습니다');
+  assert.ok(system.includes('ISO 8601'));
+  const parsed = JSON.parse(user);
+  assert.equal(parsed.now, '2026-09-04T12:00:00+09:00');
+  assert.ok(parsed.now_label.includes('금요일'), `요일 표기가 없습니다: ${parsed.now_label}`);
+  assert.deepEqual(nowHint(PLAN_NOW).iso, parsed.now);
+});
+
+test('parsePlan: LLM 이 준 meet_at 을 먼저 쓴다', () => {
+  const plan = parsePlan(JSON.stringify({
+    place: '판교역 2번 출구', time: '다음 주 금요일 저녁 7시', meet_at: '2026-09-11T19:00:00+09:00',
+    activity: '3km 러닝', nearby: [],
+  }), PLAN_NOW);
+  assert.equal(plan.meet_at, '2026-09-11T19:00:00+09:00');
+});
+
+test('parsePlan: meet_at 이 없거나 과거·이상값이면 time 문구에서 다시 뽑는다', () => {
+  const base = { place: '판교역', time: '목요일 19:30', activity: '러닝', nearby: [] };
+  assert.equal(parsePlan(JSON.stringify(base), PLAN_NOW).meet_at, '2026-09-10T19:30:00+09:00');
+  assert.equal(parsePlan(JSON.stringify({ ...base, meet_at: '작년 어느 날' }), PLAN_NOW).meet_at, '2026-09-10T19:30:00+09:00');
+  assert.equal(parsePlan(JSON.stringify({ ...base, meet_at: '2020-01-01T19:00:00+09:00' }), PLAN_NOW).meet_at, '2026-09-10T19:30:00+09:00');
+});
+
+test('parsePlan: 시간 문구로도 날짜를 짚을 수 없으면 meet_at 은 null', () => {
+  // meet_at 이 null 인 카드는 자동 확정 대상이 아니라 기존처럼 전원 투표로만 확정된다
+  const plan = parsePlan(JSON.stringify({ place: '판교역', time: '평일 저녁', activity: '러닝', nearby: [] }), PLAN_NOW);
+  assert.equal(plan.meet_at, null);
+  // 이미 지난 시각만 가리키는 문구도 새 카드로는 받지 않는다
+  assert.equal(parsePlan(JSON.stringify({ place: '판교역', time: '이번 주 목요일 19:30', activity: '러닝', nearby: [] }), PLAN_NOW).meet_at, null);
+});
+
+test('fallbackPlan: when_label 에서 meet_at 을 채우고, 못 짚으면 null', () => {
+  assert.equal(fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝'], when_label: '평일 저녁' }, [], PLAN_NOW).meet_at, null);
+  assert.equal(fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝'], when_label: '다음 주 수요일 저녁' }, [], PLAN_NOW).meet_at, '2026-09-16T19:00:00+09:00');
+  assert.equal(fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝'], when_label: '내일 점심' }, PLACES, PLAN_NOW).meet_at, '2026-09-05T12:00:00+09:00');
 });
 
 /* ================= search.ts ================= */
