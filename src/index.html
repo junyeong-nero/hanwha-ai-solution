@@ -727,6 +727,23 @@ const COMPANIES=[
   {id:'ocean',name:'한화오션',          c:'#2BB3C0'},
   {id:'hotel',name:'한화호텔앤드리조트',c:'#E86A8A'},
   {id:'gal',  name:'한화갤러리아',      c:'#B49BE0'},
+  {id:'corp', name:'㈜한화',           c:'#D6A84F'},
+  {id:'vision', name:'한화비전',       c:'#7C83FD'},
+  {id:'semitech', name:'한화세미텍',    c:'#4CC9F0'},
+  {id:'momentum', name:'한화모멘텀',    c:'#F72585'},
+  {id:'robotics', name:'한화로보틱스',  c:'#A855F7'},
+  {id:'energy', name:'한화에너지',     c:'#22C55E'},
+  {id:'impact', name:'한화임팩트',     c:'#F59E0B'},
+  {id:'power', name:'한화파워',        c:'#EF4444'},
+  {id:'total', name:'한화토탈에너지스', c:'#14B8A6'},
+  {id:'engine', name:'한화엔진',       c:'#64748B'},
+  {id:'advanced', name:'한화첨단소재', c:'#06B6D4'},
+  {id:'yeocheon', name:'여천NCC',      c:'#84CC16'},
+  {id:'ins', name:'한화손해보험',      c:'#FB7185'},
+  {id:'asset', name:'한화자산운용',    c:'#C084FC'},
+  {id:'savings', name:'한화저축은행',  c:'#38BDF8'},
+  {id:'life-fs', name:'한화생명금융서비스', c:'#E879F9'},
+  {id:'connect', name:'한화커넥트',    c:'#F43F5E'},
 ];
 const PEOPLE={
   p1:{real:'오세림', nick:'달빛서기',   co:'inv',  av:'🐰'},
@@ -842,8 +859,11 @@ function activeCompanies(){
 function renderHome(){
   const act=activeCompanies();
   let h='<div id="sun">한화</div>';
+  const rings=Math.ceil(Math.sqrt(COMPANIES.length));
+  const maxR=Math.max(80,Math.min(188,(($('space').clientWidth||320)/2)-22));
   COMPANIES.forEach((c,i)=>{
-    const r=44+i*15.6, d=34+i*9, del=-(d*(i*.37%1));
+    const ring=Math.floor(i/rings);
+    const r=Math.max(44,maxR*(ring+1)/rings), d=34+ring*9, del=-(d*((i%rings)/rings));
     h+='<div class="orbit" style="width:'+(r*2)+'px;height:'+(r*2)+'px"></div>';
     const lit=act.has(c.id), mine=c.id===S.profile.company;
     h+='<div class="holder" style="--d:'+d+'s;--del:'+del+'s">'
