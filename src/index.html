@@ -1258,16 +1258,16 @@ function renderProfile(){
   $('pfident').textContent=P.realName?P.realName+' · '+(co(P.company)||{}).name+' (로그인 정보)':'';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
   $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
-  $('f-region').innerHTML=REGIONS.map(r=>chipHtml('region',r,P.regions.includes(r),'tglRegion(\''+r+'\')')).join('')
+  $('f-region').innerHTML=REGIONS.map(r=>chipHtml('region',r,P.regions.includes(r))).join('')
     +'<button class="chip add" onclick="openAdd(\'region\')">＋ 직접 추가</button>';
   $('f-age').textContent=P.age+'세';
   $('f-gender').innerHTML=[['m','남성'],['f','여성'],[null,'선택 안 함']].map(([v,l])=>
     '<button class="'+(P.gender===v?'on':'')+'" onclick="setP(\'gender\','+(v?'\''+v+'\'':'null')+')">'+l+'</button>').join('');
   const MB=['ISTJ','ISFJ','INFJ','INTJ','ISTP','ISFP','INFP','INTP','ESTP','ESFP','ENFP','ENTP','ESTJ','ESFJ','ENFJ','ENTJ'];
   $('f-mbti').innerHTML=MB.map(m=>'<option'+(m===P.mbti?' selected':'')+'>'+m+'</option>').join('');
-  $('f-int').innerHTML=INTS.map(v=>chipHtml('int',v,P.interests.includes(v),'tgl(S.profile.interests,\''+v+'\')')).join('')
+  $('f-int').innerHTML=INTS.map(v=>chipHtml('int',v,P.interests.includes(v))).join('')
     +'<button class="chip add" onclick="openAdd(\'int\')">＋ 직접 추가</button>';
-  $('f-hob').innerHTML=HOBS.map(v=>chipHtml('hob',v,P.hobbies.includes(v),'tgl(S.profile.hobbies,\''+v+'\')')).join('')
+  $('f-hob').innerHTML=HOBS.map(v=>chipHtml('hob',v,P.hobbies.includes(v))).join('')
     +'<button class="chip add" onclick="openAdd(\'hob\')">＋ 직접 추가</button>';
   $('f-min').textContent=P.sizeMin+'명';$('f-max').textContent=P.sizeMax+'명';
   $('f-same').classList.toggle('on',P.sameGender);
@@ -1281,10 +1281,10 @@ function renderProfile(){
 $('nick').addEventListener('input',e=>{S.profile.nick=e.target.value||'달토끼';profileChanged()});
 
 /* 칩 렌더링: 직접 추가한 항목은 × 삭제 버튼이 붙는다 */
-function chipHtml(kind,v,on,onclick){
-  const chip='<button class="chip'+(on?' on':'')+'" onclick="'+onclick+'">'+esc(v)+'</button>';
+function chipHtml(kind,v,on){
+  const chip=`<button class="chip${on?' on':''}" data-kind="${esc(kind)}" data-v="${esc(v)}">${esc(v)}</button>`;
   if(BASE[kind].includes(v))return chip;
-  return '<span class="chipwrap">'+chip+'<button class="chipx" aria-label="'+esc(v)+' 삭제" onclick="removeItem(\''+kind+'\',\''+v+'\')">×</button></span>';
+  return `<span class="chipwrap">${chip}<button class="chipx" data-chip-remove data-kind="${esc(kind)}" data-v="${esc(v)}" aria-label="${esc(v)} 삭제">×</button></span>`;
 }
 function removeItem(kind,v){
   const P=S.profile;
@@ -1293,6 +1293,27 @@ function removeItem(kind,v){
   else{HOBS=HOBS.filter(x=>x!==v); P.hobbies=P.hobbies.filter(x=>x!==v);}
   renderProfile();profileChanged();
   toast('삭제 완료','<b>'+esc(v)+'</b> 항목을 지웠어요');
+}
+
+/* 칩은 사용자 입력을 인라인 JS로 만들지 않고 data-*와 이벤트 위임으로 처리한다 */
+function bindChipEvents(){
+  document.addEventListener('click',e=>{
+    const remove=e.target.closest('[data-chip-remove]');
+    if(remove){ removeItem(remove.dataset.kind,remove.dataset.v); return; }
+    const profileChip=e.target.closest('[data-kind][data-v]');
+    if(profileChip){
+      const {kind,v}=profileChip.dataset;
+      if(kind==='region')tglRegion(v);
+      else if(kind==='int')tgl(S.profile.interests,v);
+      else if(kind==='hob')tgl(S.profile.hobbies,v);
+      return;
+    }
+    const createChip=e.target.closest('[data-create-kind][data-v]');
+    if(createChip){
+      if(createChip.dataset.createKind==='region')cset('region',createChip.dataset.v);
+      else if(createChip.dataset.createKind==='tag')ctag(createChip.dataset.v);
+    }
+  });
 }
 
 /* 직접 추가 */
@@ -1311,7 +1332,7 @@ function openAdd(kind){
 }
 function hideAdd(){$('addwrap').classList.remove('on')}
 function confirmAdd(){
-  let v=$('addin').value.trim().replace(/["'\\<>]/g,'');
+  let v=$('addin').value.trim();
   if(!v)return;
   if(ADDKIND==='region'){
     if(!REGIONS.includes(v))REGIONS.push(v);
@@ -1584,14 +1605,14 @@ function ctag(v){const i=C.tags.indexOf(v);i<0?C.tags.push(v):C.tags.splice(i,1)
 function bumpCap(d){C.cap=Math.max(2,Math.min(10,C.cap+d));renderCreate()}
 function renderCreate(){
   $('c-emoji').innerHTML=EMOJIS.map(e=>'<button class="'+(C.em===e?'on':'')+'" onclick="cset(\'em\',\''+e+'\')">'+e+'</button>').join('');
-  $('c-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(C.region===r?' on':'')+'" onclick="cset(\'region\',\''+r+'\')">'+esc(r)+'</button>').join('');
+  $('c-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(C.region===r?' on':'')+'" data-create-kind="region" data-v="'+esc(r)+'">'+esc(r)+'</button>').join('');
   const pool=[...new Set([...INTS,...HOBS])];
-  $('c-tags').innerHTML=pool.map(v=>'<button class="chip'+(C.tags.includes(v)?' on':'')+'" onclick="ctag(\''+v+'\')">'+esc(v)+'</button>').join('');
+  $('c-tags').innerHTML=pool.map(v=>'<button class="chip'+(C.tags.includes(v)?' on':'')+'" data-create-kind="tag" data-v="'+esc(v)+'">'+esc(v)+'</button>').join('');
   $('c-when').innerHTML=WHENS.map(w=>'<button class="chip'+(C.when===w?' on':'')+'" onclick="cset(\'when\',\''+w+'\')">'+w+'</button>').join('');
   $('c-cap').textContent=C.cap+'명';
 }
 async function submitCreate(){
-  const name=$('c-name').value.trim().replace(/["'\\<>]/g,'');
+  const name=$('c-name').value.trim();
   if(!name)return $('c-err').textContent='모임 이름을 입력해 주세요';
   if(!C.region)return $('c-err').textContent='지역을 선택해 주세요';
   if(!C.tags.length)return $('c-err').textContent='관심사나 취미를 1개 이상 골라 주세요';
@@ -1619,6 +1640,7 @@ async function submitCreate(){
 }
 
 /* ================= 시작 ================= */
+bindChipEvents();
 if(BACKEND)initBackend();
 else{renderHome();renderProfile();updateBdg();}
 </script>

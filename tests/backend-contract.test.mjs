@@ -60,7 +60,10 @@ test('백엔드 모드에서는 계열사가 로그인 정보로 고정된다', 
 test('백엔드 모드는 로그인 전에 로컬 데모 홈을 렌더링하지 않는다', () => {
   const startup = html.match(/\/\* ================= 시작 ================= \*\/([\s\S]*?)<\/script>/)?.[1];
   assert.ok(startup, '시작 시퀀스가 있어야 한다');
-  assert.match(startup, /^\s*if\(BACKEND\)initBackend\(\);\s*else\{renderHome\(\);renderProfile\(\);updateBdg\(\);\}\s*$/);
+  assert.match(startup, /if\(BACKEND\)initBackend\(\);\s*else\{renderHome\(\);renderProfile\(\);updateBdg\(\);\}/);
+  // 모드 무관 초기화(이벤트 바인딩 등)는 허용하되, 데모 렌더는 else 분기 밖에 있으면 안 된다
+  const beforeBranch = startup.slice(0, startup.indexOf('if(BACKEND)'));
+  assert.doesNotMatch(beforeBranch, /renderHome\(\)|renderProfile\(\)|updateBdg\(\)/);
 });
 
 test('입장 오류마다 한국어 안내가 보인다', () => {
@@ -160,6 +163,19 @@ test('직접 추가한 프로필 항목은 삭제할 수 있다', () => {
   assert.match(html, /function removeItem\(kind,v\)/);
   assert.match(html, /class="chipx"/);
   assert.match(html, /const BASE=\{region:/);
+});
+
+test('칩 값은 onclick에 직접 삽입하지 않고 data 속성과 위임 이벤트를 사용한다', () => {
+  assert.match(html, /function chipHtml\(kind,v,on\)/);
+  assert.match(html, /data-kind="\$\{esc\(kind\)\}"/);
+  assert.match(html, /data-v="\$\{esc\(v\)\}"/);
+  assert.doesNotMatch(html, /function chipHtml\(kind,v,on,onclick\)/);
+  assert.doesNotMatch(html, /onclick="'\+onclick\+'"/);
+  assert.match(html, /function bindChipEvents\(\)/);
+  assert.match(html, /document\.addEventListener\('click'/);
+  assert.doesNotMatch(html, /\.value\.trim\(\)\.replace\(\/\["'\\\\<>\]\/g,''\)/);
+  assert.match(html, /data-create-kind="region"/);
+  assert.match(html, /data-create-kind="tag"/);
 });
 
 test('모임 만들기: 시트·검증·양쪽 모드 생성', () => {
