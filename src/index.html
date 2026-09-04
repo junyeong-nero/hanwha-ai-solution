@@ -1619,8 +1619,8 @@ async function submitCreate(){
 }
 
 /* ================= 시작 ================= */
-renderHome();renderProfile();updateBdg();
 if(BACKEND)initBackend();
+else{renderHome();renderProfile();updateBdg();}
 </script>
 </body>
 </html>
