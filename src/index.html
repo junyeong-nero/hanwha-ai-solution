@@ -621,7 +621,7 @@ nav#nav svg{width:23px;height:23px}
       <div class="grip"></div>
       <b style="font-size:16px">오늘 만남은 어땠나요?</b>
       <p class="hint" style="margin:4px 0 12px">별점은 매칭 정확도를 높이는 학습 데이터로만 쓰이고, 다른 멤버에게는 보이지 않아요</p>
-      <div class="stars" id="stars"></div>
+      <div class="stars" id="ratestars"></div>
       <div class="rateval" id="rateval"></div>
       <input type="text" id="ratecmt" maxlength="120" placeholder="한 줄 코멘트 (선택)" autocomplete="off">
       <p class="eerr" id="rateerr"></p>
@@ -978,16 +978,17 @@ function renderMatchCards(list,note){
     return;
   }
   $('meets').innerHTML=list.map(m=>{
-    const total=memberTotal(m), kn=knownIn(m), ratio=total?Math.round(kn/total*100):0;
-    const joined=S.joined.includes(m.id);
+    // memberCount 는 나를 제외한 인원. 표시 인원은 참가 중이면 나를 더해 채팅 목록과 같은 수를 보여준다 (#3)
+    const others=memberTotal(m), kn=knownIn(m), ratio=others?Math.round(kn/others*100):0;
+    const joined=S.joined.includes(m.id), shown=others+(joined?1:0);
     return '<div class="card meet">'
       +'<div class="hd"><div class="em">'+m.em+'</div><div style="flex:1">'
-      +'<h3>'+esc(m.name)+'</h3><div class="meta">'+esc(m.region)+' · '+esc(m.when)+' · '+total+'명 참여 중 / 정원 '+m.cap+'</div>'
+      +'<h3>'+esc(m.name)+'</h3><div class="meta">'+esc(m.region)+' · '+esc(m.when)+' · '+shown+'명 참여 중 / 정원 '+m.cap+'</div>'
       +'<div style="margin-top:7px">'+(m.mine?'<span class="tag" style="color:var(--orange-soft);background:rgba(243,115,33,.14)">내가 만든 모임</span>':'')+m.tags.map(t=>'<span class="tag">#'+esc(t)+'</span>').join('')+'</div>'
       +'</div></div>'
       +'<div class="ai">🌙 <b>AI 추천 이유</b> — '+m.ai+'</div>'
       +'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div>'
-      +'<div class="lb"><span>'+(kn? '아는 얼굴 <b>'+kn+'명</b> / '+total+'명':'모두 새로운 만남')+'</span><span>'+ratio+'%</span></div></div>'
+      +'<div class="lb"><span>'+(kn? '아는 얼굴 <b>'+kn+'명</b> / '+others+'명':'모두 새로운 만남')+'</span><span>'+ratio+'%</span></div></div>'
       +'<button class="cta" '+(joined?'disabled':'')+' onclick="joinMeet(\''+m.id+'\')">'+(joined?'참가 완료 · 채팅 탭에서 확인':'참가')+'</button>'
       +'</div>';
   }).join('');
@@ -1030,7 +1031,7 @@ function renderRooms(){
     const last=r.msgs.length?r.msgs[r.msgs.length-1]:{x:r.last||'대화를 시작해 보세요',t:r.lastT||''};
     const lastTxt=last.f==='ai'?'🌙 AI가 약속을 제안했어요':(last.x||'');
     return '<button class="room" onclick="openRoom(\''+id+'\')">'
-      +'<span class="av">'+m.em+(r.revealed?'<span class="full">🌕</span>':'')+'</span>'
+      +'<span class="av">'+m.em+(r.iAttended?'<span class="full">🌕</span>':'')+'</span>'
       +'<span class="bd"><span class="r1"><b>'+esc(m.name)+'<small>'+(memberTotal(m)+1)+'</small></b><time>'+(last.t||'')+'</time></span>'
       +'<span class="r2"><p>'+esc(String(lastTxt)).slice(0,44)+'</p>'+(r.unread?'<span class="ub">'+r.unread+'</span>':'')+'</span></span></button>';
   }).join('');
@@ -1131,7 +1132,7 @@ function renderBanner(){
 function renderMsgs(){
   const r=S.rooms[CUR];
   $('msgs').innerHTML=r.msgs.map((m,i)=>{
-    if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+m.x+'</div></div>';
+    if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+esc(String(m.x||''))+'</div></div>';   // 닉네임·LLM 텍스트가 섞이므로 반드시 이스케이프
     if(m.f==='me')return '<div class="msg me"><div><div class="bub">'+esc(m.x)+'</div></div></div>';
     if(m.f==='ai'){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
@@ -1560,7 +1561,7 @@ function ensureMeeting(id,patch){
   if(!m){m={id,em:'🌙',name:'',region:'',when:'',cap:6,tags:[],members:[],ai:''};MEETINGS.push(m)}
   Object.assign(m,patch); return m;
 }
-function ensureRoom(id){return S.rooms[id]||(S.rooms[id]={msgs:[],unread:0,planned:null,revealed:false,photos:[],votes:{},attended:new Set(),iAttended:false})}
+function ensureRoom(id){return S.rooms[id]||(S.rooms[id]={msgs:[],unread:0,planned:null,revealed:false,completed:false,photos:[],votes:{},attended:new Set(),iAttended:false})}
 /* 채팅 목록 (room_summaries RPC) */
 async function loadRooms(){
   const {data,error}=await sb.rpc('room_summaries'); if(error){netFail('채팅 목록');return}
@@ -1568,8 +1569,10 @@ async function loadRooms(){
   (data||[]).forEach(x=>{
     const m=ensureMeeting(x.meeting_id,{em:x.emoji||'🌙',name:x.title,memberCount:Math.max(0,(x.member_count||1)-1)});
     const r=ensureRoom(x.meeting_id);
-    r.revealed=x.status==='completed'; r.last=x.last_body; r.lastT=x.last_at?fmtT(x.last_at):'';
-    if(r.revealed&&!r.photos.length)r.photos=placeholderPhotos(m);
+    r.completed=x.status==='completed';                 // 모임 전체 완료 여부 (모임 상태) — #4
+    r.iAttended=!!x.attended; r.revealed=r.iAttended;    // 내 체크인 여부 (room_summaries.attended)
+    r.last=x.last_body; r.lastT=x.last_at?fmtT(x.last_at):'';
+    if(r.iAttended&&!r.photos.length)r.photos=placeholderPhotos(m);
   });
 }
 /* AI 매칭 (recommend-meetings Edge Function) */
@@ -1763,7 +1766,7 @@ function openRating(id){
 function hideRating(){$('ratewrap').classList.remove('on')}
 function setRate(v){RT.val=v;renderStars()}
 function renderStars(){
-  $('stars').innerHTML=[1,2,3,4,5].map(n=>{
+  $('ratestars').innerHTML=[1,2,3,4,5].map(n=>{
     const w=RT.val>=n?100:RT.val>=n-.5?50:0;
     return '<div class="star">★<span class="fillc" style="width:'+w+'%">★</span>'
       +'<button class="l" aria-label="'+(n-.5)+'점" onclick="setRate('+(n-.5)+')"></button>'
