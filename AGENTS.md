@@ -37,8 +37,10 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 │   ├── features.md / background.md / overview.md
 │   ├── deployment.md       ← Supabase·Pages 배포 절차와 발표 체크리스트
 │   └── superpowers/        ← 백엔드 설계(specs)와 실행 계획(plans)
-├── src/
-│   └── index.html          ← 프로토타입 본체 (단일 파일, 이중 모드)
+├── src/                    ← 프로토타입 본체 (빌드 없음, 이중 모드)
+│   ├── index.html          ← 마크업 + <link>·<script> 로드 순서
+│   ├── styles.css          ← 전체 스타일
+│   └── js/                 ← config → app → home/match/chat/profile → backend → boot
 ├── supabase/
 │   ├── config.toml, seed.sql
 │   ├── migrations/         ← 스키마·RLS·RPC
@@ -49,11 +51,14 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ## 개발 규칙
 
 ### 아키텍처 — 이중 모드
-- **`src/index.html` 단일 파일** — HTML/CSS/JS 전부 포함, 빌드 도구 없음 (폰트만 `../assets/fonts/` 상대 경로 참조)
-- **로컬 데모 모드(기본):** 파일 상단 `CONFIG.SUPABASE_URL`이 비어 있으면 외부 네트워크 요청 없이 하드코딩 데이터(`COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS`)와 전역 `S` 객체만으로 동작. 새로고침 시 초기화
+- **빌드 도구 없음** — `src/index.html`(마크업) · `src/styles.css` · `src/js/*.js` 로 나뉘어 있고, 브라우저가 `<link>`·`<script>`로 그대로 읽는다 (폰트만 `../assets/fonts/` 상대 경로 참조)
+- **JS는 ES 모듈이 아니라 일반 스크립트** — 전역 스코프를 공유하므로 `import`/`export` 없이 파일 간 함수·상수를 그냥 쓰고, 마크업의 인라인 `onclick`도 그대로 유효하다. `file://` 로 열어도 동작하는 이유이기도 하니 `type="module"` 로 바꾸지 말 것
+- **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `backend.js` → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
+- 화면별 파일 배치: 모임 만들기는 `match.js`, 만남 평가는 `chat.js` 에 있다
+- **로컬 데모 모드(기본):** `src/js/config.js` 상단 `CONFIG.SUPABASE_URL`이 비어 있으면 외부 네트워크 요청 없이 하드코딩 데이터(`COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS`)와 전역 `S` 객체만으로 동작. 새로고침 시 초기화
 - **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 OpenRouter LLM을 호출. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
 - 두 모드 모두에서 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지하고 `BACKEND` 플래그로만 분기
-- 브라우저에는 anon 키만. secret key·OpenRouter 키가 HTML에 들어가면 `tests/backend-contract.test.mjs`가 실패함
+- 브라우저에는 anon 키만. secret key·OpenRouter 키가 `src/` 에 들어가면 `tests/backend-contract.test.mjs`가 실패함
 - 화면 전환은 섹션 show/hide 방식 (SPA 라우터 없음)
 - Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않으며, 이 저장소의 테스트 실행 요건인 Node 24 이상에서 그대로 테스트됨 (`npm test`).
 
@@ -73,7 +78,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 
 ## 실행·확인 방법
 
-빌드 불필요. 브라우저에서 `src/index.html`을 열면 동작합니다.
+빌드 불필요. 브라우저에서 `src/index.html`을 열면 동작합니다 (일반 스크립트라 `file://` 로 열어도 됩니다).
 
 테스트를 실행하려면 Node.js 24 이상이 필요합니다. `npm test`가 현재 버전을 먼저 확인하고, 지원하지 않는 버전이면 원인을 한국어로 안내한 뒤 종료합니다.
 
@@ -95,6 +100,8 @@ npm test
 - `responsive-ui.test.mjs` — 반응형 CSS 구조
 - `backend-contract.test.mjs` — 비밀 키 미노출, 이중 모드·입장 화면·Realtime 호출 계약
 - `edge-functions.test.mjs` — 마이그레이션 스키마 검사, `_shared/` 순수 함수(입장 코드·LLM 파서·익명화)
+
+`src/` 를 검사하는 테스트는 `tests/helpers/source.mjs` 가 `index.html` 의 `<link>`·`<script src>` 를 실제 파일 내용으로 인라인해 만든 단일 문자열(`html`)을 씁니다. `src/` 에 CSS·JS 파일을 새로 추가하면 index.html 에 태그만 걸어 두면 되고, 테스트 쪽은 따로 손댈 필요가 없습니다.
 
 ## 배포
 

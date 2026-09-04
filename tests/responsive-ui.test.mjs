@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import test from 'node:test';
 
-const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
+import { html } from './helpers/source.mjs';
 
 test('responsive layout defines mobile, web, and pc ranges', () => {
   assert.match(html, /@media\s*\(max-width:\s*599px\)/);

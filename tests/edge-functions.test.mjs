@@ -19,7 +19,8 @@ import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan } from '../
 import { parseMeetAt, acceptMeetAt, nowHint, MAX_HORIZON_DAYS } from '../supabase/functions/_shared/plantime.ts';
 import { searchPlaces, KAKAO_ENDPOINT } from '../supabase/functions/_shared/search.ts';
 
-const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
+import { html } from './helpers/source.mjs';
+
 const migration = fs.readFileSync(new URL('../supabase/migrations/0001_initial.sql', import.meta.url), 'utf8');
 const migration0004 = fs.readFileSync(new URL('../supabase/migrations/0004_votes_attendance_regions.sql', import.meta.url), 'utf8');
 const migration0007 = fs.readFileSync(new URL('../supabase/migrations/0007_plan_meet_at_auto_confirm.sql', import.meta.url), 'utf8');
