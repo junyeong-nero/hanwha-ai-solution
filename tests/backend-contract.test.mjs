@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
+import { html } from './helpers/source.mjs';
+
 const env = fs.readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
 
 /* ===== Task 1: 비밀 키 미노출 · 환경 예시 ===== */

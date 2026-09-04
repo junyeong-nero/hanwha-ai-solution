@@ -2,7 +2,7 @@
 
 MoonLight Hanwha를 GitHub Pages + Supabase + OpenRouter 조합으로 배포하는 순서입니다. 설계 근거는 [백엔드 설계 문서](superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md), 작업 단위는 [실행 계획](superpowers/plans/2026-09-02-supabase-openrouter-backend-plan.md)을 참고합니다.
 
-> **원칙:** GitHub Pages(`src/index.html`)에는 Supabase URL과 publishable/anon 키만 들어갑니다. Supabase secret key, OpenRouter API 키, 초기화 토큰은 **Edge Function 비밀값에만** 둡니다. `CONFIG`가 비어 있으면 앱은 네트워크 없이 로컬 데모 모드로 동작하므로, 아래 절차가 끝나지 않아도 발표 데모는 깨지지 않습니다.
+> **원칙:** GitHub Pages(`src/`)에는 Supabase URL과 publishable/anon 키만 들어갑니다. Supabase secret key, OpenRouter API 키, 초기화 토큰은 **Edge Function 비밀값에만** 둡니다. `CONFIG`가 비어 있으면 앱은 네트워크 없이 로컬 데모 모드로 동작하므로, 아래 절차가 끝나지 않아도 발표 데모는 깨지지 않습니다.
 
 ## 빠른 방법 — 스크립트 한 번
 
@@ -109,7 +109,7 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 
 ## 5. 프론트엔드 연결과 QR
 
-1. `src/index.html` 상단의 `CONFIG`를 채웁니다.
+1. `src/js/config.js` 상단의 `CONFIG`를 채웁니다.
    ```js
    const CONFIG={SUPABASE_URL:'https://<ref>.supabase.co',SUPABASE_ANON_KEY:'<anon 키>',DEMO_MODE:true};
    ```
