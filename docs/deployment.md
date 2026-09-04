@@ -49,7 +49,15 @@ npx supabase link --project-ref <프로젝트 ref>
 npx supabase db push
 ```
 
-`db push`는 `supabase/migrations/0001_initial.sql`을 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
+`db push`는 `supabase/migrations/` 의 마이그레이션을 순서대로 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
+
+> **선택 — 지난 약속 자동 확정 주기 실행**
+> 약속 시간이 지난 카드는 멤버가 채팅방을 열 때 `settle_due_plans` 가 확정합니다. 아무도 방을 열지 않아도 정리되게 하려면
+> `pg_cron` 확장을 켠 뒤 SQL Editor에서 아래를 한 번 실행하세요(서비스 역할 전용 함수라 브라우저에서는 호출되지 않습니다).
+>
+> ```sql
+> select cron.schedule('settle-due-plans', '*/10 * * * *', $$select public.settle_all_due_plans()$$);
+> ```
 
 시드 데이터(계열사 25개, 모임 7개)는 Dashboard → **SQL Editor**에서 `supabase/seed.sql` 내용을 붙여 넣어 실행합니다. 시드에 들어 있는 로컬용 입장 코드 `123456`은 **발표에서 쓰지 말고** 아래 4단계에서 새 코드를 만듭니다.
 
