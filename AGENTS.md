@@ -40,7 +40,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 │   ├── config.toml, seed.sql
 │   ├── migrations/         ← 스키마·RLS·RPC
 │   └── functions/          ← Edge Functions (Deno) + _shared/ 순수 로직
-└── tests/                  ← node --test tests/*.mjs
+└── tests/                  ← npm test (Node.js 24 이상)
 ```
 
 ## 개발 규칙
@@ -52,7 +52,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 - 두 모드 모두에서 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지하고 `BACKEND` 플래그로만 분기
 - 브라우저에는 anon 키만. secret key·OpenRouter 키가 HTML에 들어가면 `tests/backend-contract.test.mjs`가 실패함
 - 화면 전환은 섹션 show/hide 방식 (SPA 라우터 없음)
-- Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않아 Node 24에서도 그대로 테스트됨 (`node --test tests/*.mjs`)
+- Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않으며, 이 저장소의 테스트 실행 요건인 Node 24 이상에서 그대로 테스트됨 (`npm test`).
 
 ### iOS Safari 대응 (수정 시 반드시 유지)
 - `viewport-fit=cover` + `env(safe-area-inset-*)` 패딩 — 노치·홈 인디케이터 대응
@@ -72,6 +72,8 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 
 빌드 불필요. 브라우저에서 `src/index.html`을 열면 동작합니다.
 
+테스트를 실행하려면 Node.js 24 이상이 필요합니다. `npm test`가 현재 버전을 먼저 확인하고, 지원하지 않는 버전이면 원인을 한국어로 안내한 뒤 종료합니다.
+
 - 모바일 뷰포트(375×812)로 확인할 것 — 이 앱은 휴대폰 화면 기준으로 설계됨
 - 핵심 데모 흐름으로 회귀 확인:
   1. 매칭 탭 → 모임 `참가` → 채팅 탭에 방 생성
@@ -83,7 +85,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ## 테스트
 
 ```bash
-node --test tests/*.mjs
+npm test
 ```
 
 - `responsive-ui.test.mjs` — 반응형 CSS 구조

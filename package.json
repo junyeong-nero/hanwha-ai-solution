@@ -1,0 +1,11 @@
+{
+  "name": "moonlight-hanwha",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "node scripts/check-node-version.mjs && node --test tests/*.mjs"
+  }
+}
