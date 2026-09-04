@@ -242,7 +242,12 @@ async function doReveal(){
   if(BACKEND){
     // 서버가 내 출석을 기록하고, 이미 완료한 멤버와의 연결을 만든다 (멱등)
     try{res=await callFn('complete-meeting',{meeting_id:id})}
-    catch(e){ if(e.code!=='UNAUTHORIZED')toast('만남 완료','처리에 실패했어요 · 다시 시도해 주세요'); return }
+    catch(e){
+      // 약속이 확정되기 전부터 멤버였어야 체크인할 수 있다 (#11) — 실명은 실제로 만난 사람에게만
+      if(e.code==='PLAN_NOT_CONFIRMED')toast('만남 완료','확정된 약속이 있어야 만남 완료를 누를 수 있어요');
+      else if(e.code!=='UNAUTHORIZED')toast('만남 완료','처리에 실패했어요 · 다시 시도해 주세요');
+      return;
+    }
   }
   $('veiltxt').textContent='만남을 완료했어요. 함께 완료한 동료부터 이름이 보여요';
   $('veil').classList.add('on');

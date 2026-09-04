@@ -274,3 +274,15 @@ test('#4 채팅 목록 배지는 내 체크인(iAttended) 기준이고 모임 �
   assert.ok(html.includes("(r.iAttended?'<span class=\"full\">🌕</span>':'')"));
   assert.ok(!html.includes("r.revealed=x.status==='completed'"));
 });
+
+test('#11 참가 거절(정원·마감)은 네트워크 오류와 다르게 안내한다', () => {
+  assert.ok(html.includes("if(error.code==='42501')"));
+  assert.ok(html.includes('정원이 찼거나 마감된 모임이에요'));
+  // 참가 이전 대화가 보이지 않는다는 것을 참가 시점에 알린다
+  assert.ok(html.includes('참가 이전 대화는 보이지 않아요'));
+});
+
+test('#11 확정된 약속이 없으면 만남 완료를 막고 이유를 안내한다', () => {
+  assert.ok(html.includes("e.code==='PLAN_NOT_CONFIRMED'"));
+  assert.ok(html.includes('확정된 약속이 있어야 만남 완료를 누를 수 있어요'));
+});

@@ -2,7 +2,8 @@
 // 호출자를 체크인하고, 이미 체크인한 다른 멤버와 연결 쌍을 만들고, 사진첩을 준비한다.
 // 멤버 전원이 체크인하면 모임이 completed 로 바뀐다. 재호출해도 결과가 같다.
 // 요청: POST { meeting_id }  (Authorization: Bearer <세션 JWT>)
-// 응답: 200 { attended: true, attended_count, member_count, connection_count, album_id } / 403 NOT_MEMBER
+// 응답: 200 { attended: true, attended_count, member_count, connection_count, album_id }
+//       / 403 NOT_MEMBER / 409 PLAN_NOT_CONFIRMED
 import { preflight, json, fail, errorResponse, readJsonBody, isUuid } from '../_shared/cors.ts';
 import { requireUser } from '../_shared/supabase.ts';
 
@@ -23,6 +24,9 @@ Deno.serve(async (req) => {
     if (error) {
       const notMember = error.code === '42501' || /모임 멤버가 아닙니다/.test(error.message ?? '');
       if (notMember) return fail(403, 'NOT_MEMBER', '이 모임의 멤버만 만남 완료를 체크인할 수 있어요');
+      // 약속이 확정되기 전부터 멤버였어야 체크인할 수 있다 (실명은 실제로 만난 사람에게만)
+      const noPlan = error.code === '55000' || /확정된 약속이 있어야/.test(error.message ?? '');
+      if (noPlan) return fail(409, 'PLAN_NOT_CONFIRMED', '확정된 약속이 있어야 만남 완료를 체크인할 수 있어요');
       throw error;
     }
 
