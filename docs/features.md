@@ -1,6 +1,6 @@
 # MoonLight Hanwha 기능 명세
 
-이 문서는 **MoonLight Hanwha** — 웹으로 구현하는 휴대폰 앱 형식의 사내 네트워킹 서비스 — 의 기능을 정의합니다. 서비스 배경과 문제 정의는 [background.md](background.md), 전체 방향은 [overview.md](overview.md)를 참고합니다.
+이 문서는 **MoonLight Hanwha** — 웹으로 구현하는 휴대폰 앱 형식의 사내 네트워킹 서비스 — 의 기능을 정의합니다. 서비스 배경·문제 정의·전체 방향은 [introduction.md](introduction.md)를 기준으로 합니다. 원문 자료는 [background.md](background.md)와 [overview.md](overview.md)에 보존되어 있습니다.
 
 ## 1. 서비스 개요
 

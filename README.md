@@ -82,10 +82,10 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 - [ ] **발표용 입장 코드 생성** — 시드 코드 `123456` 대신 새 코드를 SQL로 만들고 화면에 띄울 준비 (deployment.md §4)
 - [ ] **실기기 회귀** — 아이폰 Safari에서 deployment.md §7 체크리스트 (다른 기기 로그인 복원·이름 불일치 거부 포함)
 - [ ] **AI 활용 근거 정리** — 어떤 AI 툴을 왜 썼는지, 프롬프트(`supabase/functions/_shared/recommendation.ts`, `chat.ts`)·워크플로우·실제 응답 샘플을 PPT에 기록 (배점 25)
-- [ ] **발표 자료(PPT)** — 문제와 필요성([background.md](docs/background.md) 데이터 근거), 해결 방식, MVP 작동 화면, 기대효과(정량화), 현업 적용 방안과 제약
+- [ ] **발표 자료(PPT)** — 문제와 필요성([introduction.md](docs/introduction.md) 데이터 근거), 해결 방식, MVP 작동 화면, 기대효과(정량화), 현업 적용 방안과 제약
 - [ ] **소개 영상** — 실제 앱을 조작하며 문제·해결 방식·작동 장면·결과와 효과 설명
 - [ ] **제출 품질 확인** — 제출 페이지에서 대표 링크·PPT·영상을 열어 보고 모바일 화면과 링크 오류 점검
-- [ ] **최종 제출** — 팀·파트 선택, 팀 수정 PIN, 수업 제출코드 `hh` 입력 후 프로젝트 최종 제출
+- [ ] **최종 제출** — 팀·파트 선택, 팀 수정 PIN, 강사가 안내한 수업 제출코드 입력 후 프로젝트 최종 제출
 
 ### 제출 후
 
@@ -98,7 +98,7 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 | --- | ---: | --- |
 | 적합한 AI 툴 선택·활용 | 25 | LLM 매칭·약속 추천 Edge Function, 프롬프트·검증·fallback 설계 |
 | 가공된 산출물 퀄리티 | 25 | 동작하는 프로토타입(Pages), 백엔드, 테스트 |
-| 논리적 원인 분석 | 15 | [background.md](docs/background.md) |
+| 논리적 원인 분석 | 15 | [introduction.md](docs/introduction.md) |
 | 데이터 근거 해결책 | 15 | 잡플래닛 조사·일터우정 연구 인용 |
 | 실질적 기대효과 | 10 | PPT에서 정량화 필요 |
 | 현실적 구현 가능성 | 10 | 이중 모드·파일럿 계획·제외 범위 명시 |
@@ -106,8 +106,10 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 ## 문서
 
 - [기능 명세](docs/features.md) — 4개 탭과 전체 사용자 흐름의 기준 문서
-- [문제 정의와 배경](docs/background.md) — 사내 네트워킹 문제와 데이터 근거
-- [초기 기획 문서](docs/overview.md) — 피벗 이전 방향을 포함한 참고 문서
+- [프로젝트 소개](docs/introduction.md) — 문제 정의·기획 방향·해결 방식·기대효과 통합 문서
+- [제출 가이드](docs/submission-guide.md) — 제출 페이지 요구사항·과제 주제·평가표·체크리스트
+- [문제 정의와 배경 원문](docs/background.md) — 통합 전 사내 네트워킹 문제와 데이터 근거
+- [초기 기획 원문](docs/overview.md) — 통합 전 방향을 보존한 참고 문서
 
 ## 프로젝트 구조
 
@@ -118,6 +120,8 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 ├── assets/
 │   └── fonts/PretendardVariable.woff2
 ├── docs/
+│   ├── introduction.md
+│   ├── submission-guide.md
 │   ├── background.md
 │   ├── features.md
 │   ├── overview.md
