@@ -16,6 +16,7 @@ import {
   FALLBACK_REASON_SAME_GENDER,
 } from '../supabase/functions/_shared/recommendation.ts';
 import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan } from '../supabase/functions/_shared/chat.ts';
+import { safeUrl } from '../supabase/functions/_shared/json.ts';
 import { searchPlaces, KAKAO_ENDPOINT } from '../supabase/functions/_shared/search.ts';
 
 const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
@@ -441,6 +442,37 @@ test('parsePlan: candidates 는 이름 없는 항목을 버리고 최대 5개만
   assert.deepEqual(plan.candidates[2], { name: '후보 3', address: '', url: '', why: '' });
 });
 
+test('safeUrl: http/https 외 스킴과 잘못된 URL은 거부하고 유효한 URL은 보존한다', () => {
+  assert.equal(safeUrl('javascript:alert(1)'), '');
+  assert.equal(safeUrl('data:text/html,<script>alert(1)</script>'), '');
+  assert.equal(safeUrl('//evil.example/path'), '');
+  assert.equal(safeUrl('not a url'), '');
+  assert.equal(safeUrl(' HTTPS://Example.com/path '), 'HTTPS://Example.com/path');
+  assert.equal(safeUrl('http://example.com'), 'http://example.com');
+});
+
+test('parsePlan: 위험한 후보지 URL은 빈 값으로 정제한다', () => {
+  const plan = parsePlan(JSON.stringify({
+    place: '테스트', time: '내일', activity: '산책', nearby: [],
+    candidates: [
+      { name: '악성', url: 'javascript:alert(1)' },
+      { name: '정상', url: 'https://example.com/place' },
+    ],
+  }));
+  assert.equal(plan.candidates[0].url, '');
+  assert.equal(plan.candidates[1].url, 'https://example.com/place');
+});
+
+test('buildPlanPrompt: 검색 장소의 위험한 URL은 프롬프트에서 제외한다', () => {
+  const { user } = buildPlanPrompt(
+    { title: '모임', region: '서울', tags: [], when_label: '내일' },
+    [],
+    [{ name: '악성 장소', address: '서울', url: 'javascript:alert(1)', category: '카페' }],
+  );
+  const places = JSON.parse(user).places;
+  assert.equal(places[0].url, undefined);
+});
+
 test('fallbackPlan: 다섯 필드를 모두 채우고 후보지가 없으면 candidates 는 빈 배열', () => {
   const plan = fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝', '운동'], when_label: '평일 저녁' });
   assert.deepEqual(Object.keys(plan).sort(), ['activity', 'candidates', 'nearby', 'place', 'time']);
@@ -487,6 +519,25 @@ test('searchPlaces: Kakao 키가 있으면 키워드 검색 결과를 후보지�
     { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페' },
     { name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '여행 > 공원' },
   ]);
+});
+
+test('searchPlaces: 검색 결과의 위험한 URL은 제거한다', async () => {
+  const fetchImpl = async () => new Response(JSON.stringify({
+    documents: [{ place_name: '악성 장소', place_url: 'javascript:alert(1)' }],
+  }), { status: 200 });
+  const out = await searchPlaces({ region: '서울', keywords: ['카페'], kakaoKey: 'k', fetchImpl });
+  assert.deepEqual(out.places, [{ name: '악성 장소', address: '', url: '', category: '' }]);
+});
+
+test('searchPlaces: OpenRouter 인용 링크의 위험한 URL도 제거한다', async () => {
+  const fetchImpl = async () => new Response(JSON.stringify({
+    choices: [{ message: {
+      content: '{"places":[{"name":"장소"}]}',
+      annotations: [{ type: 'url_citation', url_citation: { url: 'javascript:alert(1)', title: '장소' } }],
+    } }],
+  }), { status: 200 });
+  const out = await searchPlaces({ region: '서울', keywords: ['카페'], openRouterKey: 'k', fetchImpl });
+  assert.deepEqual(out.places, [{ name: '장소', address: '', url: '', category: '' }]);
 });
 
 test('searchPlaces: Kakao 첫 키워드 결과가 없으면 다음 키워드로 한 번 더 (최대 2회)', async () => {

@@ -861,6 +861,14 @@ const co=id=>COMPANIES.find(c=>c.id===id);
 const myCo=()=>co(S.profile.company);
 const $=id=>document.getElementById(id);
 const esc=s=>s.replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function safeExternalUrl(value){
+  const raw=typeof value==='string'?value.trim():'';
+  if(!raw)return '';
+  try{
+    const u=new URL(raw);
+    return u.protocol==='http:'||u.protocol==='https:'?u.href:'';
+  }catch{return ''}
+}
 function nowT(){const d=new Date(),h=d.getHours();return (h<12?'오전 ':'오후 ')+((h%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')}
 function toast(a,b){$('toast').innerHTML='<b>'+a+'</b> · '+b;$('toast').classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
 
@@ -1113,8 +1121,8 @@ function renderMsgs(){
     if(m.f==='ai'){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
       const done=r.plannedId===m.planId||votes>=total, pct=Math.min(100,Math.round(votes/total*100));
-      const cands=(p.cands||[]).map(c=>'<div class="cand"><a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener">'+esc(c.name||'')+'</a>'
-        +(c.address?'<small>'+esc(c.address)+'</small>':'')+(c.why?'<em>'+esc(c.why)+'</em>':'')+'</div>').join('');
+      const cands=(p.cands||[]).map(c=>{const url=safeExternalUrl(c.url),name=esc(c.name||'');return '<div class="cand">'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener">'+name+'</a>':'<span>'+name+'</span>')
+        +(c.address?'<small>'+esc(c.address)+'</small>':'')+(c.why?'<em>'+esc(c.why)+'</em>':'')+'</div>'}).join('');
       return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
         +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
         +'<div class="row"><i>📍</i><span><b>'+esc(p.place)+'</b></span></div>'

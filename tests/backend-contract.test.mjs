@@ -151,6 +151,13 @@ test('약속 카드는 웹 검색 후보지 목록을 보여준다', () => {
   assert.match(html, /target="_blank" rel="noopener"/);
 });
 
+test('약속 후보지 링크는 http/https 스킴만 링크로 렌더링한다', () => {
+  assert.match(html, /function safeExternalUrl\(value\)/);
+  assert.match(html, /const url=safeExternalUrl\(c\.url\)/);
+  assert.match(html, /url\?'<a href=/);
+  assert.ok(html.includes(":'<span>'+name+'</span>'"));
+});
+
 test('프로필: 복수 선호 지역 · 저장 버튼 · 같은 성별 우선 · 인재경영원', () => {
   assert.match(html, /regions:\['판교'\]/);
   assert.match(html, /function tglRegion\(r\)/);

@@ -1,5 +1,5 @@
 // 채팅 익명화 · 약속 추천 프롬프트 · 응답 파서 · 정적 fallback (순수 모듈 — Deno · Node 모두에서 동작)
-import { extractJsonObject, cleanString, cleanStringArray } from './json.ts';
+import { extractJsonObject, cleanString, cleanStringArray, safeUrl } from './json.ts';
 import type { Place } from './search.ts';
 
 export type { Place } from './search.ts';
@@ -93,7 +93,7 @@ function sanitizePlaces(places: unknown): Place[] {
     out.push({
       name,
       address: cleanString(p.address, 160),
-      url: cleanString(p.url, 300),
+      url: safeUrl(p.url),
       category: cleanString(p.category, 40),
     });
     if (out.length >= MAX_PLACES_IN_PROMPT) break;
@@ -170,7 +170,7 @@ function sanitizeCandidates(value: unknown): PlanCandidate[] {
     out.push({
       name,
       address: cleanString(c.address, 160),
-      url: cleanString(c.url, 300),
+      url: safeUrl(c.url),
       why: cleanString(c.why ?? c.reason, 120),
     });
     if (out.length >= MAX_CANDIDATES) break;

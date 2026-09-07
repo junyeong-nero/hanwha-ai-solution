@@ -53,6 +53,19 @@ export function cleanString(value: unknown, maxLen: number): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, maxLen);
 }
 
+/** 외부 링크는 http/https 스킴만 허용한다. */
+export function safeUrl(value: unknown, maxLen = 300): string {
+  const raw = cleanString(value, maxLen);
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return raw;
+  } catch {
+    return '';
+  }
+}
+
 /** 문자열 배열만 남기고 정리한다 */
 export function cleanStringArray(value: unknown, maxLen: number, maxItems: number): string[] {
   if (!Array.isArray(value)) return [];
