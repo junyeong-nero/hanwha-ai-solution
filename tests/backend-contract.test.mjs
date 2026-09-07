@@ -88,7 +88,7 @@ test('SIGNED_OUT 이벤트도 로그아웃과 같은 초기화 경로를 사용�
 test('백엔드 모드는 로그인 전에 로컬 데모 홈을 렌더링하지 않는다', () => {
   const startup = html.match(/\/\* ================= 시작 ================= \*\/([\s\S]*?)<\/script>/)?.[1];
   assert.ok(startup, '시작 시퀀스가 있어야 한다');
-  assert.match(startup, /if\(BACKEND\)initBackend\(\);\s*else\{restoreAvailabilityRooms\(\);restorePollRooms\(\);renderHome\(\);renderProfile\(\);updateBdg\(\);\}/);
+  assert.match(startup, /if\(BACKEND\)initBackend\(\);\s*else\{renderHome\(\);renderProfile\(\);updateBdg\(\);\}/);
   // 모드 무관 초기화(이벤트 바인딩 등)는 허용하되, 데모 렌더는 else 분기 밖에 있으면 안 된다
   const beforeBranch = startup.slice(0, startup.indexOf('if(BACKEND)'));
   assert.doesNotMatch(beforeBranch, /renderHome\(\)|renderProfile\(\)|updateBdg\(\)/);
@@ -135,47 +135,18 @@ test('AI 약속과 만남 완료는 Edge Function을 호출한다', () => {
   assert.match(html, /callFn\('complete-meeting'/);
 });
 
-test('약속 확정은 투표이며 전원이 눌러야 확정된다', () => {
-  assert.match(html, /from\('meeting_plan_votes'\)\.upsert\(\{plan_id:msg\.planId,meeting_id:id,user_id:ME\}/);
-  assert.match(html, /function checkPlanDone\(id,msg\)/);
-  assert.match(html, /table:'meeting_plan_votes'/);
-  assert.match(html, /전원 확정/);
-  assert.doesNotMatch(html, /from\('meeting_plans'\)\.update\(\{confirmed:true\}\)/);
-});
-
-test('#34 후보 장소 선택은 RPC 로만 저장되고 Realtime 으로 방 전체에 맞춰진다', () => {
-  // 브라우저는 meeting_plans 를 직접 수정하지 않는다 (컬럼 권한상 confirmed 외에는 막혀 있다)
-  assert.match(html, /sb\.rpc\('select_plan_place',\{p_plan_id:planId,p_place_id:c\.id\|\|null,p_name:c\.name\|\|null\}\)/);
-  assert.doesNotMatch(html, /from\('meeting_plans'\)\.update\(/);
-  // 다른 멤버가 고른 장소(selected_place)를 내 선택 상태에 반영한다
-  assert.match(html, /selected:pl\.selected_place\|\|null/);
-  assert.match(html, /if\(plan\.selected\)\{/);
-  assert.match(html, /PLACE_SEL\[pl\.id\]=i/);
-  // 지도는 메시지를 다시 그린 뒤 붙인다
+test('장소 후보에는 투표·시간표·자동 확정 경로가 없다', () => {
+  assert.doesNotMatch(html, /sb\.rpc\('(?:settle_due_plans|select_plan_place|create_meeting_poll|update_plan_schedule)'/);
+  assert.doesNotMatch(html, /from\('meeting_plan_votes'\)\.upsert/);
+  assert.doesNotMatch(html, /이 약속으로 확정|이 장소로 정하기|id="pollview"|id="availabilitywrap"/);
+  assert.match(html, /draftPlaceOpinion/);
   assert.match(html, /mountPlanMaps\(\);/);
-});
-
-test('약속 시간이 지나면 투표 없이도 자동 확정된다', () => {
-  // 서버: 방을 열 때와 1분 주기 감시에서 settle_due_plans 로 지난 약속을 확정한다
-  assert.match(html, /sb\.rpc\('settle_due_plans',\{p_meeting_id:id\}\)/);
-  assert.match(html, /function startDueWatch\(\)/);
-  assert.match(html, /function stopDueWatch\(\)/);
-  assert.match(html, /startDueWatch\(\);/);
-  assert.match(html, /stopDueWatch\(\);/);
-  // 클라이언트: meet_at 이 지난 카드는 확정으로 본다
-  assert.match(html, /function planDue\(plan\)/);
-  assert.match(html, /meetAt:pl\.meet_at\|\|null/);
-  // 확정 경로(vote/due)에 따라 안내 문구가 다르다
-  assert.match(html, /function planDoneMsg\(reason,plan\)/);
-  assert.match(html, /pl\.confirm_reason==='due'/);
-  assert.match(html, /약속 시간이 지나 자동으로 확정했어요/);
-  assert.match(html, /시간 지나 자동 확정/);
 });
 
 test('만남 완료는 개인별 체크인이고 실명은 서로 완료한 사람에게만 보인다', () => {
   assert.match(html, /from\('meeting_attendance'\)\.select\('user_id'\)/);
   assert.match(html, /table:'meeting_attendance'/);
-  assert.match(html, />만남 완료<\/button>/);
+  assert.match(html, /id="plusReveal" onclick="doReveal\(\)"/);
   assert.doesNotMatch(html, /만남 완료 \(데모\)/);
   // 라벨은 room.revealed 가 아니라 연결(S.met) 기준
   assert.match(html, /if\(S\.met\[pid\]&&p\.real\) return/);
@@ -204,8 +175,8 @@ test('채팅방 멤버 보기: 헤더 버튼·+ 메뉴·시트', () => {
 });
 
 test('약속 카드는 웹 검색 후보지 목록을 보여준다', () => {
-  assert.match(html, /class="cands"/);
-  assert.match(html, /applyPlan\(r,\{\.\.\.pl,time_label:pl\.time/);
+  assert.match(html, /class="place-candidates"/);
+  assert.match(html, /applyPlan\(r,\{\.\.\.pl,time_label:''/);
   assert.match(html, /target="_blank" rel="noopener"/);
 });
 
@@ -272,7 +243,7 @@ test('장애 상황마다 한국어 안내와 다시 시도 문구가 있다', (
   assert.match(html, /네트워크 오류/);
   assert.match(html, /다시 시도/);
   assert.match(html, /기본 순서로 모임을 보여드려요/);
-  assert.match(html, /대화 분석이 지연되어 일반 식당·카페 후보가 포함될 수 있어요/);
+  assert.match(html, /대화 분석을 마치지 못해 검색 결과를 모았어요/);
   assert.match(html, /세션이 만료됐어요/);
 });
 
@@ -303,10 +274,8 @@ test('#2 시스템 메시지도 이스케이프해서 렌더링한다', () => {
   assert.ok(!html.includes("<div class=\"bub\">'+m.x+'</div>"));
 });
 
-test('UX 후속: 모임 나가기·확정 취소는 RPC 로, 다른 방 메시지는 받은편지함 채널로 받는다', () => {
+test('UX 후속: 모임 나가기는 RPC 로, 다른 방 메시지는 받은편지함 채널로 받는다', () => {
   assert.match(html, /sb\.rpc\('leave_meeting',\{p_meeting_id:id\}\)/);
-  assert.match(html, /sb\.rpc\('withdraw_plan_vote',\{p_plan_id:msg\.planId\}\)/);
-  assert.match(html, /event:'DELETE',schema:'public',table:'meeting_plan_votes'/);
   assert.match(html, /sb\.channel\('inbox-'\+ME\)/);
   assert.match(html, /function askConfirm\(/);
   assert.doesNotMatch(html, /window\.confirm\(/, '브라우저 confirm 대신 앱 확인 시트를 쓴다');
@@ -336,9 +305,9 @@ test('#11 참가 거절(정원·마감)은 네트워크 오류와 다르게 안�
   assert.ok(html.includes('참가 이전 대화는 보이지 않아요'));
 });
 
-test('#11 확정된 약속이 없으면 만남 완료를 막고 이유를 안내한다', () => {
-  assert.ok(html.includes("e.code==='PLAN_NOT_CONFIRMED'"));
-  assert.ok(html.includes('확정된 약속이 있어야 만남 완료를 누를 수 있어요'));
+test('첫 체크인 이후 참가자의 만남 완료 거절 이유를 안내한다', () => {
+  assert.ok(html.includes("e.code==='ATTENDANCE_CLOSED'"));
+  assert.ok(html.includes('이 방의 첫 만남 완료 이후 참가했어요'));
 });
 
 /* ===== PR #9 리뷰 반영 (후속) ===== */
@@ -368,7 +337,7 @@ test('다른 기기에서 한 내 체크인도 Realtime 으로 반영된다', ()
 
 test('로컬 데모: 직접 만든 모임에서도 AI 약속·답장이 죽지 않는다', () => {
   assert.ok(html.includes('async function recommendPollPlaces(id)'));
-  assert.ok(html.includes('데모 후보 · 실제 검색 결과가 아니에요'));
+  assert.ok(html.includes('실제 검색이 아닌 가상 장소'));
   assert.ok(html.includes('if(!m.members.length)return;'));
 });
 

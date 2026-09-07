@@ -1,7 +1,7 @@
-// suggest-meeting-plan — 카카오 장소 검색으로 실제 후보지를 찾고, 최근 대화를 익명화해 OpenAI GPT 에 보내 약속 카드를 만든다.
+// suggest-meeting-plan — 카카오 장소 검색으로 실제 후보지를 찾고, 최근 대화를 익명화해 OpenAI GPT 에 보내 장소 후보 카드를 만든다.
 // 요청: POST { meeting_id }  (Authorization: Bearer <세션 JWT>)
 // 응답: 200 { plan: { id, place, time, meet_at, activity, nearby, candidates }, fallback, search_used, search } / 403 NOT_MEMBER
-// 새 추천의 meet_at은 null — 시간표에서 방장이 선택해 확정할 때만 채운다
+// 새 추천의 meet_at은 null — 시간·장소 확정은 제공하지 않는다
 // search_used: 'kakao' | 'none' — 후보지를 어떤 검색으로 찾았는지 (하위 호환)
 // search: { provider, status, queries, alternatives } — 검색 결과 없음·할당량 초과·오류를 화면에서 구분하기 위한 정보
 // LLM 이 지어낸 장소는 verifyPlan 이 검색 결과와 대조해 걸러 낸다 — 후보지는 실재하는 장소만 남는다.
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
     if (membershipError) throw membershipError;
-    if (!membership) return fail(403, 'NOT_MEMBER', '이 모임의 멤버만 약속을 추천받을 수 있어요');
+    if (!membership) return fail(403, 'NOT_MEMBER', '이 모임의 멤버만 장소를 추천받을 수 있어요');
 
     const { data: meeting, error: meetingError } = await svc
       .from('meetings')
@@ -47,8 +47,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (meetingError) throw meetingError;
     if (!meeting) return fail(404, 'NOT_FOUND', '모임을 찾을 수 없어요');
-
-    if (meeting.created_by && meeting.created_by !== user.id) return fail(403, 'NOT_HOST', '방장이 약속 잡기를 시작하면 시간과 장소를 선택할 수 있어요');
 
     const meetingForPrompt = {
       title: String(meeting.title ?? ''),
@@ -89,25 +87,7 @@ Deno.serve(async (req) => {
     const result = await suggestWithAI({ meeting: meetingForPrompt, lines, places, now, apiKey });
     const { plan: finalPlan, fallback } = result;
 
-    // 6. 시간은 미정으로 저장한다. LLM 추정 시각이 자동 확정되는 것을 막는다.
-    const { data: inserted, error: insertError } = await svc
-      .from('meeting_plans')
-      .insert({
-        meeting_id: meetingId,
-        created_by: user.id,
-        place: finalPlan.place,
-        time_label: '가능 시간 조율 중',
-        meet_at: null,
-        activity: finalPlan.activity,
-        nearby: finalPlan.nearby,
-        candidates: finalPlan.candidates,
-        source: fallback ? 'fallback' : 'llm',
-      })
-      .select('id, place, time_label, meet_at, activity, nearby, candidates, selected_place, schedule_host')
-      .single();
-    if (insertError || !inserted) throw insertError ?? new Error('약속 저장 실패');
-
-    // 7. 메타데이터만 기록 (대화 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
+    // 실행 메타데이터만 기록 (대화 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
     const { error: logError } = await svc.from('ai_recommendation_runs').insert({
       user_id: user.id,
       function_name: FN,
@@ -121,6 +101,31 @@ Deno.serve(async (req) => {
     if (logError) console.error(`[${FN}] 실행 기록 저장 실패: ${logError.code ?? 'unknown'}`);
     console.info(JSON.stringify({ function_name: FN, ...tokenUsage(result.usage), intent_usage: tokenUsage(intent.usage), latency_ms: Date.now() - started }));
 
+    const searchMeta = { provider: search.provider, status: search.status, queries: search.queries, alternatives: search.alternatives };
+    // 검색 결과가 없으면 빈 카드를 저장하지 않는다. 기존 후보는 채팅에 남겨 둔다.
+    if (!finalPlan.candidates.length) return json({ plan: null, fallback: true, search: searchMeta });
+
+    // 6. 추천 전용으로 저장한다. 시간표·투표·장소 확정은 DB에서도 차단한다.
+    const { data: inserted, error: insertError } = await svc
+      .from('meeting_plans')
+      .insert({
+        meeting_id: meetingId,
+        created_by: user.id,
+        place: finalPlan.place,
+        time_label: '',
+        recommendation_only: true,
+        search_meta: searchMeta,
+        context_since: messages?.at(-1)?.created_at ?? now.toISOString(),
+        meet_at: null,
+        activity: finalPlan.activity,
+        nearby: finalPlan.nearby,
+        candidates: finalPlan.candidates,
+        source: fallback || intent.fallback ? 'fallback' : 'llm',
+      })
+      .select('id, place, time_label, meet_at, activity, nearby, candidates, recommendation_only, created_at')
+      .single();
+    if (insertError || !inserted) throw insertError ?? new Error('장소 후보 저장 실패');
+
     return json({
       plan: {
         id: inserted.id,
@@ -130,8 +135,8 @@ Deno.serve(async (req) => {
         activity: inserted.activity,
         nearby: Array.isArray(inserted.nearby) ? inserted.nearby : [],
         candidates: Array.isArray(inserted.candidates) ? inserted.candidates : [],
-        selected_place: inserted.selected_place ?? null,
-        schedule_host: inserted.schedule_host,
+        recommendation_only: true,
+        created_at: inserted.created_at,
       },
       fallback: fallback || intent.fallback,
       intent_fallback: intent.fallback,

@@ -78,7 +78,8 @@ test('후보 목록은 선택 상태·분류·상세 링크를 보여 주고 jav
   const list = evaluate("candListHtml('local-m1',PLAN_CANDS.m1,false)");
   assert.ok(list.includes('id="cand-local-m1-0"'));
   assert.ok(list.includes('class="cand on"'), '첫 후보가 선택된 상태로 시작한다');
-  assert.ok(list.includes('이 장소로 정하기'));
+  assert.ok(list.includes('이곳 어때요?'));
+  assert.ok(!list.includes('이 장소로 정하기'));
   assert.ok(list.includes('상세 ↗'));
 
   // 확정된 약속에는 장소 선택 버튼을 내리고, 안전하지 않은 링크는 아예 그리지 않는다
@@ -119,7 +120,7 @@ test('검색 상태 안내: 결과 없음은 대체 검색어를, 할당량 초�
   assert.ok(empty.includes('검색 결과가 없어요'));
   assert.ok(empty.includes('판교 카페'));
   assert.ok(evaluate("searchNoteHtml({status:'quota'})").includes('할당량'));
-  assert.ok(evaluate("searchNoteHtml({status:'auth'})").includes('키 설정'));
+  assert.ok(evaluate("searchNoteHtml({status:'auth'})").includes('연결하지 못했어요'));
   assert.ok(evaluate("searchNoteHtml({status:'error'})").includes('실패'));
   assert.equal(evaluate("searchNoteHtml({status:'ok'})"), '');
   assert.equal(evaluate('searchNoteHtml(null)'), '');

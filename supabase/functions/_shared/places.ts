@@ -65,7 +65,8 @@ export function placeToCandidate(place: Place, why = SEARCHED_WHY): PlanCandidat
     category: cleanString(place.category, 40),
     lat: typeof place.lat === 'number' ? place.lat : null,
     lng: typeof place.lng === 'number' ? place.lng : null,
-    why: cleanString(why, 120) || SEARCHED_WHY,
+    why: cleanString(why, 120) && why !== SEARCHED_WHY ? cleanString(why, 120)
+      : cleanString(`${place.address || '요청한 지역'}에서 검색한 ${place.category || '장소'} 후보예요. 위치와 업종을 비교해 보세요.`, 120),
     verified: true,
   };
 }

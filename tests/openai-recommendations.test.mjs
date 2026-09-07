@@ -121,7 +121,9 @@ test('장소: GPT 결과를 실제 후보와 대조하고 주변 장소도 검�
   const out = await suggestWithAI({ ...planOpts, fetchImpl: async () => response(planOutput) });
   assert.equal(out.fallback, false);
   assert.equal(out.plan.place, places[0].name);
-  assert.deepEqual(out.plan.nearby, ['판교 카페']);
+  assert.deepEqual(out.plan.nearby, []);
+  assert.equal(out.plan.meet_at, null);
+  assert.equal(out.plan.time, '장소 후보');
   assert.equal(out.plan.candidates.length, 1);
   assert.equal(out.plan.candidates[0].id, '1');
   assert.equal(out.plan.candidates[0].lat, 37.39);
