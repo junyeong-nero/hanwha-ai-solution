@@ -32,6 +32,7 @@ function renderProfile(){
   $('pfav').textContent=P.av;
   if(document.activeElement!==$('nick'))$('nick').value=P.nick;
   $('pfident').textContent=P.realName?P.realName+' · '+(co(P.company)||{}).name+' (로그인 정보)':'';
+  $('logoutBtn').style.display=BACKEND&&ME?'':'none';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
   $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
   $('f-region').innerHTML=REGIONS.map(r=>chipHtml('region',r,P.regions.includes(r))).join('')
