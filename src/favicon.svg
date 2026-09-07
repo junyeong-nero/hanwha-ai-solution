@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>MoonLight Hanwha 초승달</title>
+  <!-- 독립 이미지이므로 styles.css의 배경·브랜드 색상을 사용합니다. -->
+  <circle cx="32" cy="32" r="32" fill="#090C18"/>
+  <path d="M39 10a23 23 0 1 0 15 32A23 23 0 0 1 39 10Z" fill="#F37321"/>
+</svg>
