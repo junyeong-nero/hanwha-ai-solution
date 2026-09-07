@@ -34,6 +34,7 @@ function entryErr(m){$('e-err').textContent=m||''}
 function clearBackendState(){
   if(typeof stopDueWatch==='function')stopDueWatch();
   if(typeof unsubscribeRoom==='function')unsubscribeRoom();
+  unsubscribeInbox();
   if(R.saveTimer){clearTimeout(R.saveTimer);R.saveTimer=null}
   ME=null;
   MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
@@ -63,7 +64,7 @@ async function initBackend(){
 }
 async function logout(){
   if(!BACKEND||!sb||!ME)return;
-  if(!window.confirm('로그아웃할까요?'))return;
+  if(!await askConfirm('로그아웃할까요?','같은 계열사·사번으로 다시 입장하면 프로필과 채팅이 그대로 복원돼요','로그아웃',true))return;
   try{
     const result=await sb.auth.signOut();
     if(result&&result.error)throw result.error;
@@ -110,6 +111,7 @@ async function enterDemo(){
     hideEntry(); await afterLogin();
     if(d.is_new)go('profile');   // 첫 로그인은 프로필 설정부터 — 추천의 재료가 없으면 매칭이 비어 보인다
     toast(d.is_new?'환영해요 🌙':'다시 오셨네요 🌙',d.is_new?'관심사와 선호 지역을 고르고 저장하면 매칭이 시작돼요':'저장된 프로필과 채팅을 불러왔어요');
+    if(!d.is_new&&nick&&nick!==S.profile.nick)setTimeout(()=>toast('닉네임','입력한 닉네임은 처음 입장 때만 쓰여요 · 프로필 탭에서 바꿀 수 있어요'),2800);
   }catch(e){ entryErr(ENTRY_MSG[e.code]||'입장에 실패했어요. 다시 시도해 주세요') }
   finally{clearTimeout(slow);btn.disabled=false;btn.textContent='입장하기'}
 }
@@ -146,6 +148,7 @@ async function loadProfile(){
 async function afterLogin(){
   await Promise.all([loadConnections(),loadRooms()]);
   R.recDirty=true;
+  subscribeInbox();   // 열어 두지 않은 방의 새 메시지 → 안 읽음 배지
   renderHome();renderProfile();updateBdg();go('home');
   if(new URLSearchParams(location.search).get('admin')==='1')$('adminbox').style.display='block';
 }
@@ -209,7 +212,7 @@ async function loadRecommendations(){
   }finally{clearTimeout(h1);clearTimeout(h2);R.recLoading=false}
 }
 /* 채팅방 로드 · Realtime */
-function upsertMember(p){ if(p.user_id===ME)return; PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙'} }
+function upsertMember(p){ if(p.user_id===ME)return; PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙',ints:Array.isArray(p.interests)?p.interests:[]} }
 async function refreshMembers(id){
   const {data,error}=await sb.rpc('room_members',{p_meeting_id:id}); if(error)return;
   const m=ensureMeeting(id,{}); m.members=[];
@@ -218,7 +221,7 @@ async function refreshMembers(id){
 }
 function pushMsg(r,x){
   if(!x||R.seen.has(x.id))return false; R.seen.add(x.id);
-  r.msgs.push({id:x.id,f:x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at)}); return true;
+  r.msgs.push({id:x.id,f:x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at),dk:dayKey(x.created_at)}); return true;
 }
 function applyPlan(r,pl,search){
   if(!pl||!pl.id)return;
@@ -287,6 +290,12 @@ function subscribeRoom(id){
       const msg=r.msgs.find(x=>x.planId===p.new.plan_id); if(msg)checkPlanDone(id,msg);
       if(CUR===id){renderMsgs();renderBanner()}
     })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'meeting_plan_votes',filter:'meeting_id=eq.'+id},p=>{
+      // 확정 취소 (replica identity full 이라 old 행에 plan_id·user_id 가 실린다)
+      const r=S.rooms[id], o=p.old; if(!r||!o||!o.plan_id)return;
+      if(r.votes[o.plan_id])r.votes[o.plan_id].delete(o.user_id);
+      if(CUR===id){renderMsgs();renderBanner()}
+    })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'meeting_attendance',filter:'meeting_id=eq.'+id},async p=>{
       const r=S.rooms[id]; if(!r||!p.new)return;
       r.attended.add(p.new.user_id);
@@ -301,6 +310,20 @@ function subscribeRoom(id){
     .subscribe();
 }
 function unsubscribeRoom(){ if(CH&&sb){sb.removeChannel(CH);CH=null} }
+/* 받은편지함 — 내가 참가한 모든 방의 새 메시지를 한 채널로 받아 안 읽음 배지와 목록 미리보기를 갱신한다.
+   RLS(참가 모임 메시지 조회)가 Realtime 에도 적용돼 남의 방 메시지는 오지 않는다. 열어 둔 방은 room 채널이 맡는다 */
+let INBOX=null;
+function subscribeInbox(){
+  unsubscribeInbox();
+  INBOX=sb.channel('inbox-'+ME).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},p=>{
+    const x=p.new; if(!x||x.sender_id===ME)return;
+    const id=x.meeting_id; if(!S.joined.includes(id)||id===CUR)return;
+    const r=ensureRoom(id); r.unread++; r.last=x.body; r.lastT=fmtT(x.created_at);
+    if(r.msgs.length)pushMsg(r,x);   // 한 번 열어 본 방은 목록 미리보기도 최신 메시지로
+    updateBdg(); if(S.tab==='chat'&&!CUR)renderRooms();
+  }).subscribe();
+}
+function unsubscribeInbox(){ if(INBOX&&sb){sb.removeChannel(INBOX);INBOX=null} }
 /* 발표 데이터 초기화 (관리 토큰 필요 · ?admin=1 일 때만 버튼 노출) */
 async function resetDemo(){
   const tok=window.prompt('관리 토큰을 입력하세요'); if(!tok)return;

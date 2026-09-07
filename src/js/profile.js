@@ -9,6 +9,14 @@ function bumpSize(k,d){
   else P.sizeMax=Math.max(P.sizeMin,Math.min(10,P.sizeMax+d));
   renderProfile();profileChanged();
 }
+/* 모임 규모 — 한 줄 프리셋 (소규모 · 적당히 · 넉넉히) */
+const SIZE_PRESETS=[[2,3,'2~3명','소규모'],[4,6,'4~6명','적당히'],[7,10,'7~10명','넉넉히']];
+function setSize(min,max){S.profile.sizeMin=min;S.profile.sizeMax=max;renderProfile();profileChanged()}
+function renderSizeSeg(){
+  const P=S.profile;
+  $('f-size').innerHTML=SIZE_PRESETS.map(([a,b,l,d])=>'<button class="'+(P.sizeMin===a&&P.sizeMax===b?'on':'')+'" onclick="setSize('+a+','+b+')">'+l+'<small>'+d+'</small></button>').join('');
+  $('sizehint').textContent='현재 '+P.sizeMin+'~'+P.sizeMax+'명 · 희망 인원에 가까운 모임이 먼저 추천돼요';
+}
 function toggleSame(){S.profile.sameGender=!S.profile.sameGender;renderProfile();profileChanged()}
 function tgl(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);renderProfile();profileChanged()}
 function tglRegion(r){
@@ -40,6 +48,8 @@ function renderProfile(){
   $('logoutIb').style.display=BACKEND&&ME?'':'none';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
   $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
+  $('cohint').style.display=(BACKEND&&ME)?'':'none';
+  $('reloadBtn').style.display=BACKEND?'none':'';   // 서버 모드에서는 새로고침일 뿐이라 숨긴다
   $('f-region').innerHTML=REGIONS.map(r=>chipHtml('region',r,P.regions.includes(r))).join('')
     +'<button class="chip add" onclick="openAdd(\'region\')">＋ 직접 추가</button>';
   $('f-age').textContent=P.age+'세';
@@ -51,8 +61,9 @@ function renderProfile(){
     +'<button class="chip add" onclick="openAdd(\'int\')">＋ 직접 추가</button>';
   $('f-hob').innerHTML=HOBS.map(v=>chipHtml('hob',v,P.hobbies.includes(v))).join('')
     +'<button class="chip add" onclick="openAdd(\'hob\')">＋ 직접 추가</button>';
-  $('f-min').textContent=P.sizeMin+'명';$('f-max').textContent=P.sizeMax+'명';
+  renderSizeSeg();
   $('f-same').classList.toggle('on',P.sameGender);
+  $('f-same').setAttribute('aria-checked',P.sameGender?'true':'false');
   $('samehint').textContent=P.gender?'같은 성별 멤버가 많은 모임을 먼저 추천해요':'성별을 설정하면 적용돼요 · 같은 성별 멤버가 많은 모임을 먼저 추천';
   renderSaveBtn();
   $('f-scope').innerHTML=[['mine','내 계열사 위주'],['all','다른 계열사와도']].map(([v,l])=>

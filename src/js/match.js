@@ -47,13 +47,13 @@ function renderMatchCards(list,note){
   $('meets').innerHTML=shownList.map(m=>{
     // memberCount 는 나를 제외한 인원. 표시 인원은 참가 중이면 나를 더해 채팅 목록과 같은 수를 보여준다 (#3)
     const others=memberTotal(m), kn=knownIn(m), ratio=others?Math.round(kn/others*100):0;
-    const joined=S.joined.includes(m.id), shown=joined?roomTotal(m.id):others;
+    const joined=S.joined.includes(m.id), shown=joined?roomTotal(m.id):others, full=!joined&&others>=m.cap;   // 정원이 찼으면 미리 알린다
     const avs=(m.members||[]).slice(0,4).map(pid=>'<span>'+esc((PEOPLE[pid]||{}).av||'🌙')+'</span>').join('')
       +(others>4?'<span class="more">+'+(others-4)+'</span>':'');
     const hit=m.tags.filter(t=>mineSet.has(t)).length;   // 내 관심사·취미와 겹치는 태그 수
     const badge=m.mine?'<span class="badge or">내 모임</span>':joined?'<span class="badge ok">'+ico('check')+'참가 중</span>':hit?'<span class="badge or">'+ico('spark')+'취향 '+hit+'개 일치</span>':'';
     return '<div class="card meet'+(joined?' joined':'')+'">'
-      +'<div class="hd"><div class="em">'+esc(m.em||'🌙')+'</div><div style="flex:1;min-width:0">'
+      +'<div class="hd press" role="button" onclick="openDetail(\''+m.id+'\')"><div class="em">'+esc(m.em||'🌙')+'</div><div style="flex:1;min-width:0">'
       +'<h3>'+esc(m.name)+'</h3>'
       +'<div class="meta"><span>'+ico('pin')+esc(m.region)+'</span><span>'+ico('clock')+esc(m.when)+'</span><span>'+ico('users')+shown+'/'+m.cap+'명</span></div>'
       +'</div>'+badge+'</div>'
@@ -64,6 +64,7 @@ function renderMatchCards(list,note){
       +(kn?'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div><span class="lb">아는 얼굴 <b>'+ratio+'%</b></span></div>':'')
       +(joined
         ?'<button class="cta soft" onclick="openJoined(\''+m.id+'\')">'+ico('check')+'참가 중 · 채팅방 열기</button>'
+        :full?'<button class="cta" disabled>정원 마감 · '+others+'/'+m.cap+'명</button>'
         :'<button class="cta" onclick="joinMeet(\''+m.id+'\')">참가하기</button>')
       +'</div>';
   }).join('');
@@ -87,14 +88,40 @@ async function joinMeet(id){
   S.joined.push(id);
   const seed=[
     {f:'sys',  x:'모임이 열렸어요. 만나기 전까지는 서로 익명이에요 🌙'},
-    {f:m.members[0], x:'안녕하세요! 다들 반가워요 ☺️', t:'오후 6:02'},
-    {f:m.members[1]||m.members[0], x:'와 '+m.tags[0]+' 얘기 나눌 사람 찾고 있었는데 반갑네요!', t:'오후 6:05'},
+    {f:m.members[0], x:'안녕하세요! 다들 반가워요 ☺️', t:'오후 6:02', dk:dayKey()},
+    {f:m.members[1]||m.members[0], x:'와 '+m.tags[0]+' 얘기 나눌 사람 찾고 있었는데 반갑네요!', t:'오후 6:05', dk:dayKey()},
   ];
   Object.assign(ensureRoom(id),{msgs:seed,unread:2});
   updateBdg();renderMatch();
   toast('참가 완료','<b>'+esc(m.name)+'</b> 채팅방이 열렸어요');
 }
 
+
+/* ================= 모임 상세 시트 — 참가 전에 멤버·태그·추천 이유를 보고 결정한다 ================= */
+function openDetail(id){
+  const m=MEETINGS.find(x=>x.id===id); if(!m)return;
+  const P=savedProfile(), mineSet=new Set([...P.interests,...P.hobbies]);
+  const joined=S.joined.includes(id), others=memberTotal(m), kn=knownIn(m), full=!joined&&others>=m.cap;
+  const mem=(m.members||[]).map(pid=>{
+    const p=PEOPLE[pid]||UNKNOWN, known=!!(S.met[pid]&&p.real), c=co(p.co);
+    return '<div class="memrow"><div class="mav">'+esc(p.av||'🌙')+'</div><div class="nm"><b>'+esc(known?p.real:p.nick)+'</b><small>'+esc(known?(c?c.name:''):'익명 · 만나면 실명이 보여요')+'</small>'
+      +((p.ints||[]).length?'<span class="mtags">'+p.ints.slice(0,3).map(t=>'<i>#'+esc(t)+'</i>').join('')+'</span>':'')+'</div>'
+      +(known?'<span class="mbadge on">아는 얼굴</span>':'')+'</div>';
+  }).join('');
+  $('dt-body').innerHTML='<div class="dthd"><div class="em">'+esc(m.em||'🌙')+'</div><div style="min-width:0"><b>'+esc(m.name)+'</b>'
+    +'<div class="meta"><span>'+ico('pin')+esc(m.region)+'</span><span>'+ico('clock')+esc(m.when)+'</span><span>'+ico('users')+(joined?roomTotal(id):others)+'/'+m.cap+'명</span></div></div></div>'
+    +'<div class="tags" style="margin-top:12px">'+(m.mine?'<span class="tag or">내 모임</span>':'')+m.tags.map(t=>'<span class="tag'+(mineSet.has(t)?' or':'')+'">#'+esc(t)+'</span>').join('')+'</div>'
+    +'<div class="ai" style="margin-top:12px"><span class="mi">🌙</span><div><span class="lb">MoonLight AI 추천 이유</span>'+m.ai+'</div></div>'
+    +'<div class="sec" style="margin:16px 0 4px"><h2 style="font-size:14.5px">멤버</h2><small>'+(kn?'아는 얼굴 '+kn+'명 · ':'')+others+'명</small></div>'
+    +(mem||'<p class="hint">멤버 목록은 참가하면 채팅방에서 볼 수 있어요'+(others?' · 지금 '+others+'명이 있어요':' · 첫 멤버를 기다리는 중')+'</p>')
+    +'<p class="hint" style="margin-top:10px">만나기 전까지는 서로 익명이고, 참가 이전 대화는 보이지 않아요</p>';
+  $('dt-cta').innerHTML=joined
+    ?'<button class="cta soft" onclick="hideDetail();openJoined(\''+id+'\')">'+ico('check')+'참가 중 · 채팅방 열기</button>'
+    :full?'<button class="cta" disabled>정원 마감 · '+others+'/'+m.cap+'명</button>'
+    :'<button class="cta" onclick="hideDetail();joinMeet(\''+id+'\')">참가하기</button>';
+  $('detailwrap').classList.add('on');
+}
+function hideDetail(){$('detailwrap').classList.remove('on')}
 
 /* ================= 모임 만들기 ================= */
 const C={em:'🌙',region:null,tags:[],when:'평일 저녁',cap:6,invite:[]};

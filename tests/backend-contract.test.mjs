@@ -297,6 +297,19 @@ test('#2 시스템 메시지도 이스케이프해서 렌더링한다', () => {
   assert.ok(!html.includes("<div class=\"bub\">'+m.x+'</div>"));
 });
 
+test('UX 후속: 모임 나가기·확정 취소는 RPC 로, 다른 방 메시지는 받은편지함 채널로 받는다', () => {
+  assert.match(html, /sb\.rpc\('leave_meeting',\{p_meeting_id:id\}\)/);
+  assert.match(html, /sb\.rpc\('withdraw_plan_vote',\{p_plan_id:msg\.planId\}\)/);
+  assert.match(html, /event:'DELETE',schema:'public',table:'meeting_plan_votes'/);
+  assert.match(html, /sb\.channel\('inbox-'\+ME\)/);
+  assert.match(html, /function askConfirm\(/);
+  assert.doesNotMatch(html, /window\.confirm\(/, '브라우저 confirm 대신 앱 확인 시트를 쓴다');
+  assert.match(html, /id="plusLeave"/);
+  assert.match(html, /id="openers"/);
+  assert.match(html, /function openDetail\(id\)/);
+  assert.match(html, /정원 마감/);
+});
+
 test('#3 매칭 카드의 참여 인원은 참가 중이면 나를 포함해 채팅 목록과 같은 수를 보여준다', () => {
   assert.ok(html.includes('shown=joined?roomTotal(m.id):others'));
   assert.ok(html.includes("+shown+'/'+m.cap+'명"));
@@ -348,7 +361,7 @@ test('다른 기기에서 한 내 체크인도 Realtime 으로 반영된다', ()
 });
 
 test('로컬 데모: 직접 만든 모임에서도 AI 약속·답장이 죽지 않는다', () => {
-  assert.ok(html.includes('const base=PLANS[id]||{place:'));
+  assert.ok(html.includes('const base0=PLANS[id]||{place:'));
   assert.ok(html.includes('if(!m.members.length)return;'));
 });
 
