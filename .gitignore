@@ -4,3 +4,6 @@
 supabase/.temp/
 supabase/.branches/
 node_modules/
+
+# 영상 제작 원본과 중간 산출물은 로컬에 보존
+outputs/

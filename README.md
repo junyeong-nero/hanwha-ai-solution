@@ -5,7 +5,9 @@ AI가 프로필에 맞는 소모임을 추천하고, 익명 채팅에서 시작�
 
 **데모:** [junyeong-nero.github.io/hanwha-ai-solution/src/](https://junyeong-nero.github.io/hanwha-ai-solution/src/) · 휴대폰 화면(375×812) 기준으로 설계했습니다.
 
-**소개 영상:** [1분 54초 자막 시연 영상과 재생 안내](outputs/demo-video/README.md) · TTS 없이 화면 설명과 배경음으로 핵심 흐름을 소개합니다.
+**제출 자료:** [영상](assets/video.mp4) · [발표 슬라이드](assets/ppt.html) · [제출 보고서](assets/report.md)
+
+`assets/`에는 제출용 3개 파일을 모았습니다. 영상은 1분 54초 자막판이며, 발표 HTML은 브라우저에서 열면 됩니다. 보고서는 제출 페이지의 필수·선택 항목에 맞춰 작성했습니다. 영상 제작 원본과 중간 산출물은 로컬 `outputs/`에 보존하고 Git에서 제외합니다.
 
 ## 무엇을 푸는가
 
@@ -100,5 +102,5 @@ npm test
 ├── tests/                  # npm test (Node.js 24+)
 ├── docs/                   # 기능 명세 · 소개 · 배포 절차 · 설계 문서
 ├── scripts/                # 배포 · Node 버전 검사
-└── assets/                 # 폰트 · 과제 안내
+└── assets/                 # 제출용 video.mp4 · ppt.html · report.md / 폰트 · 과제 안내
 ```
