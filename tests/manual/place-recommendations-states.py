@@ -1,6 +1,6 @@
 # 사전 준비: python3 -m pip install playwright && python3 -m playwright install chromium webkit
 # 저장소 루트에서 python3 -m http.server 8766 --bind 127.0.0.1 실행 후 이 스크립트를 실행한다.
-import asyncio,json
+import asyncio,json,re
 from pathlib import Path
 from playwright.async_api import async_playwright
 ROOT=Path(__file__).resolve().parents[2]
@@ -11,7 +11,7 @@ async def main():
    page=await browser.new_page(viewport={'width':width,'height':900},reduced_motion='reduce')
    errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    # 백엔드 응답 모양만 주입한다. 운영 인증·AI·카카오 API는 호출하지 않는다.
-   config=(ROOT/'src/js/config.js').read_text().replace("KAKAO_JS_KEY:''","KAKAO_JS_KEY:'test-key'")
+   config=re.sub(r"KAKAO_JS_KEY:'[^']*'", "KAKAO_JS_KEY:'test-key'", (ROOT/'src/js/config.js').read_text())
    await page.route('**/js/config.js',lambda r:r.fulfill(body=config,content_type='application/javascript'))
    await page.route('https://dapi.kakao.com/**',lambda r:r.abort())
    await page.route('**/js/boot.js',lambda r:r.fulfill(content_type='application/javascript',body="""

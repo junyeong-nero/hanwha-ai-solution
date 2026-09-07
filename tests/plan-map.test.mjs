@@ -17,6 +17,7 @@ const json = (value) => JSON.parse(JSON.stringify(value));
 function loadMap({ cands = null, planId = 'local-m1' } = {}) {
   const app = loadApp({ files: ['config.js', 'map.js'] });
   const { evaluate } = app;
+  evaluate("CONFIG.KAKAO_JS_KEY=''");
   // chat.js 가 갖고 있는 전역(CUR · 방 상태)만 최소로 흉내 낸다
   evaluate('var CUR="m1"');
   evaluate(`S.rooms.m1={msgs:[{f:"ai",planId:${JSON.stringify(planId)},plan:{cands:${JSON.stringify(cands ?? null)}||PLAN_CANDS.m1}}],unread:0,votes:{},attended:new Set(),photos:[]}`);
@@ -143,7 +144,7 @@ test('map.js 는 chat.js 다음에 로드되고 서버 전용 키를 쓰지 않�
   assert.ok(order[0] < order[1] && order[1] < order[2], '로드 순서: chat → map → backend');
   assert.doesNotMatch(html, /KAKAO_REST_KEY\s*[:=]/, '서버 전용 REST 키 값은 브라우저에 없다');
   assert.doesNotMatch(html, /KakaoAK/, '브라우저는 장소 검색 REST API 를 직접 부르지 않는다');
-  assert.match(html, /KAKAO_JS_KEY:''/, '공개 JS 키 자리는 비어 있고 배포 시에만 채운다');
+  assert.match(html, /KAKAO_JS_KEY:'[a-f0-9]{32}'/, '공개 JavaScript 키가 설정돼 있다');
   assert.match(html, /dapi\.kakao\.com\/v2\/maps\/sdk\.js\?autoload=false&appkey=/, '지도 SDK 는 공개 키로만 부른다');
 });
 
