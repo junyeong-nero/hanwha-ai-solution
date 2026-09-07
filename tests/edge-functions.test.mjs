@@ -488,6 +488,17 @@ test('parsePlan: candidates 는 이름 없는 항목을 버리고 최대 5개만
   assert.deepEqual(plan.candidates[2], { name: '후보 3', address: '', url: '', why: '' });
 });
 
+test('parsePlan: 후보지 URL은 http·https만 남긴다', () => {
+  const plan = parsePlan(JSON.stringify({
+    place: '판교역', time: '금요일 18시', activity: '산책', nearby: [], candidates: [
+      { name: '안전한 후보', url: 'https://example.com' },
+      { name: '악성 후보', url: 'javascript:alert(1)' },
+      { name: '상대 경로', url: '/place/1' },
+    ],
+  }));
+  assert.deepEqual(plan.candidates.map((candidate) => candidate.url), ['https://example.com', '', '']);
+});
+
 test('fallbackPlan: 다섯 필드를 모두 채우고 후보지가 없으면 candidates 는 빈 배열', () => {
   const plan = fallbackPlan({ title: '러닝', region: '판교', tags: ['러닝', '운동'], when_label: '평일 저녁' });
   assert.deepEqual(Object.keys(plan).sort(), ['activity', 'candidates', 'meet_at', 'nearby', 'place', 'time']);
@@ -618,6 +629,16 @@ test('searchPlaces: Kakao 키가 있으면 키워드 검색 결과를 후보지�
     { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페' },
     { name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '여행 > 공원' },
   ]);
+});
+
+test('searchPlaces: 후보지 URL은 http·https만 남긴다', async () => {
+  const fetchImpl = async () => new Response(JSON.stringify({ documents: [
+    { place_name: '정상 장소', place_url: 'https://place.example/1' },
+    { place_name: '악성 장소', place_url: 'javascript:alert(1)' },
+    { place_name: '상대 장소', place_url: '/place/3' },
+  ] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const out = await searchPlaces({ region: '판교', keywords: ['카페'], kakaoKey: 'k', fetchImpl });
+  assert.deepEqual(out.places.map((place) => place.url), ['https://place.example/1', '', '']);
 });
 
 test('searchPlaces: Kakao 첫 키워드 결과가 없으면 다음 키워드로 한 번 더 (최대 2회)', async () => {

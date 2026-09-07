@@ -111,6 +111,11 @@ function renderBanner(){
   else if(r.planned) h='📅 '+esc(r.planned.when)+' · '+esc(r.planned.place)+'<button onclick="doReveal()">만남 완료</button>';
   $('rbanner').innerHTML=h; $('rbanner').classList.toggle('on',!!h);
 }
+function safePlaceUrl(value){
+  const raw=typeof value==='string'?value.trim():'';
+  if(!raw)return '';
+  try{const u=new URL(raw);return u.protocol==='http:'||u.protocol==='https:'?raw:''}catch(e){return ''}
+}
 function renderMsgs(){
   const r=S.rooms[CUR];
   $('msgs').innerHTML=r.msgs.map((m,i)=>{
@@ -120,8 +125,8 @@ function renderMsgs(){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
       const unanimous=votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
       const done=r.plannedId===m.planId||unanimous||auto, pct=auto?100:Math.min(100,Math.round(votes/total*100));
-      const cands=(p.cands||[]).map(c=>'<div class="cand"><a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener">'+esc(c.name||'')+'</a>'
-        +(c.address?'<small>'+esc(c.address)+'</small>':'')+(c.why?'<em>'+esc(c.why)+'</em>':'')+'</div>').join('');
+      const cands=(p.cands||[]).map(c=>{const url=safePlaceUrl(c.url),name=esc(c.name||'');return '<div class="cand">'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener">'+name+'</a>':'<span>'+name+'</span>')
+        +(c.address?'<small>'+esc(c.address)+'</small>':'')+(c.why?'<em>'+esc(c.why)+'</em>':'')+'</div>'}).join('');
       return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
         +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
         +'<div class="row"><i>📍</i><span><b>'+esc(p.place)+'</b></span></div>'

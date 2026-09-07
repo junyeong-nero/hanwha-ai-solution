@@ -53,6 +53,18 @@ export function cleanString(value: unknown, maxLen: number): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, maxLen);
 }
 
+/** 후보지 링크는 http/https 절대 URL만 허용한다. */
+export function safeUrl(value: unknown, maxLen = 300): string {
+  const raw = cleanString(value, maxLen);
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? raw : '';
+  } catch {
+    return '';
+  }
+}
+
 /** 문자열 배열만 남기고 정리한다 */
 export function cleanStringArray(value: unknown, maxLen: number, maxItems: number): string[] {
   if (!Array.isArray(value)) return [];

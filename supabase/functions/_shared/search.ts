@@ -2,7 +2,7 @@
 // 1순위 Kakao 로컬 키워드 검색, 2순위 OpenRouter 웹 검색 플러그인, 둘 다 없으면 빈 결과.
 // 검색은 약속 추천을 절대 막지 않는다 — 어떤 오류가 나도 { provider: 'none', places: [] } 로 끝난다.
 // API 키·프롬프트·응답은 로그에 남기지 않는다.
-import { extractJsonObject, cleanString } from './json.ts';
+import { extractJsonObject, cleanString, safeUrl } from './json.ts';
 
 export interface Place {
   name: string;
@@ -68,7 +68,7 @@ function toPlace(input: unknown): Place | null {
   return {
     name,
     address: cleanString(p.address, 160),
-    url: cleanString(p.url, 300),
+    url: safeUrl(p.url),
     category: cleanString(p.category, 40),
   };
 }
@@ -162,7 +162,7 @@ function extractCitations(message: unknown): UrlCitation[] {
   for (const a of annotations) {
     const ann = a as { type?: unknown; url_citation?: { url?: unknown; title?: unknown } } | null;
     if (!ann || ann.type !== 'url_citation') continue;
-    const url = cleanString(ann.url_citation?.url, 300);
+    const url = safeUrl(ann.url_citation?.url);
     if (!url) continue;
     out.push({ url, title: cleanString(ann.url_citation?.title, 120) });
   }
