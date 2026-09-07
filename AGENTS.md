@@ -8,7 +8,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 
 - 핵심 은유: 우주와 달빛 — 계열사는 행성, 만남 성사는 행성의 점등
 - 제출 마감: **2026-09-08(화) 22:00**
-- 평가 핵심: AI 도구 활용(50점) · 문제 해결력(30점) · 현업 적용 가능성(20점) — 상세는 README.md 평가표 참고
+- 평가 핵심: AI 도구 활용(50점) · 문제 해결력(30점) · 현업 적용 가능성(20점) — 상세는 [docs/submission-guide.md](docs/submission-guide.md) 평가표 참고
 
 ## 문서 읽는 순서
 
@@ -17,7 +17,8 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 | [docs/features.md](docs/features.md) | **현재 기능 명세의 단일 기준(SSOT).** 4탭 구조와 모든 기능 정의 |
 | [docs/background.md](docs/background.md) | 문제 정의와 데이터 근거(설문·연구 인용) — 여전히 유효 |
 | [docs/overview.md](docs/overview.md) | 초기 방향("달빛한화") 문서 — **피벗 이전 내용**이므로 기능 판단 기준으로 쓰지 말 것 |
-| README.md | 과제 제출 안내·평가표·TODO |
+| README.md | 프로젝트 소개·기술 스택·AI 활용·배포 방식 |
+| [docs/submission-guide.md](docs/submission-guide.md) | 제출 페이지 요구사항·평가표·제출 체크리스트 |
 
 기능 관련 판단이 충돌하면 **features.md가 우선**합니다.
 
@@ -25,7 +26,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 
 ```
 ├── AGENTS.md               ← 이 문서
-├── README.md               ← 과제 안내·평가표
+├── README.md               ← 프로젝트 소개·기술 스택·AI 활용·배포
 ├── .env.example            ← 공개 설정 키 이름만 (실제 값 커밋 금지)
 ├── package.json            ← `npm test` 스크립트와 engines(Node >=24)
 ├── scripts/
