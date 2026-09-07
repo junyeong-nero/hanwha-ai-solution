@@ -32,8 +32,8 @@ AI가 프로필에 맞는 소모임을 추천하고, 익명 채팅에서 시작�
 | UI | 다크 우주 테마 고정, Pretendard, `styles.css` 최상단 `:root` 디자인 토큰, iOS Safari 대응(`100dvh` · `safe-area-inset` · 44px 터치 타겟) |
 | 인증 · DB · 실시간 | **Supabase** — Postgres + RLS + Realtime + Auth. 계열사·사번·이름 기반 데모 로그인으로 어느 기기에서든 프로필과 채팅이 복원됩니다 |
 | 서버 로직 | **Supabase Edge Functions** (Deno · TypeScript) 5개 — `demo-login` · `recommend-meetings` · `suggest-meeting-plan` · `complete-meeting` · `reset-demo` |
-| AI | 모임 추천은 **규칙 기반 점수 엔진**, 약속 추천은 **OpenRouter Chat Completions** (아래 참고) |
-| 장소 검색 | 카카오 로컬 키워드 검색(REST · 서버 전용 키), REST 키가 없으면 OpenRouter 웹 검색 플러그인 사용 |
+| AI | 모임·약속 추천은 **OpenAI Responses API · gpt-5.4-mini** (아래 참고) |
+| 장소 검색 | 카카오 로컬 키워드 검색(REST · 서버 전용 키), 검색 실패 시 기본 카드 제공 |
 | 지도 | 카카오맵 JavaScript SDK (공개 JS 키 · 도메인 제한) |
 | 테스트 | Node.js 24 내장 test runner — `npm test` |
 
@@ -41,20 +41,19 @@ AI가 프로필에 맞는 소모임을 추천하고, 익명 채팅에서 시작�
 
 ## AI를 어디에, 왜 썼는가
 
-### 1. 모임 추천 — LLM을 쓰지 않기로 한 자리
+### 1. 모임 추천 — 규칙 후보를 GPT로 재정렬
 
-추천 순위는 `supabase/functions/_shared/recommendation.ts`의 **규칙 기반 점수 엔진**이 매깁니다. 관심사 겹침(0.34) · 관계 방향(0.22) · 희망 인원(0.16) · 같은 성별 비율(0.14) · 같은 계열사 비율(0.10) · 잔여석(0.04)을 가중 합산하고, 적용되지 않는 항목은 빼고 나머지를 다시 정규화합니다. 추천 이유 문장도 임계값(0.6)을 넘긴 항목에서만 만들어 근거 없는 설명이 나오지 않게 했습니다.
+선호 지역·정원으로 후보를 추리고, 기존 가중치 엔진으로 채점한 미참가 모임 상위 20개를 `gpt-5.4-mini`가 재정렬합니다. ‘러닝’과 ‘조깅’처럼 문자열이 다른 관심사의 의미를 해석하고 개인화된 추천 이유를 작성합니다. 후보 밖 ID·중복·누락을 검증하고, API 실패 시 규칙 추천을 제공합니다. 나머지 후보도 유지하며 이미 참가한 모임은 뒤에 둡니다.
 
-원래 이 자리도 LLM이었지만 교체했습니다. 순위 매기기는 **입력이 구조화되어 있고 결과가 재현 가능해야 하는** 작업이라, LLM은 대기 시간과 비결정성만 얹고 얻는 것이 없었기 때문입니다. 지금은 응답이 즉시 나오고, 같은 입력이면 항상 같은 순서가 나옵니다.
+### 2. 약속 추천 — 검색된 장소와 대화 맥락 결합
 
-### 2. 약속 추천 — LLM이 맞는 자리
+`suggest-meeting-plan`은 카카오 검색 결과와 최근 대화를 GPT에 전달해 장소·시간·활동을 제안합니다. 발신자 ID는 `참가자N`으로 치환하고 호출자 참가 이후 대화만 사용합니다(최대 30개·각 300자). 대화 본문에 직접 적힌 개인정보를 자동 제거하지는 않습니다.
 
-`suggest-meeting-plan`은 채팅 맥락을 읽어 장소·시간·활동·주변 맛집을 제안합니다. 자유 대화를 해석하는 일이라 LLM(OpenRouter)을 씁니다. 대신 네 가지 안전장치를 걸었습니다.
+- **장소 검증** — 후보·만남 장소·주변 장소를 검색 결과와 대조하고 주소·좌표·링크는 검색 값으로 채웁니다. 검색 결과가 없으면 GPT를 호출하지 않고 기본 카드를 제공합니다.
+- **오류 대응** — 본문 읽기까지 요청당 20초로 제한하고 오류·거절·잘린 출력이면 기본 결과를 사용합니다.
+- **키 관리** — 사용자 소유 `OPENAI_API_KEY`는 Supabase Secret에서만 읽습니다. API에는 `store: false`를 지정하고 프롬프트·응답·키 원문을 로그에 남기지 않습니다.
 
-- **익명화** — 발신자 ID를 `참가자N`으로 바꾸고 최근 대화 30개를 메시지당 300자로 제한합니다. 프로필의 실명·사번은 별도로 넣지 않지만, 대화 본문에 직접 적힌 개인정보를 자동으로 제거하지는 않습니다 (`_shared/chat.ts`의 `anonymizeMessages`).
-- **환각 차단** — LLM이 제안한 장소 이름을 그대로 쓰지 않습니다. `verifyPlan`은 검색 결과가 있으면 **결과와 일치하지 않는 장소를 후보에서 빼고**, 남은 후보의 주소·좌표·링크 등을 검색 값으로 채웁니다. 검색 결과가 없으면 LLM 후보를 `검색 미확인` 상태로 남기고 좌표는 비웁니다.
-- **실패 대비** — 요청당 20초 타임아웃, 429·5xx 재시도, `response_format`을 거부하는 모델을 위한 compat 모드, 그래도 실패하면 정적 `fallbackPlan`. 장소 검색이 실패해도 약속 추천은 진행되고, 검색 결과 상태를 `quota` · `auth` · `error` · `empty` · `no_key`로 구분해 화면에 알립니다.
-- **로그 위생** — 프롬프트·응답·API 키는 어떤 경로로도 로그에 남기지 않습니다.
+구조와 설정은 [docs/ai-usage.md](docs/ai-usage.md)를 참고하세요.
 
 ### 3. 개발 과정에서의 AI
 
@@ -66,7 +65,7 @@ AI가 프로필에 맞는 소모임을 추천하고, 익명 채팅에서 시작�
 
 **백엔드 — Supabase.** 마이그레이션(`npx supabase db push`) → 시드 → Edge Function 5개 배포 → 비밀값 등록(`supabase secrets set`) 순서입니다. 전체 절차와 발표 전 회귀 체크리스트는 [docs/deployment.md](docs/deployment.md)에 있고, `scripts/deploy-supabase.ps1`로 한 번에 실행할 수도 있습니다.
 
-**키 경계.** 브라우저(`src/js/config.js`)에는 Supabase anon 키와 카카오맵 **JavaScript 키**(도메인 제한된 공개 키)만 들어갑니다. Supabase secret key · OpenRouter API 키 · 카카오 **REST 키**는 Edge Function 비밀값에만 두며, 이 경계가 무너지면 `tests/backend-contract.test.mjs`와 `tests/plan-map.test.mjs`가 실패합니다.
+**키 경계.** 브라우저(`src/js/config.js`)에는 Supabase anon 키와 카카오맵 **JavaScript 키**(도메인 제한된 공개 키)만 들어갑니다. Supabase secret key · OpenAI API 키 · 카카오 **REST 키**는 Edge Function 비밀값에만 두며, 이 경계가 무너지면 `tests/backend-contract.test.mjs`와 `tests/plan-map.test.mjs`가 실패합니다.
 
 **이중 모드.** `CONFIG`가 비어 있으면 네트워크 요청 없이 하드코딩 데이터로 도는 로컬 데모 모드가 됩니다. 백엔드가 연결된 상태에서도 URL에 `?demo=1`을 붙이면 로컬 모드로 열려, 발표장 네트워크 장애에 대비할 수 있습니다.
 

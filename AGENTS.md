@@ -57,9 +57,9 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 - **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `map.js`(후보 장소 지도) → `backend.js` → `responses.js`(공유 의견 화면) → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
 - 화면별 파일 배치: 모임 만들기는 `match.js`, 만남 평가는 `chat.js`, 약속 카드의 후보지 지도·선택은 `map.js` 에 있다
 - **로컬 데모 모드(기본):** `src/js/config.js` 상단 `CONFIG.SUPABASE_URL`이 비어 있으면 외부 네트워크 요청 없이 하드코딩 데이터(`COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS`)와 전역 `S` 객체만으로 동작. 새로고침 시 초기화
-- **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 서버 로직을 맡는다. **모임 추천(`recommend-meetings`)은 LLM 없이 규칙 엔진(`_shared/recommendation.ts`)으로 즉시 채점**하고, OpenRouter LLM 호출은 약속 추천(`suggest-meeting-plan`)에만 남아 있다. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
+- **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 서버 로직을 맡는다. **모임 추천(`recommend-meetings`)은 규칙 상위 후보를 OpenAI `gpt-5.4-mini`로 재정렬**하며 실패 시 규칙 엔진으로 대체한다. 약속 추천(`suggest-meeting-plan`)도 같은 모델을 쓰고 장소는 카카오 검색으로 검증한다. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
 - 두 모드 모두에서 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지하고 `BACKEND` 플래그로만 분기
-- 브라우저에는 anon 키와 카카오맵 **JavaScript 키**(공개용·도메인 제한)만. secret key·OpenRouter 키·카카오 **REST 키**가 `src/` 에 들어가면 `tests/backend-contract.test.mjs` · `tests/plan-map.test.mjs` 가 실패함. 장소 검색은 서버(Edge Function)가 REST 키로만 한다
+- 브라우저에는 anon 키와 카카오맵 **JavaScript 키**(공개용·도메인 제한)만. secret key·OpenAI·OpenRouter 키·카카오 **REST 키**가 `src/` 에 들어가면 `tests/backend-contract.test.mjs` · `tests/plan-map.test.mjs` 가 실패함. 장소 검색은 서버(Edge Function)가 REST 키로만 한다
 - 화면 전환은 섹션 show/hide 방식 (SPA 라우터 없음)
 - Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않으며, 이 저장소의 테스트 실행 요건인 Node 24 이상에서 그대로 테스트됨 (`npm test`).
 
@@ -123,7 +123,7 @@ npm test
 - **GitHub Pages** — `main` 브랜치 root 배포
 - 접속 주소: `https://junyeong-nero.github.io/hanwha-ai-solution/src/`
 - `main`에 push하면 자동 재배포되므로, **push = 배포**임을 인지하고 동작 확인 후 push할 것
-- Supabase·Edge Function·OpenRouter 설정 절차와 발표 전 체크리스트는 [docs/deployment.md](docs/deployment.md)
+- Supabase·Edge Function·OpenAI 설정 절차와 발표 전 체크리스트는 [docs/deployment.md](docs/deployment.md)
 
 ## Git 규칙
 

@@ -3,8 +3,8 @@
 # 사용법 (저장소 루트에서, Windows PowerShell):
 #   powershell -ExecutionPolicy Bypass -File scripts/deploy-supabase.ps1
 #
-# 하는 일: Supabase 로그인 → 프로젝트 연결 → 마이그레이션 적용 → 비밀값 4개 등록 → Edge Function 5개 배포
-# OpenRouter 키는 실행 중 물어볼 때 붙여 넣는다 (입력이 화면에 보이지 않고, 파일에 저장되지 않는다).
+# 하는 일: Supabase 로그인 → 프로젝트 연결 → 마이그레이션 적용 → 비밀값 3개 등록 → Edge Function 5개 배포
+# OpenAI 키는 실행 중 물어볼 때 붙여 넣는다 (입력이 화면에 보이지 않고, 파일에 저장되지 않는다).
 # DEMO_RESET_TOKEN · DEMO_LOGIN_SECRET 은 자동 생성한다. 실행이 끝나면 초기화 토큰을 한 번만 보여준다.
 
 param([string]$ProjectRef)
@@ -30,14 +30,13 @@ if (-not $ProjectRef) {
 }
 if ($ProjectRef -notmatch '^[a-z]{20}$') { throw "프로젝트 ref 형식이 아닙니다: $ProjectRef" }
 
-$secure = Read-Host 'OpenRouter API 키 (붙여 넣어도 화면에 보이지 않음)' -AsSecureString
+$secure = Read-Host 'OpenAI API 키 (붙여 넣어도 화면에 보이지 않음)' -AsSecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-$openRouterKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+$openAIKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
 [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-if (-not $openRouterKey.StartsWith('sk-or-')) { throw 'OpenRouter 키 형식이 아닙니다 (sk-or- 로 시작해야 함)' }
+if ([string]::IsNullOrWhiteSpace($openAIKey)) { throw 'OpenAI API 키를 입력해 주세요' }
 
-$model = Read-Host 'OpenRouter 모델 ID (엔터 = openrouter/free)'
-if (-not $model) { $model = 'openrouter/free' }
+# 모델은 _shared/openai.ts의 gpt-5.4-mini를 사용한다.
 
 $resetToken  = New-Token
 $loginSecret = New-Token
@@ -47,9 +46,9 @@ Invoke-Step '[1/5] Supabase 로그인 (브라우저가 열리면 승인)' { npx 
 Invoke-Step "[2/5] 프로젝트 연결 ($ProjectRef) — DB 비밀번호를 물어보면 입력" { npx supabase link --project-ref $ProjectRef }
 Invoke-Step '[3/5] 마이그레이션 적용 (supabase/migrations)' { npx supabase db push }
 Invoke-Step '[4/5] Edge Function 비밀값 등록' {
-  npx supabase secrets set "OPENROUTER_API_KEY=$openRouterKey" "OPENROUTER_MODEL=$model" "DEMO_RESET_TOKEN=$resetToken" "DEMO_LOGIN_SECRET=$loginSecret"
+  npx supabase secrets set "OPENAI_API_KEY=$openAIKey" "DEMO_RESET_TOKEN=$resetToken" "DEMO_LOGIN_SECRET=$loginSecret"
 }
-$openRouterKey = $null
+$openAIKey = $null
 Invoke-Step '[5/5] Edge Function 배포' {
   npx supabase functions deploy demo-login --no-verify-jwt
   if ($LASTEXITCODE -ne 0) { return }
@@ -73,4 +72,4 @@ Write-Host "남은 수동 단계 (docs/deployment.md):"
 Write-Host "  1) Dashboard → SQL Editor 에서 supabase/seed.sql 내용 실행 (계열사 8 · 모임 6)"
 Write-Host "  2) SQL Editor 에서 발표용 입장 코드 생성 (§4)"
 Write-Host "  3) Dashboard → Project Settings → API 의 Project URL 과 anon 키를 src/js/config.js 의 CONFIG 에 입력 후 푸시 (§5)"
-Write-Host "  4) OpenRouter 크레딧·모델 ID·남은 한도 확인 (§6)"
+Write-Host "  4) OpenAI 사용 한도와 KAKAO_REST_KEY 등록 확인 (§3·§6)"

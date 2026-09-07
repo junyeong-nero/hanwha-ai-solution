@@ -1,8 +1,8 @@
 # 배포 절차와 발표 체크리스트
 
-MoonLight Hanwha를 GitHub Pages + Supabase + OpenRouter 조합으로 배포하는 순서입니다. 설계 근거는 [백엔드 설계 문서](superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md), 작업 단위는 [실행 계획](superpowers/plans/2026-09-02-supabase-openrouter-backend-plan.md)을 참고합니다.
+MoonLight Hanwha를 GitHub Pages + Supabase + OpenAI 조합으로 배포하는 순서입니다. 설계 근거는 [백엔드 설계 문서](superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md), 작업 단위는 [실행 계획](superpowers/plans/2026-09-02-supabase-openrouter-backend-plan.md)을 참고합니다.
 
-> **원칙:** GitHub Pages(`src/`)에는 Supabase URL과 publishable/anon 키만 들어갑니다. Supabase secret key, OpenRouter API 키, 초기화 토큰은 **Edge Function 비밀값에만** 둡니다. `CONFIG`가 비어 있으면 앱은 네트워크 없이 로컬 데모 모드로 동작하므로, 아래 절차가 끝나지 않아도 발표 데모는 깨지지 않습니다.
+> **원칙:** GitHub Pages(`src/`)에는 Supabase URL과 publishable/anon 키만 들어갑니다. Supabase secret key, OpenAI API 키, 초기화 토큰은 **Edge Function 비밀값에만** 둡니다. `CONFIG`가 비어 있으면 앱은 네트워크 없이 로컬 데모 모드로 동작하므로, 아래 절차가 끝나지 않아도 발표 데모는 깨지지 않습니다.
 
 ## 빠른 방법 — 스크립트 한 번
 
@@ -18,12 +18,12 @@ powershell -ExecutionPolicy Bypass -File scripts\deploy-supabase.ps1 -ProjectRef
 
 `-ProjectRef`를 생략하면 실행 중에 물어봅니다.
 
-프로젝트 ref와 OpenRouter 키(화면에 안 보임)를 물어본 뒤 §2~§3(로그인·연결·마이그레이션·비밀값·함수 배포)을 순서대로 실행합니다. 끝나면 초기화 토큰을 한 번 보여주고 남은 수동 단계(§2 시드, §4 입장 코드, §5 `CONFIG`)를 안내합니다. 아래는 같은 내용을 손으로 할 때의 절차입니다.
+프로젝트 ref와 OpenAI 키(화면에 안 보임)를 물어본 뒤 §2~§3(로그인·연결·마이그레이션·비밀값·함수 배포)을 순서대로 실행합니다. 끝나면 초기화 토큰을 한 번 보여주고 남은 수동 단계(§2 시드, §4 입장 코드, §5 `CONFIG`)를 안내합니다. 아래는 같은 내용을 손으로 할 때의 절차입니다.
 
 ## 0. 준비물
 
 - Supabase 계정 (무료 플랜으로 충분)
-- OpenRouter 계정과 API 키 (`sk-or-v1-...`) — **소액 크레딧 충전 권장** (무료 모델 일일 한도가 낮아 리허설로 소진될 수 있음)
+- 사용자 소유 OpenAI API 키와 `gpt-5.4-mini` 호출이 가능한 API 프로젝트
 - Supabase CLI: `npx --yes supabase` 사용
 - 이 저장소의 `main` 브랜치가 GitHub Pages로 배포 중: `https://junyeong-nero.github.io/hanwha-ai-solution/src/`
 
@@ -70,13 +70,13 @@ npx supabase db push
 비밀값 등록 (값은 셸 히스토리에 남지 않게 주의):
 
 ```bash
-npx supabase secrets set OPENROUTER_API_KEY=<sk-or-v1-...>
-npx supabase secrets set OPENROUTER_MODEL=openrouter/free
+# OpenAI 키는 Dashboard → Edge Functions → Secrets에 OPENAI_API_KEY로 등록한다.
+# 모델은 _shared/openai.ts의 gpt-5.4-mini로 고정되어 있다.
 npx supabase secrets set DEMO_RESET_TOKEN=<길고 무작위인 문자열>
 npx supabase secrets set DEMO_LOGIN_SECRET=<길고 무작위인 다른 문자열>
 ```
 
-권장 — 약속 후보지를 **실재하는 장소로 검증**하는 카카오 로컬 API 키 (https://developers.kakao.com → 앱 만들기 → **REST API 키**). 없으면 OpenRouter 웹 검색 플러그인(요청당 약 $0.02, 크레딧 필요)을, 그것도 안 되면 검색 없이 진행합니다(후보지는 "검색 미확인"으로 표시됩니다):
+권장 — 약속 후보지를 **실재하는 장소로 검증**하는 카카오 로컬 API 키 (https://developers.kakao.com → 앱 만들기 → **REST API 키**). 없으면 GPT 장소 추천을 생략하고 검색 실패 안내와 기본 카드를 제공합니다:
 
 ```bash
 npx supabase secrets set KAKAO_REST_KEY=<카카오 REST API 키>
@@ -125,22 +125,21 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 3. 커밋·푸시하면 GitHub Pages가 자동 재배포됩니다 (1~2분).
 4. 공용 주소 `https://junyeong-nero.github.io/hanwha-ai-solution/src/`로 QR을 만듭니다 (아무 QR 생성기나 가능). 관리자용 주소는 `.../src/?admin=1` 입니다.
 
-## 6. OpenRouter 확인 (발표 전날·당일 — 약속 추천 전용)
+## 6. OpenAI 확인 (발표 전날·당일 — 모임·약속 추천)
 
-- https://openrouter.ai/models 에서 `OPENROUTER_MODEL`에 넣은 모델 ID가 아직 유효한지 확인합니다. `openrouter/free`가 불안정하면 가용한 특정 `:free` 모델 ID로 secret을 바꾸고 함수를 재배포합니다.
-- https://openrouter.ai/settings/credits 에서 크레딧과 남은 한도를 확인합니다. 무료 한도만으로는 리허설 + 본방을 버티기 어렵습니다.
-- **실측 (2026-09-03):** 크레딧 없는 계정에서 `google/gemma-4-31b-it:free`는 첫 호출만 성공(18초)하고 연속 호출은 곧바로 `HTTP 429`(분당 한도)로 fallback이 났습니다. `openrouter/free` 라우터는 약속 추천에 24초 만에 성공했습니다. 발표 중 카드마다 20초 안팎이 걸리므로 **크레딧을 충전하고 유료 모델(예: `google/gemini-2.5-flash`)로 바꾸는 것이 가장 확실**합니다. 모델 변경은 `npx supabase secrets set OPENROUTER_MODEL=<모델 ID>` 한 줄이며 재배포는 필요 없습니다.
-- `response_format`이나 system 역할을 지원하지 않는 모델이 400을 내면 함수가 자동으로 호환 모드(둘 다 제거)로 한 번 더 시도합니다. 그래도 실패하면 fallback 추천이 뜹니다.
-- https://openrouter.ai/settings/privacy 에서 프롬프트 로깅이 꺼져 있는지, 가능하면 학습 거부(ZDR) 제공자만 쓰도록 설정합니다.
-- OpenRouter 는 이제 **약속 추천(`suggest-meeting-plan`)에서만** 씁니다. 모임 추천(`recommend-meetings`)은 규칙 엔진이라 키·크레딧·모델 상태와 무관하게 즉시 응답하고 fallback 도 없습니다.
-- 약속 카드 응답에 `fallback: true`가 자주 나오면 채팅방에 "기본 제안" 배지가 붙습니다. 이 상태로 발표하면 "AI 활용" 시연이 약해지므로 사전에 잡습니다.
+- Supabase Dashboard → Edge Functions → Secrets에 사용자 소유 키를 `OPENAI_API_KEY`로 등록합니다. 채팅·소스·셸 명령에 실제 키를 적지 않습니다. 기존 `OPENROUTER_API_KEY`와 `OPENROUTER_MODEL`은 두 추천 함수에서 사용하지 않습니다.
+- OpenAI 프로젝트의 사용 한도와 `gpt-5.4-mini` 호출 권한을 확인하고, 위 §3 절차로 `recommend-meetings`와 `suggest-meeting-plan`을 배포합니다. 키 등록만으로 코드가 배포되지는 않습니다.
+- 매칭 응답의 `model: gpt-5.4-mini`, `fallback: false`를 확인합니다. 같은 입력은 서버 인스턴스 내 60초 캐시를 사용할 수 있습니다.
+- 카카오 REST 키를 등록하고 약속 카드의 실제 장소·좌표와 `fallback: false`를 확인합니다. 검색 결과가 없으면 GPT를 호출하지 않습니다.
+- 키 누락·401·429·시간 초과가 발생하면 기본 결과로 대체됩니다. `ai_recommendation_runs`의 `model`, `fallback`, `error_type`, `latency_ms`와 함수 로그의 토큰 수를 확인합니다.
+- 요청은 `store: false`이며 사용자 프로필의 실명·사번은 넣지 않습니다. 대화 본문 자체에 적힌 개인정보는 자동 제거되지 않으므로 실제 임직원 데이터 사용 전 별도 검토가 필요합니다.
 
 ## 7. 발표 전 회귀 체크리스트 (375×812, 실제 아이폰 권장)
 
 1. QR 접속 → 입장 화면에서 잘못된 코드 → 한국어 오류 문구 확인
 2. 올바른 코드 + 계열사 + 사번 + 이름 + 닉네임 → 홈 탭 진입, 새로고침 후에도 세션·프로필 유지
 2-1. **다른 기기**에서 같은 계열사·사번·이름으로 로그인 → 같은 프로필·참가 모임·채팅이 복원되는지, 같은 사번에 **다른 이름**을 넣으면 "사번과 이름이 일치하지 않아요"가 나오는지
-3. 매칭 탭 → 추천 카드가 **대기 없이 바로** 뜨고 **추천 이유**가 보임 (추천은 규칙 엔진이라 LLM 지연·fallback 안내가 없음)
+3. 매칭 탭 → 로딩 후 추천 카드가 뜨고 모임 상세에서 **개인화된 추천 이유**가 보임. API 오류 시 기본 순서 안내 확인
 4. 모임 `참가` → 채팅 탭에 방 생성, 두 번째 기기로 같은 모임 참가 후 양방향 메시지 수신
 5. `＋` → `AI 추천 약속 잡기` → 카드 도착 (다른 기기에도 Realtime으로 표시) → 후보지 지도에 Marker 여러 개, 목록 카드를 누르면 Marker가 함께 강조되는지 → `이 장소로 정하기` 를 누르면 다른 기기의 만남 장소도 같이 바뀌는지 → `이 약속으로 확정`
 5-1. 후보지가 비거나(검색 결과 없음) 카카오 할당량이 걸리면 카드 아래에 이유와 대체 검색어 안내가 뜨는지 (지도 없이도 약속 카드는 그대로 동작)
@@ -154,7 +153,7 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 
 - `reset-demo`로 발표 데이터를 비우거나, 발표용 프로젝트를 일시 정지(Pause)합니다. `reset-demo`는 프로필·채팅은 지우지만 Auth 계정(`계열사.사번@demo.moonlight.local`)은 남깁니다. 계정까지 지우려면 Dashboard → Authentication → Users에서 삭제합니다. 남아 있어도 다음 로그인 때 자동으로 재사용됩니다.
 - 입장 코드를 만료(`update demo_access_codes set active=false`)시킵니다.
-- 파일럿으로 넘어갈 때는 별도 프로젝트(`moonlight-pilot`)와 별도 OpenRouter 키를 사용하고, 실행 계획 Task 8의 동의·삭제 절차를 먼저 붙입니다.
+- 파일럿으로 넘어갈 때는 별도 프로젝트(`moonlight-pilot`)와 별도 OpenAI 키를 사용하고, 실행 계획 Task 8의 동의·삭제 절차를 먼저 붙입니다.
 
 ## 가능 시간 조율 (#33) 배포·검증
 

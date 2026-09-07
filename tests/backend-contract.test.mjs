@@ -8,16 +8,16 @@ const env = fs.readFileSync(new URL('../.env.example', import.meta.url), 'utf8')
 
 /* ===== Task 1: 비밀 키 미노출 · 환경 예시 ===== */
 
-test('브라우저 설정에는 OpenRouter 비밀 키가 없다', () => {
-  assert.doesNotMatch(html, /OPENROUTER_API_KEY|SUPABASE_SECRET_KEY|service_role/);
+test('브라우저 설정에는 AI 비밀 키가 없다', () => {
+  assert.doesNotMatch(html, /OPENAI_API_KEY|OPENROUTER_API_KEY|SUPABASE_SECRET_KEY|service_role/);
   assert.doesNotMatch(html, /sk-or-v1-[A-Za-z0-9]/);
 });
 
 test('환경 예시는 공개 키와 함수 설정을 구분한다', () => {
   assert.match(env, /SUPABASE_ANON_KEY/);
-  assert.match(env, /OPENROUTER_MODEL/);
+  assert.match(env, /OPENAI_API_KEY/);
   assert.doesNotMatch(env, /sk-or-v1-[A-Za-z0-9]/);
-  assert.doesNotMatch(env, /OPENROUTER_API_KEY\s*=\s*\S/);
+  assert.doesNotMatch(env, /OPENAI_API_KEY[^\S\r\n]*=[^\S\r\n]*\S/);
 });
 
 test('이중 모드: CONFIG에는 URL과 공개 publishable 또는 anon 키만 들어간다', () => {
@@ -282,7 +282,7 @@ test('초기화 컨트롤은 ?admin=1 에서만 보이고 토큰 헤더로 호�
 });
 
 test('프론트엔드에는 LLM 프롬프트나 OpenRouter 호출이 없다', () => {
-  assert.doesNotMatch(html, /openrouter\.ai/);
+  assert.doesNotMatch(html, /openrouter\.ai|api\.openai\.com/);
   assert.doesNotMatch(html, /chat\/completions/);
   assert.doesNotMatch(html, /"role"\s*:\s*"system"/);
 });

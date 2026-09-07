@@ -404,11 +404,12 @@ test('rankByRules: 후보가 없거나 id 가 없는 항목은 걸러진다', ()
   assert.deepEqual(rankByRules(PROFILE, [{ title: 'id 없음' }, null]), []);
 });
 
-test('recommend-meetings: 추천 경로에서 LLM 을 호출하지 않는다', () => {
+test('recommend-meetings: OpenAI 재정렬과 규칙 대체 경로를 사용한다', () => {
   assert.equal(RULE_ENGINE_MODEL, 'rule-based-v1');
-  assert.doesNotMatch(recommendFn, /chatJson|OPENROUTER|llm\.ts/);
-  assert.match(recommendFn, /rankByRules/);
-  assert.match(recommendFn, /model: RULE_ENGINE_MODEL/);
+  assert.match(recommendFn, /recommendWithAI/);
+  assert.match(recommendFn, /OPENAI_API_KEY/);
+  assert.doesNotMatch(recommendFn, /OPENROUTER/);
+  assert.match(recommendFn, /fallback: result.fallback/);
 });
 
 /* ================= chat.ts ================= */
@@ -1076,7 +1077,7 @@ const migration0010 = fs.readFileSync(new URL('../supabase/migrations/0010_plan_
 const suggestFn = fs.readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts', import.meta.url), 'utf8');
 
 test('#34 suggest-meeting-plan: 저장 전에 검색 결과로 검증하고 검색 상태를 함께 돌려준다', () => {
-  assert.ok(suggestFn.includes('verifyPlan(plan ?? fallbackPlan(meetingForPrompt, places, now), places)'),
+  assert.ok(suggestFn.includes('await suggestWithAI({ meeting: meetingForPrompt, lines, places, now, apiKey })'),
     'LLM · fallback 양쪽 모두 검증을 거친다');
   assert.ok(suggestFn.includes("kakaoKey: Deno.env.get('KAKAO_REST_KEY')"), '장소 검색 키는 서버 환경변수에서만 읽는다');
   assert.ok(suggestFn.includes('status: search.status'));
