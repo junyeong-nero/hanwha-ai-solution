@@ -96,7 +96,7 @@ function sanitizePlaces(places: unknown): Place[] {
     out.push({
       name,
       address: cleanString(p.address, 160),
-      url: cleanString(p.url, 300),
+      url: safeHttpUrl(cleanString(p.url, 300)),
       category: cleanString(p.category, 40),
     });
     if (out.length >= MAX_PLACES_IN_PROMPT) break;
@@ -179,7 +179,7 @@ function sanitizeCandidates(value: unknown): PlanCandidate[] {
     out.push({
       name,
       address: cleanString(c.address, 160),
-      url: cleanString(c.url, 300),
+      url: safeHttpUrl(cleanString(c.url, 300)),
       why: cleanString(c.why ?? c.reason, 120),
     });
     if (out.length >= MAX_CANDIDATES) break;
@@ -256,4 +256,9 @@ export function fallbackPlan(
     candidates: [],
     meet_at: meetAt,
   };
+}
+
+/** 후보지 링크는 http(s) 만 허용한다. javascript: 등 다른 스킴은 빈 문자열로 바꾼다 (프론트는 '#' 로 표시) */
+export function safeHttpUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : '';
 }

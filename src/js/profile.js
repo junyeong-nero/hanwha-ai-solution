@@ -54,7 +54,7 @@ function renderProfile(){
   $('f-dir').innerHTML=[['deep','깊은 유대 — 만난 사람과 또'],['wide','넓은 인맥 — 새로운 만남']].map(([v,l])=>
     '<button class="'+(P.dir===v?'on':'')+'" onclick="setP(\'dir\',\''+v+'\')">'+l+'</button>').join('');
 }
-$('nick').addEventListener('input',e=>{S.profile.nick=e.target.value||'달토끼';profileChanged()});
+$('nick').addEventListener('input',e=>{S.profile.nick=e.target.value.trim().slice(0,8)||'달토끼';profileChanged()});
 
 /* 칩 렌더링: 직접 추가한 항목은 × 삭제 버튼이 붙는다 */
 function chipHtml(kind,v,on){

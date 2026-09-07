@@ -1,15 +1,44 @@
 -- 메이저 이슈 수정 (#2, #4)
--- #2: 닉네임·이름 길이를 서버에서도 제한한다 (클라이언트 maxlength 는 우회 가능)
+-- #2: 닉네임·이름·모임 텍스트 길이를 서버에서도 제한한다 (클라이언트 maxlength 는 우회 가능)
 -- #4: room_summaries 가 내 체크인 여부(attended)를 함께 내려 채팅 목록 배지가 방을 열고 닫아도 변하지 않게 한다
 -- 재실행 가능하도록 if exists 를 쓴다.
 
+-- 제약을 걸기 전에 기존 행을 정리한다 (앞뒤 공백 제거·길이 절단·빈 값은 기본값). 그래야 db push 가 중간에 실패하지 않는다
+update public.profiles set nickname = coalesce(nullif(left(btrim(nickname), 8), ''), '달토끼')
+ where nickname is distinct from coalesce(nullif(left(btrim(nickname), 8), ''), '달토끼');
+update public.profiles set real_name = coalesce(nullif(left(btrim(real_name), 10), ''), nickname)
+ where real_name is distinct from coalesce(nullif(left(btrim(real_name), 10), ''), nickname);
+
+-- 공백만 있는 이름을 막기 위해 btrim 기준으로 센다
 alter table public.profiles drop constraint if exists profiles_nickname_length;
 alter table public.profiles add constraint profiles_nickname_length
-  check (char_length(nickname) between 1 and 8);
+  check (char_length(btrim(nickname)) between 1 and 8);
 
 alter table public.profiles drop constraint if exists profiles_real_name_length;
 alter table public.profiles add constraint profiles_real_name_length
-  check (char_length(real_name) between 1 and 10);
+  check (char_length(btrim(real_name)) between 1 and 10);
+
+-- 모임 컬럼도 같은 이유로 제한한다 (누구나 REST 로 insert 할 수 있고 화면·LLM 프롬프트에 그대로 들어간다)
+update public.meetings
+   set title = coalesce(nullif(left(btrim(title), 40), ''), '이름 없는 모임'),
+       emoji = coalesce(nullif(left(emoji, 8), ''), '🌙'),
+       region = coalesce(nullif(left(btrim(region), 20), ''), '판교'),
+       when_label = coalesce(nullif(left(btrim(when_label), 20), ''), '시간 미정'),
+       tags = tags[1:10]
+ where char_length(btrim(title)) not between 1 and 40
+    or char_length(emoji) not between 1 and 8
+    or char_length(btrim(region)) not between 1 and 20
+    or char_length(btrim(when_label)) not between 1 and 20
+    or cardinality(tags) > 10;
+
+alter table public.meetings drop constraint if exists meetings_text_length;
+alter table public.meetings add constraint meetings_text_length check (
+  char_length(btrim(title)) between 1 and 40
+  and char_length(emoji) between 1 and 8
+  and char_length(btrim(region)) between 1 and 20
+  and char_length(btrim(when_label)) between 1 and 20
+  and cardinality(tags) <= 10
+);
 
 -- 반환 컬럼이 늘어나므로 create or replace 로는 바꿀 수 없어 지우고 다시 만든다
 drop function if exists public.room_summaries();

@@ -21,9 +21,9 @@ function renderMatchCards(list,note){
   $('meets').innerHTML=list.map(m=>{
     // memberCount 는 나를 제외한 인원. 표시 인원은 참가 중이면 나를 더해 채팅 목록과 같은 수를 보여준다 (#3)
     const others=memberTotal(m), kn=knownIn(m), ratio=others?Math.round(kn/others*100):0;
-    const joined=S.joined.includes(m.id), shown=others+(joined?1:0);
+    const joined=S.joined.includes(m.id), shown=joined?roomTotal(m.id):others;
     return '<div class="card meet">'
-      +'<div class="hd"><div class="em">'+m.em+'</div><div style="flex:1">'
+      +'<div class="hd"><div class="em">'+esc(m.em||'🌙')+'</div><div style="flex:1">'
       +'<h3>'+esc(m.name)+'</h3><div class="meta">'+esc(m.region)+' · '+esc(m.when)+' · '+shown+'명 참여 중 / 정원 '+m.cap+'</div>'
       +'<div style="margin-top:7px">'+(m.mine?'<span class="tag" style="color:var(--orange-soft);background:rgba(243,115,33,.14)">내가 만든 모임</span>':'')+m.tags.map(t=>'<span class="tag">#'+esc(t)+'</span>').join('')+'</div>'
       +'</div></div>'
@@ -52,7 +52,7 @@ async function joinMeet(id){
     {f:m.members[0], x:'안녕하세요! 다들 반가워요 ☺️', t:'오후 6:02'},
     {f:m.members[1]||m.members[0], x:'와 '+m.tags[0]+' 얘기 나눌 사람 찾고 있었는데 반갑네요!', t:'오후 6:05'},
   ];
-  S.rooms[id]={msgs:seed,unread:2,planned:null,revealed:false,photos:[],votes:{},attended:new Set(),iAttended:false};
+  Object.assign(ensureRoom(id),{msgs:seed,unread:2});
   updateBdg();renderMatch();
   toast('참가 완료','<b>'+esc(m.name)+'</b> 채팅방이 열렸어요');
 }
@@ -74,7 +74,7 @@ function renderCreate(){
   // 친구 초대 후보 = 나와 연결된(서로 만남 완료한) 사람
   const friends=Object.keys(S.met).filter(pid=>PEOPLE[pid]&&PEOPLE[pid].real);
   $('c-invite').innerHTML=friends.length
-    ?friends.map(pid=>{const p=PEOPLE[pid],c=co(p.co);return '<button class="chip'+(C.invite.includes(pid)?' on':'')+'" onclick="cinv(\''+pid+'\')">'+p.av+' '+esc(p.real)+(c?' · '+esc(c.name):'')+'</button>'}).join('')
+    ?friends.map(pid=>{const p=PEOPLE[pid],c=co(p.co);return '<button class="chip'+(C.invite.includes(pid)?' on':'')+'" onclick="cinv(\''+pid+'\')">'+esc(p.av||'🌙')+' '+esc(p.real)+(c?' · '+esc(c.name):'')+'</button>'}).join('')
     :'<p class="hint">아직 연결된 친구가 없어요. 만남을 완료해 연결되면 여기서 초대할 수 있어요.</p>';
   $('c-emoji').innerHTML=EMOJIS.map(e=>'<button class="'+(C.em===e?'on':'')+'" onclick="cset(\'em\',\''+e+'\')">'+e+'</button>').join('');
   $('c-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(C.region===r?' on':'')+'" data-create-kind="region" data-v="'+esc(r)+'">'+esc(r)+'</button>').join('');
@@ -108,7 +108,7 @@ async function submitCreate(){
       const invited=[...C.invite], names=invited.map(p=>PEOPLE[p].real).join(', ');
       MEETINGS.unshift({id,em:C.em,name,region:C.region,when:C.when,cap:C.cap,tags:[...C.tags],members:invited,mine:true,ai:'내가 만든 모임 — 관심사가 맞는 동료가 참가하면 채팅이 시작돼요'});
       S.joined.push(id);
-      S.rooms[id]={msgs:[{f:'sys',x:'모임을 열었어요. 관심사가 맞는 동료가 참가하면 여기서 익명으로 대화해요 🌙'+(invited.length?' · '+names+' 님을 초대했어요':'')}],unread:0,planned:null,revealed:false,photos:[],votes:{},attended:new Set(),iAttended:false};
+      Object.assign(ensureRoom(id),{msgs:[{f:'sys',x:'모임을 열었어요. 관심사가 맞는 동료가 참가하면 여기서 익명으로 대화해요 🌙'+(invited.length?' · '+names+' 님을 초대했어요':'')}]});
       updateBdg(); renderMatch();
       toast('모임 생성','<b>'+esc(name)+'</b> 채팅방이 열렸어요');
     }

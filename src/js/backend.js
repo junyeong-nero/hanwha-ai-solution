@@ -84,14 +84,14 @@ async function enterDemo(){
 /* 프로필 저장·복원 */
 function profileRow(){
   const P=S.profile;
-  return {user_id:ME,real_name:P.realName||P.nick,nickname:P.nick,avatar:P.av,company_id:P.company,region:P.regions[0]||null,regions:P.regions,age:P.age,
+  return {user_id:ME,real_name:String(P.realName||P.nick).trim().slice(0,10)||'달토끼',nickname:String(P.nick||'').trim().slice(0,8)||'달토끼',avatar:P.av,company_id:P.company,region:P.regions[0]||null,regions:P.regions,age:P.age,
     gender:P.gender,mbti:P.mbti,interests:P.interests,hobbies:P.hobbies,group_size_min:P.sizeMin,group_size_max:P.sizeMax,
     matching_preferences:{same_gender:P.sameGender,scope:P.scope,direction:P.dir},updated_at:new Date().toISOString()};
 }
 async function saveProfile(){
   if(!BACKEND||!ME||!sb)return false;
   const {error}=await sb.from('profiles').upsert(profileRow());
-  if(error){netFail('설정 저장');return false}
+  if(error){ if(error.code==='23514')toast('저장 실패','닉네임은 1~8자, 이름은 1~10자여야 해요'); else netFail('설정 저장'); return false }
   R.recDirty=true; return true;
 }
 function profileChanged(){ S.dirty=true; renderSaveBtn(); }
@@ -127,7 +127,7 @@ function ensureMeeting(id,patch){
   if(!m){m={id,em:'🌙',name:'',region:'',when:'',cap:6,tags:[],members:[],ai:''};MEETINGS.push(m)}
   Object.assign(m,patch); return m;
 }
-function ensureRoom(id){return S.rooms[id]||(S.rooms[id]={msgs:[],unread:0,planned:null,revealed:false,completed:false,photos:[],votes:{},attended:new Set(),iAttended:false})}
+function ensureRoom(id){return S.rooms[id]||(S.rooms[id]={msgs:[],unread:0,planned:null,photos:[],votes:{},attended:new Set(),iAttended:false})}   // 방 객체는 여기서만 만든다
 /* 채팅 목록 (room_summaries RPC) */
 async function loadRooms(){
   const {data,error}=await sb.rpc('room_summaries'); if(error){netFail('채팅 목록');return}
@@ -135,8 +135,8 @@ async function loadRooms(){
   (data||[]).forEach(x=>{
     const m=ensureMeeting(x.meeting_id,{em:x.emoji||'🌙',name:x.title,memberCount:Math.max(0,(x.member_count||1)-1)});
     const r=ensureRoom(x.meeting_id);
-    r.completed=x.status==='completed';                 // 모임 전체 완료 여부 (모임 상태) — #4
-    r.iAttended=!!x.attended; r.revealed=r.iAttended;    // 내 체크인 여부 (room_summaries.attended)
+    // 내 체크인 여부는 room_summaries.attended 로 받는다 (#4). 컬럼이 없으면(마이그레이션 미적용) 기존 값을 유지한다
+    if(x.attended!=null)r.iAttended=!!x.attended;
     r.last=x.last_body; r.lastT=x.last_at?fmtT(x.last_at):'';
     if(r.iAttended&&!r.photos.length)r.photos=placeholderPhotos(m);
   });
@@ -215,7 +215,7 @@ async function loadRoom(id){
   m.members=[]; (mem.data||[]).forEach(p=>{if(p.user_id===ME)return;m.members.push(p.user_id);upsertMember(p)});
   m.memberCount=m.members.length;
   r.votes={}; (votes.data||[]).forEach(v=>{(r.votes[v.plan_id]||(r.votes[v.plan_id]=new Set())).add(v.user_id)});
-  r.attended=new Set((att.data||[]).map(a=>a.user_id)); r.iAttended=r.attended.has(ME); r.revealed=r.iAttended;
+  r.attended=new Set((att.data||[]).map(a=>a.user_id)); r.iAttended=r.attended.has(ME);
   r.myRating=(fb&&fb.data&&fb.data.rating)?Number(fb.data.rating):0;
   if(r.iAttended&&!r.photos.length)r.photos=placeholderPhotos(m);
   r.planned=null; r.plannedId=null;
@@ -245,6 +245,7 @@ function subscribeRoom(id){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'meeting_attendance',filter:'meeting_id=eq.'+id},async p=>{
       const r=S.rooms[id]; if(!r||!p.new)return;
       r.attended.add(p.new.user_id);
+      if(p.new.user_id===ME){ r.iAttended=true; if(!r.photos.length)r.photos=placeholderPhotos(ensureMeeting(id,{})); }   // 다른 기기에서 한 내 체크인
       if(p.new.user_id!==ME){
         await Promise.all([refreshMembers(id),loadConnections()]);   // 서로 완료했다면 이제 실명이 내려온다
         const who=PEOPLE[p.new.user_id]||UNKNOWN, linked=!!(S.met[p.new.user_id]&&who.real);

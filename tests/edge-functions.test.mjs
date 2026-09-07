@@ -865,11 +865,22 @@ test('0005 마이그레이션: meeting_feedback(0.5 단위 별점)·features 트
 const migration0008 = fs.readFileSync(new URL('../supabase/migrations/0008_fix_major_issues.sql', import.meta.url), 'utf8');
 
 test('0008: 닉네임·이름 길이 제약과 attended 를 포함한 room_summaries', () => {
-  assert.ok(migration0008.includes('check (char_length(nickname) between 1 and 8)'));
-  assert.ok(migration0008.includes('check (char_length(real_name) between 1 and 10)'));
+  assert.ok(migration0008.includes('check (char_length(btrim(nickname)) between 1 and 8)'));
+  assert.ok(migration0008.includes('update public.profiles set nickname'), '제약 전에 기존 행 정리');
+  assert.ok(migration0008.includes('meetings_text_length'));
+  assert.ok(migration0008.includes('cardinality(tags) <= 10'));
+  assert.ok(migration0008.includes('check (char_length(btrim(real_name)) between 1 and 10)'));
   assert.ok(migration0008.includes('drop function if exists public.room_summaries();'));
   assert.ok(migration0008.includes('create function public.room_summaries()'));
   assert.ok(migration0008.includes('attended boolean'));
   assert.ok(migration0008.includes('from public.meeting_attendance a'));
   assert.ok(migration0008.includes('grant execute on function public.room_summaries() to authenticated, service_role;'));
+});
+
+test('parsePlan: 후보지 URL 은 http(s) 만 남긴다 (javascript: 차단)', () => {
+  const raw = JSON.stringify({ place: '판교 화랑공원', time: '목요일 19:30', activity: '러닝', nearby: ['곰탕'],
+    candidates: [{ name: 'A', url: 'javascript:alert(1)' }, { name: 'B', url: 'https://map.kakao.com/?q=B' }] });
+  const plan = parsePlan(raw);
+  assert.equal(plan.candidates[0].url, '');
+  assert.equal(plan.candidates[1].url, 'https://map.kakao.com/?q=B');
 });
