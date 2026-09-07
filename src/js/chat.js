@@ -236,7 +236,7 @@ async function recommendPollPlaces(id){
     if(msg)S.placeRecommendationTried=true;
     return msg;
   }catch(e){
-    const messages={NOT_MEMBER:'이 모임에 참가한 뒤 다시 시도해 주세요',UNAUTHORIZED:'세션이 만료됐어요. 다시 로그인해 주세요'};
+    const messages={RATE_LIMITED:'AI 장소 추천 한도에 도달했어요. 기존 후보를 비교하거나 잠시 후 다시 시도해 주세요',NOT_MEMBER:'이 모임에 참가한 뒤 다시 시도해 주세요',UNAUTHORIZED:'세션이 만료됐어요. 다시 로그인해 주세요'};
     if(e.code)throw new Error(messages[e.code]||'장소 추천에 연결하지 못했어요. 잠시 후 다시 시도해 주세요');
     throw e;
   }finally{r.planPending=false;if(CUR===id&&S.rooms[id]===r){renderMsgs();renderBanner()}}

@@ -140,7 +140,7 @@ function renderCreate(){
     ?friends.map(pid=>{const p=PEOPLE[pid],c=co(p.co);return '<button class="chip'+(C.invite.includes(pid)?' on':'')+'" onclick="cinv(\''+pid+'\')">'+esc(p.av||'🌙')+' '+esc(p.real)+(c?' · '+esc(c.name):'')+'</button>'}).join('')
     :'<p class="hint">아직 연결된 친구가 없어요. 만남을 완료해 연결되면 여기서 초대할 수 있어요.</p>';
   $('c-emoji').innerHTML=EMOJIS.map(e=>'<button class="'+(C.em===e?'on':'')+'" onclick="cset(\'em\',\''+e+'\')">'+e+'</button>').join('');
-  $('c-region').innerHTML=REGIONS.map(r=>'<button class="chip'+(C.region===r?' on':'')+'" data-create-kind="region" data-v="'+esc(r)+'">'+esc(r)+'</button>').join('');
+  $('c-region').innerHTML=REGIONS.map(r=>'<option value="'+esc(r)+'"'+(C.region===r?' selected':'')+'>'+esc(r)+'</option>').join('');
   const pool=[...new Set([...INTS,...HOBS])];
   $('c-tags').innerHTML=pool.map(v=>'<button class="chip'+(C.tags.includes(v)?' on':'')+'" data-create-kind="tag" data-v="'+esc(v)+'">'+esc(v)+'</button>').join('');
   $('c-when').innerHTML=WHENS.map(w=>'<button class="chip'+(C.when===w?' on':'')+'" onclick="cset(\'when\',\''+w+'\')">'+w+'</button>').join('');

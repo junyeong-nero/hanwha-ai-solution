@@ -9,6 +9,8 @@ import { ageBand, RULE_ENGINE_MODEL } from '../_shared/recommendation.ts';
 import { tokenUsage } from '../_shared/openai.ts';
 import { recommendWithAI } from '../_shared/ai-matching.ts';
 
+import { consumeAIBudget } from '../_shared/ai-limit.ts';
+
 const FN = 'recommend-meetings';
 
 interface Candidate {
@@ -167,10 +169,12 @@ Deno.serve(async (req) => {
     }
 
     // 5. GPT 재정렬 — 오류 시 규칙 순서를 반환하고 후보도 같은 순서로 정렬한다
+    const allowed = await consumeAIBudget(svc, user.id, FN, null, (key) => Deno.env.get(key));
     const result = await recommendWithAI({
       profile: ruleProfile, candidates, userId: user.id,
-      apiKey: Deno.env.get('OPENAI_API_KEY') ?? '',
+      apiKey: allowed ? Deno.env.get('OPENAI_API_KEY') ?? '' : '',
     });
+    if (!allowed) result.error_type = 'RATE_LIMITED';
     const { recommendations } = result;
     const rankById = new Map(recommendations.map((r) => [r.meeting_id, r.rank]));
     candidates.sort((a, b) => (rankById.get(a.id) ?? Infinity) - (rankById.get(b.id) ?? Infinity));
@@ -189,7 +193,7 @@ Deno.serve(async (req) => {
     if (logError) console.error(`[${FN}] 실행 기록 저장 실패: ${logError.code ?? 'unknown'}`);
     console.info(JSON.stringify({ function_name: FN, ...tokenUsage(result.usage), latency_ms: Date.now() - started }));
 
-    return json({ recommendations, candidates, model: result.model, fallback: result.fallback, cached: result.cached, regions: regionsUsed });
+    return json({ recommendations, candidates, model: result.model, fallback: result.fallback, cached: result.cached, rate_limited: !allowed, regions: regionsUsed });
   } catch (err) {
     return errorResponse(err, FN);
   }

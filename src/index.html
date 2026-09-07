@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -332,8 +332,9 @@
           <div class="emrow" id="c-emoji"></div>
         </div>
         <div class="frow">
-          <label>지역<span class="req">필수</span></label>
-          <div id="c-region"></div>
+          <label for="c-region">지역<span class="req">필수 · 한 곳</span></label>
+          <select id="c-region" class="frow-select" aria-describedby="c-region-hint" onchange="cset('region',this.value)"></select>
+          <p id="c-region-hint" class="hint">모임은 한 지역에서 열려요. 한 곳을 선택해 주세요.</p>
         </div>
         <div class="frow">
           <label>관심사 · 취미<span class="req">1개 이상</span></label>

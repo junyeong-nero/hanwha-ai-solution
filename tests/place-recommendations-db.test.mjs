@@ -28,7 +28,7 @@ async function fixture(){
   insert into meetings(id,created_by,title) values('${meeting}','${host}','장소 추천 모임');
   insert into meeting_members(meeting_id,user_id) values('${meeting}','${host}'),('${meeting}','${member}');
  `);
- for(const file of ['0013_plan_availability.sql','0014_meeting_responses.sql','0016_unified_scheduling.sql','0017_place_recommendations.sql']){
+ for(const file of ['0013_plan_availability.sql','0014_meeting_responses.sql','0016_unified_scheduling.sql','0019_place_recommendations.sql']){
   await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  }
  await db.exec(`alter table meeting_plans enable row level security;

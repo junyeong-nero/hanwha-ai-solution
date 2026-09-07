@@ -49,9 +49,9 @@ npx supabase link --project-ref <프로젝트 ref>
 npx supabase db push
 ```
 
-**장소 후보 추천은 프런트엔드 배포 전에 `0017_place_recommendations.sql`까지 적용하고 `suggest-meeting-plan`, `complete-meeting` Edge Function을 함께 배포해야 합니다.** 추천 전용 컬럼·확정 차단과 일정 독립 체크인을 추가합니다. DB → Edge Function → 프런트엔드 순서로 적용하고, 방장·일반 멤버 두 계정에서 후보 추천·재접속·Realtime·상호 만남 완료를 확인하세요.
+**장소 후보 추천은 프런트엔드 배포 전에 `0019_place_recommendations.sql`까지 적용하고 `suggest-meeting-plan`, `complete-meeting` Edge Function을 함께 배포해야 합니다.** 추천 전용 컬럼·확정 차단과 일정 독립 체크인을 추가합니다. DB → Edge Function → 프런트엔드 순서로 적용하고, 방장·일반 멤버 두 계정에서 후보 추천·재접속·Realtime·상호 만남 완료를 확인하세요.
 
-`db push`는 `supabase/migrations/` 의 마이그레이션을 0015까지 순서대로 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
+`db push`는 `supabase/migrations/` 의 마이그레이션을 0019까지 순서대로 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
 
 
 ## 3. Edge Function 배포
@@ -95,6 +95,8 @@ npx supabase functions deploy reset-demo --no-verify-jwt
 
 ## 4. 발표용 입장 코드 만들기
 
+호출 제한 설정과 배포 전 검증은 [입장 시도 제한](login-rate-limit.md)을 확인합니다.
+
 Dashboard → SQL Editor에서 실행 (코드는 발표 직전에 새로 만들고, 저장소에 커밋하지 않습니다):
 
 ```sql
@@ -115,6 +117,8 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 4. 공용 주소 `https://junyeong-nero.github.io/hanwha-ai-solution/src/`로 QR을 만듭니다 (아무 QR 생성기나 가능). 관리자용 주소는 `.../src/?admin=1` 입니다.
 
 ## 6. OpenAI 확인 (발표 전날·당일 — 모임·장소 추천)
+
+호출 제한 설정과 배포 전 검증은 [AI 호출 예산](ai-rate-limit.md)을 확인합니다.
 
 - Supabase Dashboard → Edge Functions → Secrets에 사용자 소유 키를 `OPENAI_API_KEY`로 등록합니다. 채팅·소스·셸 명령에 실제 키를 적지 않습니다. 기존 `OPENROUTER_API_KEY`와 `OPENROUTER_MODEL`은 두 추천 함수에서 사용하지 않습니다.
 - OpenAI 프로젝트의 사용 한도와 `gpt-5.4-mini` 호출 권한을 확인하고, 위 §3 절차로 `recommend-meetings`와 `suggest-meeting-plan`을 배포합니다. 키 등록만으로 코드가 배포되지는 않습니다.
