@@ -32,7 +32,7 @@ on conflict (id) do nothing;
 
 -- 모임 (안정적인 UUID 를 써서 프론트·테스트가 같은 id 를 참조할 수 있게 한다)
 insert into public.meetings (id, emoji, title, tags, region, when_label, capacity) values
-  ('00000000-0000-4000-8000-000000000007', '🌿', '인재경영원 교육 후 저녁 산책', array['산책', '러닝'],     '인재경영원', '평일 저녁', 6)
+  ('00000000-0000-4000-8000-000000000007', '🌿', '인재경영원 교육 후 저녁 산책', array['산책', '러닝'],     '인재경영원', '평일 저녁', 300)
 on conflict (id) do nothing;
 
 -- 로컬 개발용 입장 코드 123456 (30일 뒤 만료).

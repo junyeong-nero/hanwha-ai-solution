@@ -53,7 +53,7 @@ const PEOPLE={
   p10:{real:'서준호',nick:'만월기사',   co:'inv',  av:'🐯', ints:['자동화','주식']},
 };
 const MEETINGS=[
-  {id:'m7', em:'🌿', name:'인재경영원 교육 후 저녁 산책', region:'인재경영원', when:'평일 저녁', cap:6,
+  {id:'m7', em:'🌿', name:'인재경영원 교육 후 저녁 산책', region:'인재경영원', when:'평일 저녁', cap:300,
    tags:['산책','러닝'], members:['p9','p10'],
    ai:'교육 기간에 <b>인재경영원</b>에서 만나기 좋은 모임이에요. 저녁 산책은 처음 만나는 사이에도 부담이 없어요.'},
 ];

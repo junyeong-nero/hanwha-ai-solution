@@ -6,9 +6,11 @@ import { loadApp } from './helpers/app-context.mjs';
 
 const uid = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const migration = readFileSync(new URL('../supabase/migrations/0020_hr_default_meetings.sql', import.meta.url), 'utf8');
+const capacityMigration = readFileSync(new URL('../supabase/migrations/0021_hr_meeting_capacity.sql', import.meta.url), 'utf8');
 
 test('로컬 초기 모임·프로필과 신규 입장 프로필은 인재경영원으로 시작한다', () => {
   const app = loadApp({ files: ['config.js'] });
+  assert.equal(app.evaluate('MEETINGS[0].cap'), 300);
   assert.equal(app.evaluate('JSON.stringify(MEETINGS.map(m=>[m.id,m.region]))'), JSON.stringify([['m7', '인재경영원']]));
   assert.equal(app.evaluate('JSON.stringify(S.profile.regions)'), JSON.stringify(['인재경영원']));
   const login = readFileSync(new URL('../supabase/functions/demo-login/index.ts', import.meta.url), 'utf8');
@@ -32,6 +34,10 @@ test('기존 시드만 추천에서 제외하고 사용자 데이터 보존·신
     `);
     await db.exec(migration);
     await db.exec(migration);
+    await db.exec(capacityMigration);
+    await db.exec(capacityMigration);
+    assert.equal((await db.query('select capacity from meetings where id=$1', [uid(7)])).rows[0].capacity, 300);
+    assert.equal((await db.query('select capacity from meetings where id=$1', [uid(8)])).rows[0].capacity, null);
     const rows = (await db.query('select id,status from meetings order by id')).rows;
     assert.deepEqual(rows.map(r => r.status), ['cancelled','cancelled','cancelled','cancelled','completed','open','open','open']);
     assert.equal((await db.query('select * from meeting_members')).rows.length, 1);
