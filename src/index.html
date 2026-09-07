@@ -85,8 +85,8 @@
           <li><b>프로필 · 추천 기준 저장</b><p>계열사·나이와 선호 지역을 확인해요. 관심사·취미·성별·MBTI·모임 규모는 선택 사항이에요. 같은 성별 우선은 성별을 설정해야 적용돼요.</p></li>
           <li><b>매칭 · 모임 참가</b><p>저장한 선호 지역의 모임만 보여요. 주황 띠는 이미 만난 사람의 비율이에요. 마음에 드는 모임의 ‘참가하기’를 누르거나 ‘모임 만들기’로 직접 열어보세요.</p></li>
           <li><b>채팅 · 닉네임으로 인사</b><p>참가한 모임이 채팅 탭에 생겨요. 처음 만나는 동료에게는 닉네임과 아바타로 보여요. 참가한 시점부터의 대화를 볼 수 있어요.</p></li>
-          <li><b>약속 · 장소와 시간 정하기</b><p>채팅방 ＋ → ‘약속 잡기 · 시간과 장소’에서 날짜 범위를 정하고 후보를 받아요. 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요. 날짜×시간 그리드를 칠하고 장소를 골라 저장해요.</p><p>같은 약속 화면에서 방장이 가능 인원을 비교하고 최종 확정해요. 의견 수집 중에는 자동 확정되지 않아요.</p></li>
-          <li><b>실제 만남 · 각자 만남 완료</b><p>확정된 약속에 만나고 채팅방 상단의 ‘만남 완료’를 눌러요. 나와 상대가 둘 다 완료해야 서로의 실명·계열사가 공개돼요. 약속 확정 뒤 참가한 멤버는 해당 약속의 완료를 누를 수 없어요.</p></li>
+          <li><b>AI 장소 추천 기능 써보기</b><p>참가한 채팅방에서 ‘AI 장소 추천’을 눌러요. 최근 대화에 맞는 장소 후보와 추천 이유, 주소를 비교하고 지도에서 위치를 살펴봐요. 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요.</p><p>‘이곳 어때요?’를 누르면 메시지 초안이 만들어져요. 함께 갈 곳과 시간은 채팅으로 자유롭게 이야기해요.</p></li>
+          <li><b>실제 만남 · 각자 만남 완료</b><p>실제로 만난 뒤 채팅방 ＋ 메뉴의 ‘만남 완료’를 눌러요. 나와 상대가 둘 다 완료해야 서로의 실명·계열사가 공개돼요. 첫 만남 완료 이후 참가한 멤버는 이 만남의 완료를 누를 수 없어요.</p></li>
           <li><b>홈 · 넓어진 연결 확인</b><p>서로 완료한 동료가 연결되고 해당 계열사 행성이 빛나요. 만남 완료 후 사진첩에 추억을 남기고, 만남 평가도 할 수 있어요.</p></li>
         </ol>
         <p class="hint">모임이 보이지 않나요? 프로필에서 선호 지역을 더 선택하고 저장해 보세요. 원하는 모임을 직접 만들어도 좋아요.</p>
@@ -261,22 +261,18 @@
     <div class="sheet">
       <div class="grip"></div>
       <div class="sbody">
-      <span id="pollMenuIcon" hidden></span>
-      <button class="psheet-item" onclick="aiPlan()"><i>🌙</i><div><span id="plusAiLbl">약속 잡기 · 시간과 장소</span><small>가능 시간을 칠하고, 대화에 맞는 장소를 골라요 · 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요</small></div></button>
-      <button class="psheet-item" onclick="hidePlus();openMembers()"><i>👥</i><div>채팅방 멤버 보기<small>누가 있는지 · 확정 투표 · 만남 완료 여부</small></div></button>
+      <button class="psheet-item" id="plusAi" onclick="aiPlan()"><i id="placeMenuIcon"></i><div><span id="plusAiLbl">AI 장소 추천</span><small>대화에 맞는 후보와 추천 이유를 함께 살펴봐요 · 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요</small></div></button>
+      <button class="psheet-item" onclick="hidePlus();openMembers()"><i>👥</i><div>채팅방 멤버 보기<small>누가 있는지 · 만남 완료 여부</small></div></button>
+      <button class="psheet-item" id="plusReveal" onclick="doReveal()"><i id="revealMenuIcon"></i><div>만남 완료<small>실제로 만난 뒤 각자 눌러요 · 서로 완료하면 실명이 보여요</small></div></button>
       <button class="psheet-item" id="plusRate" onclick="hidePlus();openRating(CUR)"><i>⭐</i><div>만남 평가하기<small>별 0.5~5점 · 매칭 정확도 학습에 쓰여요 · 만남 완료 후</small></div></button>
       <button class="psheet-item" id="plusAlbum" onclick="hidePlus();openAlbum()"><i>🖼️</i><div>모임 사진첩<small>만남이 성사되면 열려요</small></div></button>
       <button class="psheet-item" onclick="hidePlus();showMeetingInfo()"><i>ℹ️</i><div>모임 정보<small>지역 · 시간대 · 정원</small></div></button>
-      <button class="psheet-item" id="plusLeave" onclick="leaveMeeting()"><i>🚪</i><div>모임 나가기<small>만남 완료 전까지만 · 채팅 기록과 확정 투표가 사라져요</small></div></button>
+      <button class="psheet-item" id="plusLeave" onclick="leaveMeeting()"><i>🚪</i><div>모임 나가기<small>만남 완료 전까지만 · 채팅 기록이 사라져요</small></div></button>
       </div>
     </div>
   </div>
 
   <!-- 만남 평가 시트 (별 0.5~5) -->
-  <div class="sheetwrap" id="availabilitywrap">
-    <div class="dimbg" onclick="closeAvailability()"></div>
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="가능 시간 조율"><div class="grip"></div><div class="sh"><b>가능 시간 조율</b><button class="ib" style="min-width:44px;min-height:44px" onclick="closeAvailability()" aria-label="닫기">×</button></div><div class="sbody" id="availabilitybody"></div></div>
-  </div>
   <div class="sheetwrap" id="ratewrap">
     <div class="dimbg" onclick="hideRating()"></div>
     <div class="sheet">
@@ -402,7 +398,7 @@
     </div>
   </div>
 
-  <section id="pollview" aria-label="모임 의견 조율" hidden></section>
+
   <!-- 모임 상세 시트 (참가 전 미리 보기) -->
   <div class="sheetwrap" id="detailwrap">
     <div class="dimbg" onclick="hideDetail()"></div>
@@ -436,11 +432,10 @@
 <script src="js/home.js"></script>
 <script src="js/match.js"></script>
 <script src="js/chat.js"></script>
-<script src="js/availability.js"></script>
 <script src="js/map.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/backend.js"></script>
-<script src="js/responses.js"></script>
+<script src="js/places.js"></script>
 <script src="js/boot.js"></script>
 </body>
 </html>

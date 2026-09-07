@@ -46,7 +46,7 @@ test('DB 예산: 사용자·모임·전역 상한, 동시 제출, 만료, 권한
 test('약속 함수의 예산 검사는 권한 확인 뒤, 모든 유료 작업과 저장 앞에 있다',()=>{
   const source=readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts',import.meta.url),'utf8');
   const guard=source.indexOf('const allowed = await consumeAIBudget');
-  assert.ok(guard>source.indexOf("return fail(403, 'NOT_HOST'"));
+  assert.ok(guard>source.indexOf("return fail(403, 'NOT_MEMBER'"));
   for(const token of ['await inferPlaceIntent(', 'await searchPlaces(', 'await suggestWithAI(', ".from('meeting_plans')"]){
     assert.ok(guard<source.indexOf(token),token);
   }
@@ -62,7 +62,7 @@ test('실제 약속 핸들러: 거부된 요청은 외부 호출·대화 조회�
     const svc={
       from(table){
         assert.ok(['meeting_members','meetings'].includes(table),'대화 조회·약속 저장 금지');
-        const q={select(){return q},eq(){return q},async maybeSingle(){return {data:table==='meetings'?{id:uid(10),created_by:uid(1)}:{joined_at:'2026-01-01'},error:null}}};
+        const q={select(){return q},eq(){return q},async maybeSingle(){return {data:table==='meetings'?{id:uid(10),created_by:uid(2)}:{joined_at:'2026-01-01'},error:null}}};
         return q;
       },
       async rpc(){quota++;return {data:denied===false?false:null,error:denied==='db-error'?{}:null}}

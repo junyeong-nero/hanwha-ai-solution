@@ -54,10 +54,10 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ### 아키텍처 — 이중 모드
 - **빌드 도구 없음** — `src/index.html`(마크업) · `src/styles.css` · `src/js/*.js` 로 나뉘어 있고, 브라우저가 `<link>`·`<script>`로 그대로 읽는다 (폰트만 `../assets/fonts/` 상대 경로 참조)
 - **JS는 ES 모듈이 아니라 일반 스크립트** — 전역 스코프를 공유하므로 `import`/`export` 없이 파일 간 함수·상수를 그냥 쓰고, 마크업의 인라인 `onclick`도 그대로 유효하다. `file://` 로 열어도 동작하는 이유이기도 하니 `type="module"` 로 바꾸지 말 것
-- **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `map.js`(후보 장소 지도) → `backend.js` → `responses.js`(공유 의견 화면) → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
-- 화면별 파일 배치: 모임 만들기는 `match.js`, 만남 평가는 `chat.js`, 약속 카드의 후보지 지도·선택은 `map.js` 에 있다
+- **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `map.js`(후보 장소 지도) → `backend.js` → `places.js`(장소 후보·의견 초안) → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
+- 화면별 파일 배치: 모임 만들기는 `match.js`, 만남 평가는 `chat.js`, 장소 후보의 지도·개인 강조은 `map.js` 에 있다
 - **로컬 데모 모드(기본):** `src/js/config.js` 상단 `CONFIG.SUPABASE_URL`이 비어 있으면 외부 네트워크 요청 없이 하드코딩 데이터(`COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS`)와 전역 `S` 객체만으로 동작. 새로고침 시 초기화
-- **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 서버 로직을 맡는다. **모임 추천(`recommend-meetings`)은 규칙 상위 후보를 OpenAI `gpt-5.4-mini`로 재정렬**하며 실패 시 규칙 엔진으로 대체한다. 약속 추천(`suggest-meeting-plan`)도 같은 모델을 쓰고 장소는 카카오 검색으로 검증한다. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
+- **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 서버 로직을 맡는다. **모임 추천(`recommend-meetings`)은 규칙 상위 후보를 OpenAI `gpt-5.4-mini`로 재정렬**하며 실패 시 규칙 엔진으로 대체한다. 장소 추천(`suggest-meeting-plan`)도 같은 모델을 쓰고 장소는 카카오 검색으로 검증한다. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
 - 두 모드 모두에서 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지하고 `BACKEND` 플래그로만 분기
 - 브라우저에는 anon 키와 카카오맵 **JavaScript 키**(공개용·도메인 제한)만. secret key·OpenAI·OpenRouter 키·카카오 **REST 키**가 `src/` 에 들어가면 `tests/backend-contract.test.mjs` · `tests/plan-map.test.mjs` 가 실패함. 장소 검색은 서버(Edge Function)가 REST 키로만 한다
 - 화면 전환은 섹션 show/hide 방식 (SPA 라우터 없음)
@@ -93,12 +93,11 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 - 입장 화면이 열리면 `demo-login` 에 `{warm:true}` 를 한 번 보내 콜드 스타트를 미리 치른다 (함수는 검사 없이 바로 200). 발표 직전에는 한 번 로그인해 두면 더 확실하다
 - 핵심 데모 흐름으로 회귀 확인:
   1. 매칭 탭 → 모임 `참가` → 채팅 탭에 방 생성
-  2. 채팅방 `＋` → `AI 추천 약속 잡기` → `이 약속으로 확정`
-     (m7 인재경영원 모임만 이미 약속 시간이 지난 샘플이라, 투표 없이 `시간 지나 자동 확정`으로 바로 넘어갑니다)
-  3. 상단 배너 `만남 완료` → 베일 벗기기 애니메이션 → 익명→실명 전환, 사진첩 개방
+  2. 채팅방 `AI 장소 추천` → 후보·추천 이유·지도 비교 → `이곳 어때요?` → 의견 초안 전송 (시간·장소 확정 없음)
+  3. 채팅방 `＋ → 만남 완료` → 실제 만남 확인 → 베일 벗기기 → 상호 완료한 멤버 실명 전환·사진첩 개방
   4. 홈 탭 → 해당 계열사 행성 점등·연결 동료 수 증가 확인
   5. 프로필 설정 변경(선호 지역·관계 방향) → 매칭 탭 정렬 변화 확인
-  6. 카드 제목 → 모임 상세 시트 → `참가하기`; 채팅방 `＋` → `모임 나가기`(만남 완료 전) · `AI 약속 다시 제안받기`(확정 전) · 약속 카드 `확정 취소`
+  6. 카드 제목 → 모임 상세 시트 → `참가하기`; 채팅방 `＋` → `모임 나가기`(만남 완료 전) · `AI 장소 추천` 재요청 → 이전 후보 접기
 - 확인 대화는 `askConfirm(title, desc, okLabel, danger)` (app.js, Promise<boolean>) 를 쓴다 — `window.confirm` 금지 (테스트가 막는다)
 
 ## 테스트
@@ -109,11 +108,12 @@ npm test
 ```
 
 - `meeting-responses-db.test.mjs` — PGlite(PostgreSQL)에서 의견 RPC의 참여·방장 권한, 수정·마감·확정·탈퇴와 기존 확정 경로 차단을 실행 검증
-- `meeting-responses.test.mjs` — 시간 슬롯·교집합·안전한 의견 렌더링
+- `decision-flow.test.mjs` — 후보 요청·초안 보존·재시도·방 이동·로그아웃·가이드 완료·안전한 렌더링
+- `place-recommendations-db.test.mjs` — 추천 전용 확정 차단·참가 이후 조회·일정 독립 상호 체크인
 - `responsive-ui.test.mjs` — 반응형 CSS 구조
 - `backend-contract.test.mjs` — 비밀 키 미노출, 이중 모드·입장 화면·Realtime 호출 계약
 - `edge-functions.test.mjs` — 마이그레이션 스키마 검사, `_shared/` 순수 함수(입장 코드·추천 규칙 엔진·LLM 파서·익명화)
-- `plan-map.test.mjs` — 약속 카드의 후보 장소 지도. `map.js` 를 브라우저와 같은 전역에서 실행해 좌표 배치(`pinLayout`)·목록↔Marker 선택 동기화·검색 실패 안내·키 분리를 검사한다
+- `plan-map.test.mjs` — 추천 카드의 후보 장소 지도. `map.js` 를 브라우저와 같은 전역에서 실행해 좌표 배치(`pinLayout`)·목록↔Marker 선택 동기화·검색 실패 안내·키 분리를 검사한다
 - `home-orbit.test.mjs` — 홈 은하계(회전 궤도). `helpers/app-context.mjs` 가 `config.js`·`home.js` 를 브라우저와 같은 전역에서 실행해 실제 궤도 배치(회전 중 겹침·화면 밖·재렌더 안정성)와 "아는 사람이 생긴 계열사만 합류" 규칙을 검사한다
 
 `src/` 를 검사하는 테스트는 `tests/helpers/source.mjs` 가 `index.html` 의 `<link>`·`<script src>` 를 실제 파일 내용으로 인라인해 만든 단일 문자열(`html`)을 씁니다. `src/` 에 CSS·JS 파일을 새로 추가하면 index.html 에 태그만 걸어 두면 되고, 테스트 쪽은 따로 손댈 필요가 없습니다.

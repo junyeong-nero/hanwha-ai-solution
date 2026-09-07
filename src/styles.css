@@ -679,41 +679,6 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .emrow button{width:44px;height:44px;border-radius:13px;background:var(--card2);border:1px solid var(--line);font-size:21px}
 .emrow button.on{border-color:var(--orange);background:var(--orange-a18);box-shadow:0 0 0 3px var(--orange-a12)}
 
-/* 공유 의견 화면: 채팅 밖에서 여는 독립 화면 */
-#pollview{position:fixed;inset:0;z-index:180;background:var(--bg);height:100dvh;overflow:auto;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);color:var(--tx)}
-#pollview[hidden]{display:none}
-#pollview .top,.pollbody{max-width:680px;margin:auto}
-#pollview .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
-.pollbody{padding:16px 20px 40px;overflow-wrap:anywhere}
-.pollbody p{color:var(--tx2);line-height:1.6;margin:12px 0}
-.pollbody .cta{width:100%;margin:12px 0;min-height:44px}
-.pollbody fieldset{border:1px solid var(--line);border-radius:var(--r-m);padding:12px;margin:16px 0;min-width:0}
-.pollbody legend{font-weight:700}
-.pollchoice{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 0}
-.pollchoice small{display:block;color:var(--tx2)}
-.pollbody input[type=radio],.pollbody input[type=checkbox]{accent-color:var(--orange);width:22px;height:22px;flex-shrink:0}
-.pollfield{display:flex;flex-direction:column;gap:8px;margin:20px 0}
-.pollfield input,.pollfield select,.pollfield textarea{font:inherit;font-size:16px;min-height:44px;min-width:0;width:100%;box-sizing:border-box;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:var(--r-s);padding:12px}
-.pollfield textarea{min-height:100px;resize:vertical}
-.pollslot{display:flex;align-items:center;gap:8px;min-height:44px;border-radius:var(--r-s)}
-.pollslot:has(input:checked){background:var(--orange-a18)}
-.pollbody :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
-
-
-.plan [hidden]{display:none}
-
-/* 가능 시간 조율: 표 안은 선택, 표 밖은 스크롤 */
-.av-config{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
-#availabilitybody p{font-size:13px;color:var(--tx2);line-height:1.6;margin:12px 0}
-#availabilitybody input,#availabilitybody select,.pollbody .av-config input{display:block;width:100%;min-width:0;font-size:16px;min-height:44px;box-sizing:border-box;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:var(--r-s);padding:6px}
-#availabilitybody summary{min-height:44px;padding:12px 0}
-.av-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;touch-action:none;user-select:none;margin:12px 0}
-.av-slot{min-height:54px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--card);padding:4px;font-size:11px;color:var(--tx)}
-.av-slot span,.av-slot b{display:block}.av-slot.some{background:var(--card3)}.av-slot.best{background:var(--orange-a18);color:var(--orange-soft)}.av-slot.all{background:var(--card3);color:var(--ok);border-color:var(--ok)}
-.av-slot[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--orange)}
-.av-slot:focus-visible{outline:2px solid var(--tx);outline-offset:1px}
-#avcandidates .cta{margin:8px 0}#avstatus{color:var(--orange-soft);font-size:13px;min-height:24px}
-
 /* 첫 프로필 설정과 다시 볼 수 있는 사용 가이드 */
 .guide-entry{margin-bottom:14px}
 .profile-guide,.usage-guide,.profile-next{margin-bottom:14px}
@@ -733,16 +698,40 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .profile-next .hint{margin:8px 0 12px}
 .setup-steps button:focus-visible,.usage-guide summary:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:var(--r-s)}
 
-/* 날짜 열 × 시간 행. 작은 화면에서는 시간축을 고정한 채 가로로 이동한다. */
-.pollgrid-scroll{overflow:auto;max-height:55dvh;border:1px solid var(--line);border-radius:var(--r-m);margin:12px 0;overscroll-behavior:contain}
-.pollgrid{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;user-select:none;min-width:max-content}
-.pollgrid caption{padding:10px;text-align:left;color:var(--tx2);background:var(--card)}
-.pollgrid th{min-width:52px;width:52px;height:44px;background:var(--card2);font-size:12px;text-align:center;font-weight:600}
-.pollgrid thead th{position:sticky;top:0;z-index:2}.pollgrid th small{display:block;color:var(--tx3)}
-.pollgrid tr>th:first-child{position:sticky;left:0;z-index:1}.pollgrid thead th:first-child{z-index:3}
-.pollgrid td{padding:0;border-top:1px solid var(--line);border-left:1px solid var(--line);min-width:44px}
-.pollcell{display:block;width:100%;min-width:52px;min-height:44px;border:0;border-radius:0;background:var(--card);color:var(--tx2);touch-action:none;font-size:12px}
-.pollcell.some{background:var(--orange-a18)}.pollcell.all{background:var(--card3);color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
-.pollcell[aria-pressed="true"]{background:var(--orange-a30);color:var(--tx);box-shadow:inset 0 0 0 2px var(--orange)}
-.pollcell:focus-visible{outline:2px solid var(--tx);outline-offset:-3px}.pollcell:disabled{opacity:.7}
-.pollbody details{margin:12px 0}.pollbody summary{min-height:44px;padding:12px 0;cursor:pointer}
+/* 장소 후보를 대화 속에서 비교한다. 모바일은 한 열, 넓은 채팅방은 두 열이다. */
+#rbanner{flex-wrap:wrap;background:var(--orange-a12);border-color:var(--orange-a30)}
+#rbanner button{min-height:44px;height:auto;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-s);box-shadow:none}
+#rbanner button:disabled{background:var(--card2);color:var(--tx2)}
+.msg.places-msg{width:100%;max-width:100%;align-items:flex-start;margin-top:18px}
+.places-msg .place-content{flex:1;min-width:0;max-width:880px}
+.places-msg .mav{width:28px;height:28px;border-radius:var(--r-s);color:var(--orange-soft);box-shadow:none}
+.places-msg .who{color:var(--orange-soft)}
+.place-plan.plan{width:100%;min-width:0;padding:14px!important;background:var(--bg2)!important;border-color:var(--orange-a30)!important;border-radius:var(--r-l)!important}
+.place-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--tx2)}
+.place-plan h4{font-size:19px;letter-spacing:-.5px;color:var(--tx);margin:12px 0 6px}
+.place-intro{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:14px}
+.place-candidates{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:12px}
+.place-plan .cand{display:flex;flex-direction:column;gap:0;min-width:0;margin:0;border:1px solid var(--line);border-radius:var(--r-m);background:var(--card)}
+.place-plan .cand.on{border-color:var(--orange-a30);background:var(--orange-a12)}
+.place-plan .cand .pick{padding:14px 12px;gap:9px;border-radius:var(--r-m);flex:1}
+.place-plan .cand .txt b{font-size:15px;display:block;margin-bottom:4px;line-height:1.5}
+.place-plan .cand .cat{font-size:11px;margin:0 0 6px;padding:2px 6px;border-radius:var(--r-s);color:var(--tx2)}
+.place-plan .cand small{font-size:12px;color:var(--tx2);line-height:1.6}
+.place-plan .cand em{margin-top:10px;line-height:1.65;font-size:13px;color:var(--tx)}
+.place-plan .cand em strong{display:block;font-size:11px;font-weight:600;color:var(--orange-soft);margin-bottom:3px}
+.cand-actions{display:flex;align-items:stretch;border-top:1px solid var(--line);padding:4px 8px;gap:6px}
+.place-plan .cand-actions .opinion{margin:0;height:auto;min-height:44px;flex:1;width:auto;background:transparent;color:var(--orange-soft);border-radius:var(--r-s);box-shadow:none;font-size:13px}
+.place-plan .cand-actions .detail{min-width:60px;min-height:44px;font-size:12px;color:var(--tx2)}
+.place-footnote{font-size:11px;line-height:1.65;color:var(--tx2);margin-top:12px}
+.previous-places summary{min-height:44px;padding:12px 0;cursor:pointer;color:var(--tx2);font-size:13px}
+.place-status{border:1px solid var(--line);border-radius:var(--r-m);background:var(--card);padding:16px;margin:14px 0;font-size:13px;color:var(--tx2);max-width:880px}
+.place-status b{display:block;color:var(--tx);margin-bottom:4px}
+.place-status .sk{display:block;height:4px;width:80px;margin-bottom:12px;border-radius:var(--r-s)}
+.place-status .cta{margin-top:12px}
+.place-plan button:focus-visible,.place-plan a:focus-visible,.previous-places summary:focus-visible,#rbanner button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+@media(min-width:768px){
+  .place-candidates{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .place-plan.plan{padding:20px!important}
+  .place-plan .planmap{height:210px}
+  #msgs{padding:20px 28px}
+}

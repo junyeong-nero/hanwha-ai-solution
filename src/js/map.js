@@ -76,23 +76,21 @@ function candListHtml(planId,cands,disabled){
       +(c.verified===false?'<span class="cat warn">검색 미확인</span>':'')
       +(c.ambiguous?'<span class="cat warn">같은 이름 여러 곳</span>':'')
       +(c.address?'<small>'+esc(c.address)+'</small>':'')
-      +(c.why?'<em>'+esc(c.why)+'</em>':'')
+      +'<em><strong>추천 이유</strong>'+esc(c.why||'모임 지역에서 검색한 후보예요. 주소와 업종을 비교해 보세요.')+'</em>'
       +'</span></button>'
+      +'<div class="cand-actions"><button class="opinion press" onclick="draftPlaceOpinion(\''+esc(planId)+'\','+i+')">이곳 어때요?</button>'
       +(url!=='#'?'<a class="detail" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc(c.name||'')+' 상세 보기">상세 ↗</a>':'')
-      +'</div>';
-  }).join('')
-    +(cands&&cands.length&&!disabled
-      ? '<button class="pickbtn" onclick="pickPlace(\''+esc(planId)+'\')">이 장소로 정하기</button>'
-      : '');
+      +'</div></div>';
+  }).join('');
 }
 
 /* 검색 상태별 토스트 문구 */
 const SEARCH_TOAST={
   empty:'검색 결과가 없어 대체 검색어를 안내했어요',
   quota:'장소 검색 할당량을 초과했어요 · 잠시 후 다시 시도해 주세요',
-  auth:'장소 검색 키 설정을 확인해 주세요',
-  error:'장소 검색에 실패해 후보 없이 제안했어요',
-  no_key:'장소 검색이 꺼져 있어 AI 제안만 보여 드려요',
+  auth:'장소 검색에 연결하지 못했어요 · 잠시 후 다시 시도해 주세요',
+  error:'장소 검색에 실패했어요 · 다시 시도해 주세요',
+  no_key:'장소 검색을 사용할 수 없어요 · 잠시 후 다시 시도해 주세요',
 };
 
 /* 검색 상태 안내 — 결과 없음 · 할당량 초과 · 오류를 구분해 보여 준다 */
@@ -102,11 +100,11 @@ function searchNoteHtml(search){
   const msg={
     empty:'검색 결과가 없어요'+(alt?' · 이렇게 찾아 보세요: '+alt:' · 다른 지역이나 키워드로 다시 시도해 주세요'),
     quota:'장소 검색 할당량을 초과했어요 · 잠시 후 다시 시도해 주세요',
-    auth:'장소 검색 키 설정을 확인해 주세요 (도메인 제한 · 만료)',
-    error:'장소 검색에 실패했어요 · 후보 없이 약속만 제안했어요',
-    no_key:'장소 검색이 꺼져 있어요 · AI 제안만 보여 드려요',
+    auth:'장소 검색에 연결하지 못했어요 · 잠시 후 다시 시도해 주세요',
+    error:'장소 검색에 실패했어요 · 다시 시도해 주세요',
+    no_key:'장소 검색을 사용할 수 없어요 · 잠시 후 다시 시도해 주세요',
   }[search.status];
-  return msg?'<p class="cnote">⚠️ '+msg+'</p>':'';
+  return msg?'<p class="cnote">'+msg+'</p>':'';
 }
 
 /* 지도 영역 — SDK를 쓸 수 있으면 빈 컨테이너(마운트 후 채움), 아니면 placeholder */
@@ -128,7 +126,7 @@ function mapPhHtml(planId,cands){
   }).join('');
   const cur=cands[sel]||{};
   return '<div class="grid" aria-hidden="true"></div>'+pins
-    +'<div class="cap">🗺️ 후보 '+mappable(cands).length+'곳 · <b>'+esc(cur.name||'')+'</b></div>';
+    +'<div class="cap">상대 위치 · 후보 '+mappable(cands).length+'곳 · <b>'+esc(cur.name||'')+'</b></div>';
 }
 
 /* ===== 실제 지도 마운트 ===== */
@@ -222,17 +220,5 @@ function resetPlanMaps(){
   Object.keys(KMAP.views).forEach(k=>delete KMAP.views[k]);
 }
 
-/* 선택한 후보를 이 약속의 만남 장소로 정한다 (백엔드 모드는 RPC로 저장 → 방 전체에 반영) */
-async function pickPlace(planId){
-  const cands=planCands(planId), c=cands[selIdx(planId)]; if(!c)return;
-  const r=S.rooms[CUR], msg=r&&r.msgs.find(m=>m.f==='ai'&&m.planId===planId);
-  if(!msg)return;
-  if(BACKEND){
-    const {error}=await sb.rpc('select_plan_place',{p_plan_id:planId,p_place_id:c.id||null,p_name:c.name||null});
-    if(error){netFail('장소 선택');return}
-  }
-  msg.plan.place=c.name; msg.plan.selected=c;
-  if(typeof persistAvailability==='function')persistAvailability(CUR);
-  renderMsgs(); renderBanner();
-  toast('장소 선택',esc(c.name)+' 으로 정했어요 · 모두 확정하면 약속이 잡혀요');
-}
+/* 이전 호출은 장소를 확정하지 않고 의견 초안만 만든다. */
+function pickPlace(planId){draftPlaceOpinion(planId,selIdx(planId))}

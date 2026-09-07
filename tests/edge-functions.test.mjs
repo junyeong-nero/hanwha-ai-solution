@@ -478,7 +478,7 @@ test('buildPlanPrompt: 검색된 후보지가 있으면 목록을 넣고 그 안
   // 주소·좌표·링크는 검색 결과에서 채우므로 프롬프트에 링크를 넣어 지어내게 하지 않는다
   assert.equal(parsed.places[0].url, undefined);
   assert.equal(parsed.places[2].category, undefined);
-  assert.match(system, /name 은 목록의 값을 글자 그대로/);
+  assert.match(system, /name은 검색 결과 그대로/);
 });
 
 test('parsePlan: 필수 필드가 빠지면 INVALID_LLM_OUTPUT', () => {
@@ -528,7 +528,7 @@ test('fallbackPlan: 검색된 후보지가 있으면 첫 장소를 만남 장소
   assert.equal(plan.candidates.length, 3);
   assert.deepEqual(plan.candidates[0], {
     id: '1', name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1',
-    category: '카페', lat: 37.3947, lng: 127.1112, why: '검색된 후보지예요', verified: true,
+    category: '카페', lat: 37.3947, lng: 127.1112, why: '경기 성남시 분당구 판교역로 4에서 검색한 카페 후보예요. 위치와 업종을 비교해 보세요.', verified: true,
   });
   assert.ok(plan.nearby.includes('화랑공원'));
   const many = fallbackPlan({ title: 'x', region: '판교', tags: [], when_label: '' }, Array.from({ length: 8 }, (_, i) => ({ id: String(i), name: `장소 ${i}`, address: '', url: '', category: '', lat: null, lng: null })));
@@ -640,10 +640,12 @@ test('acceptMeetAt: 과거·너무 먼 시각·잘못된 값은 버린다', () =
 
 /* ================= chat.ts — meet_at 연결 ================= */
 
-test('buildPlanPrompt: LLM 이 상대 날짜를 풀 수 있게 now 를 넣고 meet_at 을 요구한다', () => {
+test('buildPlanPrompt: 최신 대화 맥락은 유지하되 시간을 제안하지 않는다', () => {
   const { system, user } = buildPlanPrompt({ title: '러닝', region: '판교', tags: ['러닝'], when_label: '평일 저녁' }, [], [], PLAN_NOW);
   assert.ok(system.includes('meet_at'), '시스템 프롬프트가 meet_at 을 요구하지 않습니다');
-  assert.ok(system.includes('ISO 8601'));
+  assert.ok(system.includes('meet_at은 반드시 null'));
+  assert.ok(system.includes('영업시간'));
+  assert.ok(system.includes('추천 이유') || system.includes('why'));
   const parsed = JSON.parse(user);
   assert.equal(parsed.now, '2026-09-04T12:00:00+09:00');
   assert.ok(parsed.now_label.includes('금요일'), `요일 표기가 없습니다: ${parsed.now_label}`);
@@ -1061,9 +1063,9 @@ test('0009: 시간 경과로 확정된 카드의 확정 시각은 정리가 돈 
   assert.ok(migration0009.includes("when confirm_reason = 'due' then coalesce(meet_at, created_at)"));
 });
 
-test('complete-meeting: 확정된 약속이 없으면 409 PLAN_NOT_CONFIRMED 로 답한다', () => {
+test('complete-meeting: 늦게 참가한 멤버는 409 ATTENDANCE_CLOSED 로 답한다', () => {
   assert.ok(completeMeeting.includes("error.code === '55000'"));
-  assert.ok(completeMeeting.includes("fail(409, 'PLAN_NOT_CONFIRMED'"));
+  assert.ok(completeMeeting.includes("fail(409, 'ATTENDANCE_CLOSED'"));
 });
 
 test('suggest-meeting-plan: AI 프롬프트에도 호출자가 참가한 뒤의 대화만 넣는다', () => {
@@ -1082,7 +1084,8 @@ test('#34 suggest-meeting-plan: 저장 전에 검색 결과로 검증하고 검�
   assert.ok(suggestFn.includes("kakaoKey: Deno.env.get('KAKAO_REST_KEY')"), '장소 검색 키는 서버 환경변수에서만 읽는다');
   assert.ok(suggestFn.includes('status: search.status'));
   assert.ok(suggestFn.includes('alternatives: search.alternatives'));
-  assert.ok(suggestFn.includes('selected_place: inserted.selected_place ?? null'));
+  assert.ok(suggestFn.includes('recommendation_only: true'));
+  assert.ok(!suggestFn.includes("return fail(403, 'NOT_HOST'"));
 });
 
 test('#34 0010 마이그레이션: 후보 목록 안의 장소만 멤버가 고를 수 있다', () => {
