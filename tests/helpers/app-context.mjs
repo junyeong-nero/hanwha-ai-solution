@@ -20,10 +20,16 @@ const stubElement = (width) => ({
  */
 export function loadApp({ files = ['config.js', 'home.js'], width = 320 } = {}) {
   const els = new Map();
+  const focused = [];
   const document = {
+    activeElement: null,
     getElementById(id) {
       if (!els.has(id)) els.set(id, stubElement(width));
       return els.get(id);
+    },
+    // 포커스 복원만 확인하면 되므로, 선택자를 그대로 기억하는 가짜 요소를 돌려준다
+    querySelector(selector) {
+      return { focus: () => focused.push(selector) };
     },
   };
   const context = vm.createContext({ document, window: {}, console });
@@ -32,7 +38,7 @@ export function loadApp({ files = ['config.js', 'home.js'], width = 320 } = {}) 
   }
   // const 선언은 컨텍스트 객체에 붙지 않으므로, 평가로 꺼내 쓴다.
   const evaluate = (code) => vm.runInContext(code, context);
-  return { evaluate, el: (id) => document.getElementById(id) };
+  return { evaluate, el: (id) => document.getElementById(id), focused };
 }
 
 /** #space 에 그려진 행성들을 {id 없는} 좌표·클래스 목록으로 파싱한다 */

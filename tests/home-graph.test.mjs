@@ -6,15 +6,26 @@ import { html } from './helpers/source.mjs';
 import { loadApp, parsePlanets, minPlanetGap } from './helpers/app-context.mjs';
 
 const TOUCH = 44;           // 터치 타겟 한 변
-const MIN_GAP = 39.9;       // 행성 사이 최소 중심 거리(px, 320px 기준) — home.js 의 HOME_MIN_GAP
+// 행성 사이 최소 중심 거리(px, 320px 기준). 3중 궤도의 반지름 간격(약 44.2px)에서
+// 반지름 흔들림만큼을 뺀 값이 기하학적 상한이라, 터치 타겟 44px 에 0.1px 못 미치는 선까지 본다.
+const MIN_GAP = 43.9;
 const WIDTH = 320;          // 375×812 화면에서의 #space 폭
 
 const render = (app) => {
   app.evaluate('renderHome()');
   return parsePlanets(app.el('space').innerHTML, WIDTH);
 };
+// 계열사 순서대로 훑어 전부 여는 경로
 const revealAll = (app) =>
   app.evaluate('for(let i=0;i<60;i++)COMPANIES.forEach(c=>{if(S.homeGraph.shown.has(c.id))expandHomeCompany(c.id)})');
+// 사용자가 실제로 누르는 순서는 제각각이고 부모(origin)가 달라지면 배치도 달라지므로,
+// 무작위 탭 순서로 전부 여는 경로도 함께 검사한다.
+const revealRandomly = (app, seed) =>
+  app.evaluate(`(()=>{let s=${seed}>>>0;const r=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296};
+    for(let i=0;i<200&&S.homeGraph.shown.size<COMPANIES.length;i++){
+      const ids=COMPANIES.filter(c=>S.homeGraph.shown.has(c.id)).map(c=>c.id);
+      expandHomeCompany(ids[Math.floor(r()*ids.length)]);
+    }})()`);
 
 test('최초 진입 화면에는 주요 계열사 10곳만 나타난다', () => {
   const app = loadApp();
@@ -67,17 +78,20 @@ test('재렌더링만으로는 기존 행성 위치가 흔들리지 않는다', 
   );
 });
 
-test('어떤 세션 시드에서도 행성이 겹치거나 화면 밖으로 잘리지 않는다', () => {
-  for (let seed = 0; seed < 60; seed += 1) {
-    const app = loadApp();
-    app.evaluate(`S.homeGraph.seed=${seed}`);
-    revealAll(app);
-    const planets = render(app);
-    assert.equal(planets.length, app.evaluate('COMPANIES.length'), `seed ${seed}`);
-    assert.ok(minPlanetGap(planets) >= MIN_GAP, `seed ${seed}: 최소 간격 ${minPlanetGap(planets).toFixed(1)}px`);
-    for (const p of planets) {
-      const inside = [p.x, p.y].every((v) => v >= TOUCH / 2 && v <= WIDTH - TOUCH / 2);
-      assert.ok(inside, `seed ${seed}: 44px 터치 영역이 화면 밖으로 나갔다 (${p.x}, ${p.y})`);
+test('어떤 세션 시드·탐색 순서에서도 행성이 겹치거나 화면 밖으로 잘리지 않는다', () => {
+  for (const reveal of [revealAll, revealRandomly]) {
+    for (let seed = 0; seed < 60; seed += 1) {
+      const app = loadApp();
+      app.evaluate(`S.homeGraph.seed=${seed}`);
+      reveal(app, seed + 1);
+      const planets = render(app);
+      const where = `${reveal.name} seed ${seed}`;
+      assert.equal(planets.length, app.evaluate('COMPANIES.length'), where);
+      assert.ok(minPlanetGap(planets) >= MIN_GAP, `${where}: 최소 간격 ${minPlanetGap(planets).toFixed(2)}px`);
+      for (const p of planets) {
+        const inside = [p.x, p.y].every((v) => v >= TOUCH / 2 && v <= WIDTH - TOUCH / 2);
+        assert.ok(inside, `${where}: 44px 터치 영역이 화면 밖으로 나갔다 (${p.x}, ${p.y})`);
+      }
     }
   }
 });
@@ -110,6 +124,32 @@ test('행성 버튼은 44px 터치 타겟과 탐색 라벨을 유지한다', () 
   app.evaluate('renderHome()');
   assert.match(app.el('space').innerHTML, /onclick="tapCo\(&quot;aero&quot;\)"/);
   assert.match(app.el('space').innerHTML, /aria-label="한화에어로스페이스 · 이어진 계열사 \d곳 더 보기"/);
+});
+
+test('탐색으로 버튼이 다시 그려져도 같은 계열사 버튼으로 포커스가 돌아온다', () => {
+  const app = loadApp();
+  app.evaluate('renderHome()');
+  assert.match(app.el('space').innerHTML, /data-co="aero"/);
+  assert.match(app.el('colist').innerHTML, /data-co="aero"/);
+
+  app.evaluate("tapCo('aero')");
+  assert.deepEqual(app.focused, ['#space [data-co="aero"]']);
+
+  // 시트에서 더 탐색하면 포커스는 시트 안에 남는다
+  app.evaluate("exploreCo('aero')");
+  assert.equal(app.focused.at(-1), '#cosheet .cta');
+});
+
+test('사용자가 바뀌면(로그아웃) 홈 그래프가 처음 상태로 돌아간다', () => {
+  const app = loadApp({ files: ['config.js', 'home.js', 'backend.js'] });
+  app.evaluate("PEOPLE.p99={real:'테스터',nick:'테스터',co:'yeocheon',av:'🌙'};S.met.p99=true");
+  app.evaluate("expandHomeCompany('aero');renderHome()");
+  assert.ok(app.evaluate('S.homeGraph.shown.size') > 10);
+
+  app.evaluate('clearBackendState()');
+  assert.equal(app.evaluate('S.homeGraph.shown.size'), 10, '앞 사용자가 연 계열사가 남지 않는다');
+  assert.equal(app.evaluate('Object.keys(S.homeGraph.slots).length'), 0, '배치도 새로 잡는다');
+  assert.equal(render(app).length, 10);
 });
 
 test('확장 연출은 prefers-reduced-motion 에서 제거된다', () => {

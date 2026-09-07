@@ -3,10 +3,10 @@
    COMPANY_LINKS 로 이어진 계열사가 바깥 궤도에 단계적으로 추가된다.
    배치는 시드 기반 결정적 랜덤 + 간단한 충돌 회피라 재렌더링해도 위치가 흔들리지 않는다. */
 const HOME_RING_CAPS=[6,11,16];         // 안쪽 궤도부터 담을 수 있는 행성 수 (합 33 ≥ 전체 계열사 수)
-const HOME_RING_FRACS=[.37,.66,.95];    // 궤도 반지름 비율 (바깥 궤도 = 1) — 궤도 간격도 최소 간격 이상
+const HOME_RING_FRACS=[.34,.67,.99];    // 궤도 반지름 비율 — 궤도 사이 간격(약 44px)도 최소 간격 이상으로 벌린다
 const HOME_PAD=26;                      // 44px 터치 타겟이 잘리지 않도록 남기는 가장자리 여백(px)
 const HOME_BASE_R=320/2-HOME_PAD;       // 320px 기준 바깥 궤도 반지름(px) — 충돌 계산 기준
-const HOME_MIN_GAP=40;                  // 320px 기준 행성 사이 최소 간격(px)
+const HOME_MIN_GAP=44;                  // 320px 기준 행성 사이 최소 간격(px) = 터치 타겟 한 변
 const HOME_REVEAL_STEP=2;               // 한 번 탐색할 때 새로 열리는 계열사 수
 
 function activeCompanies(){
@@ -75,8 +75,8 @@ function placeHomeNode(id){
     const step=2*Math.PI/cap, base=homeRand('ring'+ring)*2*Math.PI;   // 궤도마다 시작 각도를 흔들어 규칙성을 없앤다
     for(let slot=0;slot<cap;slot++){
       if(taken.has(ring+':'+slot))continue;
-      const ang=base+slot*step+(homeRand(id+':a'+ring+slot)-.5)*step*.24;   // 슬롯 폭 안에서만 흔들린다
-      const rf=HOME_RING_FRACS[ring]+(homeRand(id+':r'+ring+slot)-.5)*.04;
+      const ang=base+slot*step+(homeRand(id+':a'+ring+slot)-.5)*step*.12;   // 슬롯 폭 안에서만 흔들린다
+      const rf=HOME_RING_FRACS[ring]+(homeRand(id+':r'+ring+slot)-.5)*.02;
       const near=parent?angleGap(ang,parent.ang)/Math.PI:0;                 // 부모와 가까운 슬롯이 우선
       cands.push({ring,slot,ang,rf,rank:d+near});
     }
@@ -131,7 +131,7 @@ function renderHome(){
     const lit=act.has(c.id), mine=c.id===S.profile.company, more=hiddenLinkCount(c.id);
     h+='<button class="planet '+(lit?'lit':'dim')+(mine?' mine':'')+(g.entering.has(c.id)?' new':'')+'"'
       +' style="--c:'+c.c+';--s:'+(mine?'19px':'15px')+';left:'+pos[c.id].x.toFixed(2)+'%;top:'+pos[c.id].y.toFixed(2)+'%"'
-      +' onclick="tapCo(&quot;'+c.id+'&quot;)"'
+      +' onclick="tapCo(&quot;'+c.id+'&quot;)" data-co="'+c.id+'"'
       +' aria-label="'+esc(c.name)+(more?' · 이어진 계열사 '+more+'곳 더 보기':'')+'">'
       +'<span class="dot"></span>'+(more?'<span class="more"></span>':'')+'</button>';
   });
@@ -150,7 +150,7 @@ function renderHome(){
   $('colist').innerHTML=list.map(c=>{
     const lit=act.has(c.id);
     const n=Object.keys(S.met).filter(p=>PEOPLE[p]&&PEOPLE[p].co===c.id).length;
-    return '<button class="corow" style="width:100%;text-align:left" onclick="tapCo(&quot;'+c.id+'&quot;)">'
+    return '<button class="corow" style="width:100%;text-align:left" onclick="tapCo(&quot;'+c.id+'&quot;)" data-co="'+c.id+'">'
       +'<span class="pd" style="background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 8px '+c.c:'none')+'"></span>'
       +'<span class="nm">'+esc(c.name)+(c.id===S.profile.company?' <small style="color:var(--orange);font-size:10.5px">MY</small>':'')+'</span>'
       +'<span class="st '+(lit?'lit':'')+'">'+(lit?'커넥션 활성 · '+n+'명':'미개척')+'</span></button>';
@@ -158,14 +158,40 @@ function renderHome(){
    +(rest?'<div class="corow" style="justify-content:center"><span class="st">탐색할수록 계열사가 늘어납니다 · '+list.length+' / '+COMPANIES.length+'</span></div>':'');
 }
 
-/* 행성·목록 탭 — 관계를 한 단계 넓히고 상세 시트를 연다 */
+/* 행성·목록 탭 — 관계를 한 단계 넓히고 상세 시트를 연다.
+   다시 그리면 방금 누른 버튼이 사라지므로, 같은 계열사 버튼으로 포커스를 돌려준다
+   (키보드·스크린리더에서 포커스가 body 로 튀지 않도록). */
 function tapCo(id){
-  if(expandHomeCompany(id).length)renderHome();
+  const a=document.activeElement;
+  const fromList=!!(a&&a.closest&&a.closest('#colist'));
+  if(expandHomeCompany(id).length){
+    renderHome();
+    refocus((fromList?'#colist':'#space')+' [data-co="'+id+'"]');
+  }
   showCo(id);
 }
-/* 상세 시트의 "이어진 계열사 더 보기" — 다음 단계를 마저 연다 */
+/* 상세 시트의 "이어진 계열사 더 보기" — 다음 단계를 마저 열고 포커스를 시트 안에 남긴다 */
 function exploreCo(id){
-  if(expandHomeCompany(id).length){renderHome();showCo(id)}
+  if(!expandHomeCompany(id).length)return;
+  renderHome();
+  showCo(id);
+  refocus('#cosheet .cta');
+}
+function refocus(selector){
+  const el=document.querySelector&&document.querySelector(selector);
+  if(el&&el.focus)el.focus();
+}
+
+/* 로그아웃 등으로 사용자가 바뀌면 그래프를 처음 상태로 되돌린다
+   (앞 사용자가 탐색한 계열사·점등으로 열린 계열사·배치가 남지 않도록) */
+function resetHomeGraph(){
+  const g=S.homeGraph;
+  g.seed=Math.floor(Math.random()*1e9);
+  g.shown=new Set(HOME_CORE_IDS);
+  g.origin={};
+  g.slots={};
+  g.entering.clear();
+  g.enteringLinks.clear();
 }
 
 function showCo(id){
