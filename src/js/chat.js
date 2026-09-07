@@ -4,18 +4,21 @@ function updateBdg(){
   $('chatbdg').style.display=n?'flex':'none';$('chatbdg').textContent=n;
 }
 function renderRooms(){
-  if(!S.joined.length){
-    $('roomlist').innerHTML='<div class="empty"><i>🌘</i>아직 참여한 모임이 없어요.<br>매칭 탭에서 마음에 드는 모임에 참가해 보세요.</div>';return;
+  const n=S.joined.length; $('roomcount').textContent=n?n+'개':'';
+  if(!n){
+    $('roomlist').innerHTML='<div class="empty"><i>🌘</i><b>아직 참여한 모임이 없어요</b>매칭 탭에서 마음에 드는 모임에 참가하면<br>여기서 익명으로 대화가 시작돼요.'
+      +'<button class="cta sm" onclick="go(\'match\')">모임 둘러보기</button></div>';return;
   }
   $('roomlist').innerHTML=S.joined.map(id=>{
     const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id];
     if(!m||!r)return '';
     const last=r.msgs.length?r.msgs[r.msgs.length-1]:{x:r.last||'대화를 시작해 보세요',t:r.lastT||''};
-    const lastTxt=last.f==='ai'?'🌙 AI가 약속을 제안했어요':(last.x||'');
+    const isAi=last.f==='ai', lastTxt=isAi?'MoonLight AI가 약속을 제안했어요':(last.x||'');
+    const right=r.unread?'<span class="ub">'+r.unread+'</span>':r.planned?'<span class="pl">'+ico('cal')+' 약속 확정</span>':'';
     return '<button class="room" onclick="openRoom(\''+id+'\')">'
       +'<span class="av">'+esc(m.em||'🌙')+(r.iAttended?'<span class="full">🌕</span>':'')+'</span>'
       +'<span class="bd"><span class="r1"><b>'+esc(m.name)+'<small>'+roomTotal(id)+'</small></b><time>'+(last.t||'')+'</time></span>'
-      +'<span class="r2"><p>'+esc(String(lastTxt||'').slice(0,44))+'</p>'+(r.unread?'<span class="ub">'+r.unread+'</span>':'')+'</span></span></button>';
+      +'<span class="r2"><p'+(isAi?' class="ai"':'')+'>'+(isAi?'🌙 ':'')+esc(String(lastTxt||'').slice(0,44))+'</p>'+right+'</span></span></button>';
   }).join('');
 }
 
@@ -96,26 +99,40 @@ async function openRoom(id){
     subscribeRoom(id);
   }
   CUR=id; const r=S.rooms[id];
+  $('typing').style.display='none';   // 다른 방에서 돌던 입력 중 표시는 넘기지 않는다
   r.unread=0; updateBdg();
   renderMeta(id);
   renderBanner();renderMsgs();
   $('roomview').classList.add('on');
   startDueWatch();
 }
-function closeRoom(){$('roomview').classList.remove('on');CUR=null;stopDueWatch();if(BACKEND)unsubscribeRoom();renderRooms()}
+function closeRoom(){$('roomview').classList.remove('on');CUR=null;stopDueWatch();$('typing').style.display='none';if(BACKEND)unsubscribeRoom();renderRooms()}
+/* 매칭 카드의 "채팅방 열기" — 채팅 탭으로 옮기면서 그 방을 바로 연다 */
+function openJoined(id){go('chat');openRoom(id)}
+/* + 메뉴 "모임 정보" — 직접 만든 모임과 추천 모임을 구분해 안내한다 */
+function showMeetingInfo(){
+  const m=MEETINGS.find(x=>x.id===CUR); if(!m)return;
+  const meta=esc(m.region||'')+' · '+esc(m.when||'')+' · 정원 '+m.cap+'명';
+  toast('모임 정보',m.mine?'<b>내가 만든 모임</b> · '+meta:meta+' · 매칭 탭 AI 추천으로 열린 모임이에요');
+}
 function renderBanner(){
   const r=S.rooms[CUR]; if(!r)return;
   const total=roomTotal(CUR), n=r.attended.size;
   let h='';
   if(r.iAttended) h='🌕 만남 완료 '+n+'/'+total+(n>=total?' · 모두 완료! 베일이 벗겨졌어요':' · 함께 완료한 동료부터 실명으로 보여요');
-  else if(r.planned) h='📅 '+esc(r.planned.when)+' · '+esc(r.planned.place)+'<button onclick="doReveal()">만남 완료</button>';
+  else if(r.planned) h=ico('cal')+'<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.planned.when)+' · '+esc(r.planned.place)+'</span><button onclick="doReveal()">만남 완료</button>';
   $('rbanner').innerHTML=h; $('rbanner').classList.toggle('on',!!h);
 }
 function renderMsgs(){
-  const r=S.rooms[CUR];
-  $('msgs').innerHTML=r.msgs.map((m,i)=>{
+  const r=S.rooms[CUR], ms=r.msgs;
+  const who=m=>(m.f==='sys'||m.f==='ai')?null:m.f;   // 묶음 기준 발신자 (시스템·AI 카드는 묶지 않는다)
+  $('msgs').innerHTML=ms.map((m,i)=>{
+    const prev=ms[i-1], next=ms[i+1];
+    const cont=!!(prev&&who(m)&&who(prev)===who(m));   // 같은 사람의 연속 메시지 — 아바타·이름을 생략한다
+    const tail=!(next&&who(m)&&who(next)===who(m));    // 묶음의 마지막에만 시간을 붙인다
+    const tm=tail&&m.t?'<time>'+esc(m.t)+'</time>':'';
     if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+esc(m.x)+'</div></div>';   // 닉네임·LLM 텍스트가 섞이므로 반드시 이스케이프
-    if(m.f==='me')return '<div class="msg me"><div><div class="bub">'+esc(m.x)+'</div></div></div>';
+    if(m.f==='me')return '<div class="msg me'+(cont?' cont':'')+'"><div><div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
     if(m.f==='ai'){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
       const unanimous=votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
@@ -126,8 +143,8 @@ function renderMsgs(){
         ? '<div class="cands"><b>후보지 · 실제 장소 검색 결과 '+p.cands.length+'곳</b>'
           +planMapHtml(m.planId,p.cands)+candListHtml(m.planId,p.cands,done)+note+'</div>'
         : (note?'<div class="cands">'+note+'</div>':'');
-      return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
-        +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
+      return '<div class="msg aimsg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
+        +'<div class="bub plan"><h4>'+ico('spark')+'AI 추천 약속</h4>'
         +'<div class="row"><i>📍</i><span><b>'+esc(p.place)+'</b></span></div>'
         +'<div class="row"><i>🕖</i><span>'+esc(p.when)+'</span></div>'
         +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
@@ -140,7 +157,7 @@ function renderMsgs(){
         +'</div></div></div>';
     }
     const p=PEOPLE[m.f]||UNKNOWN;
-    return '<div class="msg"><div class="mav">'+esc(p.av||'🌙')+'</div><div><div class="who">'+label(m.f,r)+'</div><div class="bub">'+esc(m.x)+'</div></div></div>';
+    return '<div class="msg'+(cont?' cont':'')+'"><div class="mav">'+esc(p.av||'🌙')+'</div><div>'+(cont?'':'<div class="who">'+label(m.f,r)+'</div>')+'<div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
   }).join('');
   mountPlanMaps();   // 새로 그려진 지도 컨테이너에 카카오맵을 붙인다 (placeholder 모드에서는 아무 일도 하지 않는다)
   $('msgs').scrollTop=$('msgs').scrollHeight;
@@ -185,6 +202,10 @@ async function aiPlan(){
   if(r.msgs.some(m=>m.f==='ai')){toast('AI 약속','이미 이 방에 추천 약속이 있어요');return}
   $('typing').style.display='block';$('typing').textContent='MoonLight AI가 대화를 읽고 있어요…';
   if(BACKEND){
+    // 무료 모델은 20~30초 걸릴 수 있다 — 단계별로 기다림을 설명하고, 방을 떠나 있어도 도착을 알린다
+    const mm=MEETINGS.find(x=>x.id===id)||{name:'모임'};
+    const t1=setTimeout(()=>{if(CUR===id)$('typing').textContent='실제 장소를 검색해 후보를 고르는 중이에요 · 조금만요'},8000);
+    const t2=setTimeout(()=>{if(CUR===id)$('typing').textContent='AI 응답이 늦어지고 있어요 · 다른 탭을 봐도 도착하면 알려 드려요'},20000);
     try{
       const d=await callFn('suggest-meeting-plan',{meeting_id:id});
       const pl=d.plan||{};
@@ -193,8 +214,9 @@ async function aiPlan(){
       else if(d.search&&d.search.status==='ok')toast('후보지 검증','실제 장소 '+((pl.candidates||[]).length)+'곳을 찾아 지도에 표시했어요');
       else if(d.search&&d.search.status!=='ok')toast('후보지 검색',SEARCH_TOAST[d.search.status]||'후보지를 찾지 못했어요');
       if(CUR===id){renderMsgs();renderBanner()}
+      else toast('약속 제안 도착','<b>'+esc(mm.name)+'</b> 방에 AI 추천 약속이 올라왔어요');
     }catch(e){ if(e.code!=='UNAUTHORIZED')toast('AI 약속','약속 제안에 실패했어요 · 다시 시도해 주세요') }
-    finally{$('typing').style.display='none'}
+    finally{clearTimeout(t1);clearTimeout(t2);if(CUR===id)$('typing').style.display='none'}
     return;
   }
   setTimeout(()=>{
@@ -300,7 +322,7 @@ function openAlbum(){
   if(!r.photos.length)r.photos=placeholderPhotos(m);
   $('albTitle').textContent=m.name+' 사진첩';
   $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'">'+esc(p.l)+'</div>').join('')
-    +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3)">＋ 사진 추가</button>';
+    +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3);box-shadow:none" onclick="toast(\'사진 추가\',\'사진 업로드는 발표 이후 파일럿에서 지원돼요\')">＋ 사진 추가</button>';
   $('album').classList.add('on');
 }
 function closeAlbum(){$('album').classList.remove('on')}
