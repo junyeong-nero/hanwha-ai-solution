@@ -120,15 +120,19 @@ function renderMsgs(){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
       const unanimous=votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
       const done=r.plannedId===m.planId||unanimous||auto, pct=auto?100:Math.min(100,Math.round(votes/total*100));
-      const cands=(p.cands||[]).map(c=>'<div class="cand"><a href="'+esc(safeUrl(c.url))+'" target="_blank" rel="noopener">'+esc(c.name||'')+'</a>'
-        +(c.address?'<small>'+esc(c.address)+'</small>':'')+(c.why?'<em>'+esc(c.why)+'</em>':'')+'</div>').join('');
+      // 후보지: 지도 + 목록. 목록과 Marker 선택은 selectCand 로 양방향 동기화된다
+      const note=searchNoteHtml(m.search);   // 검색 결과 없음·할당량 초과·오류 안내
+      const cands=(p.cands||[]).length
+        ? '<div class="cands"><b>후보지 · 실제 장소 검색 결과 '+p.cands.length+'곳</b>'
+          +planMapHtml(m.planId,p.cands)+candListHtml(m.planId,p.cands,done)+note+'</div>'
+        : (note?'<div class="cands">'+note+'</div>':'');
       return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
         +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
         +'<div class="row"><i>📍</i><span><b>'+esc(p.place)+'</b></span></div>'
         +'<div class="row"><i>🕖</i><span>'+esc(p.when)+'</span></div>'
         +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
         +'<div class="row"><i>🍜</i><span>'+esc(p.food)+'</span></div>'
-        +(cands?'<div class="cands"><b>후보지 · 웹 검색 결과</b>'+cands+'</div>':'')
+        +cands
         +'<div class="vote"><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div>'
         +'<div class="lb"><span>'+(auto?'<b>시간 지나 자동 확정 🌕</b>':done?'<b>전원 확정 🌕</b>':'확정 <b>'+votes+'</b> / '+total+'명')+'</span>'
         +'<span>'+(auto?'약속 시간이 지났어요':done?'약속이 잡혔어요':'모두 누르면 확정돼요')+'</span></div></div>'
@@ -138,6 +142,7 @@ function renderMsgs(){
     const p=PEOPLE[m.f]||UNKNOWN;
     return '<div class="msg"><div class="mav">'+esc(p.av||'🌙')+'</div><div><div class="who">'+label(m.f,r)+'</div><div class="bub">'+esc(m.x)+'</div></div></div>';
   }).join('');
+  mountPlanMaps();   // 새로 그려진 지도 컨테이너에 카카오맵을 붙인다 (placeholder 모드에서는 아무 일도 하지 않는다)
   $('msgs').scrollTop=$('msgs').scrollHeight;
 }
 async function sendMsg(){
@@ -183,9 +188,10 @@ async function aiPlan(){
     try{
       const d=await callFn('suggest-meeting-plan',{meeting_id:id});
       const pl=d.plan||{};
-      applyPlan(r,{id:pl.id,place:pl.place,time_label:pl.time,meet_at:pl.meet_at||null,activity:pl.activity,nearby:pl.nearby||[],candidates:pl.candidates||[],confirmed:false,source:d.fallback?'fallback':'llm',created_at:new Date().toISOString()});
+      applyPlan(r,{id:pl.id,place:pl.place,time_label:pl.time,meet_at:pl.meet_at||null,activity:pl.activity,nearby:pl.nearby||[],candidates:pl.candidates||[],selected_place:pl.selected_place||null,confirmed:false,source:d.fallback?'fallback':'llm',created_at:new Date().toISOString()},d.search);
       if(d.fallback)toast('기본 제안','AI 응답이 지연되어 기본 약속안을 보여드려요');
-      else if(d.search_used&&d.search_used!=='none')toast('후보지 검색','실제 장소 '+((pl.candidates||[]).length)+'곳을 웹에서 찾았어요');
+      else if(d.search&&d.search.status==='ok')toast('후보지 검증','실제 장소 '+((pl.candidates||[]).length)+'곳을 찾아 지도에 표시했어요');
+      else if(d.search&&d.search.status!=='ok')toast('후보지 검색',SEARCH_TOAST[d.search.status]||'후보지를 찾지 못했어요');
       if(CUR===id){renderMsgs();renderBanner()}
     }catch(e){ if(e.code!=='UNAUTHORIZED')toast('AI 약속','약속 제안에 실패했어요 · 다시 시도해 주세요') }
     finally{$('typing').style.display='none'}
@@ -196,7 +202,10 @@ async function aiPlan(){
     r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     const mm=MEETINGS.find(x=>x.id===id)||{region:'',when:'',tags:[]};
     const base=PLANS[id]||{place:(mm.region||'근처')+' 만남의 장소',when:mm.when||'시간 미정',act:((mm.tags||[])[0]||'모임')+' 함께하기',food:'근처 카페 한 곳'};   // 직접 만든 모임용 기본 약속
-    const msg={f:'ai',plan:Object.assign({},base,{cands:PLAN_CANDS[id]||[],meetAt:new Date(Date.now()+(base.inH||0)*3600000).toISOString()}),planId:'local-'+id,t:nowT()};
+    // 로컬 데모: 고정된 mock 장소를 후보지로 쓴다. 후보가 없는 모임(직접 만든 모임)은 "검색 결과 없음" 안내를 보여 준다
+    const cands=PLAN_CANDS[id]||[];
+    const msg={f:'ai',plan:Object.assign({},base,{cands,meetAt:new Date(Date.now()+(base.inH||0)*3600000).toISOString()}),planId:'local-'+id,t:nowT(),
+      search:cands.length?{provider:'demo',status:'ok',alternatives:[]}:{provider:'demo',status:'empty',alternatives:[(mm.region||'회사')+' 카페',(mm.region||'회사')+' 맛집']}};
     r.msgs.push(msg);
     checkPlanDone(id,msg);   // 이미 지난 약속이면 투표 없이 바로 확정된다
     if(CUR===id){renderMsgs();renderBanner()}

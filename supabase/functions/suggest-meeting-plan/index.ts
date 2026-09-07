@@ -1,12 +1,21 @@
-// suggest-meeting-plan — 웹 검색으로 실제 후보지를 찾고, 최근 대화를 익명화해 OpenRouter LLM 에 보내 약속 카드를 만든다.
+// suggest-meeting-plan — 카카오 장소 검색으로 실제 후보지를 찾고, 최근 대화를 익명화해 OpenRouter LLM 에 보내 약속 카드를 만든다.
 // 요청: POST { meeting_id }  (Authorization: Bearer <세션 JWT>)
-// 응답: 200 { plan: { id, place, time, meet_at, activity, nearby, candidates }, fallback, search_used } / 403 NOT_MEMBER
+// 응답: 200 { plan: { id, place, time, meet_at, activity, nearby, candidates }, fallback, search_used, search } / 403 NOT_MEMBER
 // meet_at: 약속 시각(KST ISO 8601) 또는 null — 시간이 지나면 settle_due_plans 가 이 값을 보고 자동 확정한다
-// search_used: 'kakao' | 'openrouter' | 'none' — 후보지를 어떤 검색으로 찾았는지
+// search_used: 'kakao' | 'openrouter' | 'none' — 후보지를 어떤 검색으로 찾았는지 (하위 호환)
+// search: { provider, status, queries, alternatives } — 검색 결과 없음·할당량 초과·오류를 화면에서 구분하기 위한 정보
+// LLM 이 지어낸 장소는 verifyPlan 이 검색 결과와 대조해 걸러 낸다 — 후보지는 실재하는 장소만 남는다.
 import { preflight, json, fail, errorResponse, readJsonBody, isUuid } from '../_shared/cors.ts';
 import { requireUser, serviceClient } from '../_shared/supabase.ts';
 import { chatJson, LlmError } from '../_shared/llm.ts';
-import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan, type PlanSuggestion } from '../_shared/chat.ts';
+import {
+  anonymizeMessages,
+  buildPlanPrompt,
+  parsePlan,
+  fallbackPlan,
+  verifyPlan,
+  type PlanSuggestion,
+} from '../_shared/chat.ts';
 import { searchPlaces } from '../_shared/search.ts';
 
 const FN = 'suggest-meeting-plan';
@@ -76,8 +85,9 @@ Deno.serve(async (req) => {
     const model = Deno.env.get('OPENROUTER_MODEL') ?? 'openrouter/free';
     const apiKey = Deno.env.get('OPENROUTER_API_KEY') ?? '';
 
-    // 3. 웹 검색으로 실제 후보지 리스트업 — 태그를 키워드로, 첫 태그를 활동 힌트로 쓴다.
-    //    검색 실패는 약속 추천을 막지 않는다 (provider 'none', 빈 목록).
+    // 3. 실제 장소 검색으로 후보지 리스트업 — 태그를 키워드로, 첫 태그를 활동 힌트로 쓴다.
+    //    카카오 REST 키(서버 전용)가 있으면 카카오 로컬 검색, 없으면 OpenRouter 웹 검색으로 넘어간다.
+    //    검색 실패는 약속 추천을 막지 않는다 (빈 목록 + status 로 이유 전달).
     const activityHint = meetingForPrompt.tags[0] ? `${meetingForPrompt.tags[0]} 모임` : '모임 장소';
     const keywords = [...new Set([...meetingForPrompt.tags, activityHint])];
     const search = await searchPlaces({
@@ -109,9 +119,10 @@ Deno.serve(async (req) => {
     }
 
     const fallback = plan === null;
-    const finalPlan = plan ?? fallbackPlan(meetingForPrompt, places, now);
+    // 5. LLM 텍스트를 그대로 확정하지 않는다 — 검색 결과와 대조해 실재하는 장소만 후보로 남긴다
+    const finalPlan = verifyPlan(plan ?? fallbackPlan(meetingForPrompt, places, now), places);
 
-    // 5. 저장 후 계약 형태로 반환 (time ↔ time_label 매핑, candidates 는 jsonb, meet_at 은 자동 확정용 시각)
+    // 6. 저장 후 계약 형태로 반환 (time ↔ time_label 매핑, candidates 는 jsonb, meet_at 은 자동 확정용 시각)
     const { data: inserted, error: insertError } = await svc
       .from('meeting_plans')
       .insert({
@@ -125,11 +136,11 @@ Deno.serve(async (req) => {
         candidates: finalPlan.candidates,
         source: fallback ? 'fallback' : 'llm',
       })
-      .select('id, place, time_label, meet_at, activity, nearby, candidates')
+      .select('id, place, time_label, meet_at, activity, nearby, candidates, selected_place')
       .single();
     if (insertError || !inserted) throw insertError ?? new Error('약속 저장 실패');
 
-    // 6. 메타데이터만 기록 (대화 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
+    // 7. 메타데이터만 기록 (대화 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
     const { error: logError } = await svc.from('ai_recommendation_runs').insert({
       user_id: user.id,
       function_name: FN,
@@ -151,9 +162,16 @@ Deno.serve(async (req) => {
         activity: inserted.activity,
         nearby: Array.isArray(inserted.nearby) ? inserted.nearby : [],
         candidates: Array.isArray(inserted.candidates) ? inserted.candidates : [],
+        selected_place: inserted.selected_place ?? null,
       },
       fallback,
       search_used: search.provider,
+      search: {
+        provider: search.provider,
+        status: search.status,
+        queries: search.queries,
+        alternatives: search.alternatives,
+      },
     });
   } catch (err) {
     return errorResponse(err, FN);

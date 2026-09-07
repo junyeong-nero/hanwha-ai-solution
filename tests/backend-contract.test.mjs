@@ -21,7 +21,7 @@ test('환경 예시는 공개 키와 함수 설정을 구분한다', () => {
 });
 
 test('이중 모드: CONFIG에는 URL과 anon 키만 들어가고, 키가 있으면 role 이 anon 이어야 한다', () => {
-  const m = html.match(/const CONFIG=\{SUPABASE_URL:'([^']*)',SUPABASE_ANON_KEY:'([^']*)',DEMO_MODE:(true|false)\}/);
+  const m = html.match(/const CONFIG=\{SUPABASE_URL:'([^']*)',SUPABASE_ANON_KEY:'([^']*)',KAKAO_JS_KEY:'([^']*)',DEMO_MODE:(true|false)\}/);
   assert.ok(m, 'CONFIG 블록 형식');
   const [, url, key] = m;
   if (url || key) {
@@ -134,6 +134,18 @@ test('약속 확정은 투표이며 전원이 눌러야 확정된다', () => {
   assert.match(html, /table:'meeting_plan_votes'/);
   assert.match(html, /전원 확정/);
   assert.doesNotMatch(html, /from\('meeting_plans'\)\.update\(\{confirmed:true\}\)/);
+});
+
+test('#34 후보 장소 선택은 RPC 로만 저장되고 Realtime 으로 방 전체에 맞춰진다', () => {
+  // 브라우저는 meeting_plans 를 직접 수정하지 않는다 (컬럼 권한상 confirmed 외에는 막혀 있다)
+  assert.match(html, /sb\.rpc\('select_plan_place',\{p_plan_id:planId,p_place_id:c\.id\|\|null,p_name:c\.name\|\|null\}\)/);
+  assert.doesNotMatch(html, /from\('meeting_plans'\)\.update\(/);
+  // 다른 멤버가 고른 장소(selected_place)를 내 선택 상태에 반영한다
+  assert.match(html, /selected:pl\.selected_place\|\|null/);
+  assert.match(html, /if\(plan\.selected\)\{/);
+  assert.match(html, /PLACE_SEL\[pl\.id\]=i/);
+  // 지도는 메시지를 다시 그린 뒤 붙인다
+  assert.match(html, /mountPlanMaps\(\);/);
 });
 
 test('약속 시간이 지나면 투표 없이도 자동 확정된다', () => {
@@ -324,7 +336,8 @@ test('사용자·LLM 유래 문자열은 모두 esc 를 거친다 (emoji·avatar
   assert.ok(html.includes("esc(x.av||'🌙')"), '멤버 시트 아바타');
   assert.ok(html.includes('esc(PEOPLE[pid].real)'));
   assert.ok(html.includes("'+esc(p.l)+'"), '사진첩 라벨');
-  assert.ok(html.includes("esc(safeUrl(c.url))"), '후보지 링크는 safeUrl');
+  assert.ok(html.includes('const on=i===selIdx(planId), url=safeUrl(c.url)'), '후보지 링크는 safeUrl');
+  assert.ok(html.includes('href="\'+esc(url)+\'"'), '후보지 링크도 esc');
   assert.ok(!html.includes("+p.av+'"), '이스케이프 없는 아바타 삽입 없음');
   assert.ok(!html.includes("+m.em+"), '이스케이프 없는 emoji 삽입 없음');
 });

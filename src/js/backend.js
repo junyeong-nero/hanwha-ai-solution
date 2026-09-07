@@ -33,6 +33,7 @@ function clearBackendState(){
   MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
   S.joined=[]; S.rooms={}; S.dirty=false;
   if(typeof resetHomeGraph==='function')resetHomeGraph();   // 홈 그래프도 사용자별로 초기화
+  if(typeof resetPlanMaps==='function')resetPlanMaps();     // 후보 장소 선택·지도도 사용자별로 초기화
   R.rec=null; R.recLoading=false; R.recDirty=true; R.seen.clear();
   if(typeof CUR!=='undefined')CUR=null;
   $('roomview').classList.remove('on');$('album').classList.remove('on');$('satview').classList.remove('on');
@@ -205,15 +206,22 @@ function pushMsg(r,x){
   if(!x||R.seen.has(x.id))return false; R.seen.add(x.id);
   r.msgs.push({id:x.id,f:x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at)}); return true;
 }
-function applyPlan(r,pl){
+function applyPlan(r,pl,search){
   if(!pl||!pl.id)return;
-  const plan={place:pl.place||'',when:pl.time_label||'',meetAt:pl.meet_at||null,act:pl.activity||'',food:(pl.nearby||[]).join(' · '),cands:Array.isArray(pl.candidates)?pl.candidates:[]};
+  const plan={place:pl.place||'',when:pl.time_label||'',meetAt:pl.meet_at||null,act:pl.activity||'',food:(pl.nearby||[]).join(' · '),
+    cands:Array.isArray(pl.candidates)?pl.candidates:[],selected:pl.selected_place||null};
   let msg=r.msgs.find(m=>m.f==='ai'&&m.planId===pl.id);
   if(!msg){
     if(!r.msgs.some(m=>m.f==='ai'))r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     msg={f:'ai',plan,planId:pl.id,t:fmtT(pl.created_at)||nowT()}; r.msgs.push(msg);
   }
   msg.plan=plan; msg.source=pl.source;
+  if(search)msg.search=search;   // 검색 상태는 추천 응답에서만 오고, Realtime 갱신 때는 이전 값을 유지한다
+  // 다른 멤버가 고른 장소를 내 화면의 선택 상태에도 맞춘다 (Realtime 양방향 동기화)
+  if(plan.selected){
+    const i=plan.cands.findIndex(c=>c&&((plan.selected.id&&c.id===plan.selected.id)||c.name===plan.selected.name));
+    if(i>=0)PLACE_SEL[pl.id]=i;
+  }
   // 서버가 전원 투표(vote) 또는 약속 시간 경과(due) 로 confirmed 를 켠다.
   // 서버 정리가 아직 안 돌았어도 meet_at 이 지났으면 화면에서는 먼저 확정으로 본다.
   const due=planDue(plan);

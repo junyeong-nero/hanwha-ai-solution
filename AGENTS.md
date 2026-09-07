@@ -40,7 +40,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ├── src/                    ← 프로토타입 본체 (빌드 없음, 이중 모드)
 │   ├── index.html          ← 마크업 + <link>·<script> 로드 순서
 │   ├── styles.css          ← 전체 스타일
-│   └── js/                 ← config → app → home/match/chat/profile → backend → boot
+│   └── js/                 ← config → app → home/match/chat/profile → map → backend → boot
 ├── supabase/
 │   ├── config.toml, seed.sql
 │   ├── migrations/         ← 스키마·RLS·RPC
@@ -53,12 +53,12 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ### 아키텍처 — 이중 모드
 - **빌드 도구 없음** — `src/index.html`(마크업) · `src/styles.css` · `src/js/*.js` 로 나뉘어 있고, 브라우저가 `<link>`·`<script>`로 그대로 읽는다 (폰트만 `../assets/fonts/` 상대 경로 참조)
 - **JS는 ES 모듈이 아니라 일반 스크립트** — 전역 스코프를 공유하므로 `import`/`export` 없이 파일 간 함수·상수를 그냥 쓰고, 마크업의 인라인 `onclick`도 그대로 유효하다. `file://` 로 열어도 동작하는 이유이기도 하니 `type="module"` 로 바꾸지 말 것
-- **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `backend.js` → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
-- 화면별 파일 배치: 모임 만들기는 `match.js`, 만남 평가는 `chat.js` 에 있다
+- **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `map.js`(후보 장소 지도) → `backend.js` → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
+- 화면별 파일 배치: 모임 만들기는 `match.js`, 만남 평가는 `chat.js`, 약속 카드의 후보지 지도·선택은 `map.js` 에 있다
 - **로컬 데모 모드(기본):** `src/js/config.js` 상단 `CONFIG.SUPABASE_URL`이 비어 있으면 외부 네트워크 요청 없이 하드코딩 데이터(`COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS`)와 전역 `S` 객체만으로 동작. 새로고침 시 초기화
 - **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 서버 로직을 맡는다. **모임 추천(`recommend-meetings`)은 LLM 없이 규칙 엔진(`_shared/recommendation.ts`)으로 즉시 채점**하고, OpenRouter LLM 호출은 약속 추천(`suggest-meeting-plan`)에만 남아 있다. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
 - 두 모드 모두에서 기존 함수 이름(`joinMeet`, `sendMsg`, `openRoom`, `aiPlan`, `confirmPlan`, `doReveal`)을 유지하고 `BACKEND` 플래그로만 분기
-- 브라우저에는 anon 키만. secret key·OpenRouter 키가 `src/` 에 들어가면 `tests/backend-contract.test.mjs`가 실패함
+- 브라우저에는 anon 키와 카카오맵 **JavaScript 키**(공개용·도메인 제한)만. secret key·OpenRouter 키·카카오 **REST 키**가 `src/` 에 들어가면 `tests/backend-contract.test.mjs` · `tests/plan-map.test.mjs` 가 실패함. 장소 검색은 서버(Edge Function)가 REST 키로만 한다
 - 화면 전환은 섹션 show/hide 방식 (SPA 라우터 없음)
 - Edge Function `_shared/` 순수 모듈은 `Deno` 전역을 쓰지 않으며, 이 저장소의 테스트 실행 요건인 Node 24 이상에서 그대로 테스트됨 (`npm test`).
 
@@ -100,6 +100,7 @@ npm test
 - `responsive-ui.test.mjs` — 반응형 CSS 구조
 - `backend-contract.test.mjs` — 비밀 키 미노출, 이중 모드·입장 화면·Realtime 호출 계약
 - `edge-functions.test.mjs` — 마이그레이션 스키마 검사, `_shared/` 순수 함수(입장 코드·추천 규칙 엔진·LLM 파서·익명화)
+- `plan-map.test.mjs` — 약속 카드의 후보 장소 지도. `map.js` 를 브라우저와 같은 전역에서 실행해 좌표 배치(`pinLayout`)·목록↔Marker 선택 동기화·검색 실패 안내·키 분리를 검사한다
 - `home-graph.test.mjs` — 홈 관계 그래프. `helpers/app-context.mjs` 가 `config.js`·`home.js` 를 브라우저와 같은 전역에서 실행해 실제 행성 좌표(겹침·화면 밖·재렌더 안정성)를 검사한다
 
 `src/` 를 검사하는 테스트는 `tests/helpers/source.mjs` 가 `index.html` 의 `<link>`·`<script src>` 를 실제 파일 내용으로 인라인해 만든 단일 문자열(`html`)을 씁니다. `src/` 에 CSS·JS 파일을 새로 추가하면 index.html 에 태그만 걸어 두면 되고, 테스트 쪽은 따로 손댈 필요가 없습니다.
