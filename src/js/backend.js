@@ -235,17 +235,23 @@ async function markRoomRead(id){
 /* AI 매칭 (recommend-meetings Edge Function) */
 async function loadRecommendations(){
   if(R.recLoading)return;
-  if(R.rec&&!R.recDirty){renderMatchCards(R.rec.list,R.rec.note);return}
+  if(R.rec&&!R.recDirty&&Date.now()-R.rec.loadedAt<60000){renderMatchCards(R.rec.list,R.rec.note);return}
+  const epoch=backendEpoch;
+  const signature=()=>JSON.stringify([savedProfile(),S.joined,Object.keys(S.met).sort()]);
+  const requested=signature();
+  let reload=false;
   R.recLoading=true;
   $('matchnote').innerHTML='';
   // 스켈레톤 카드 — 응답을 기다리는 동안 레이아웃이 튀지 않게 한다
   $('meets').innerHTML='<p class="hint" id="rechint" role="status">모임을 불러오는 중…</p>'
     +[1,2].map(()=>'<div class="card skcard"><div class="r"><div class="sk" style="width:52px;height:52px;border-radius:16px"></div><div style="flex:1"><div class="sk" style="height:16px;width:70%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:45%"></div></div></div><div class="sk" style="height:58px;border-radius:14px;margin-bottom:12px"></div><div class="sk" style="height:48px;border-radius:16px"></div></div>').join('');
   // 응답이 늦어질 때 기다림을 설명한다 (콜드 스타트 · 서버 지연)
-  const h1=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='모임을 불러오는 데 시간이 걸리고 있어요.'},8000);
-  const h2=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='연결이 지연되고 있어요. 잠시만 기다려 주세요.'},20000);
+  const h1=setTimeout(()=>{if(epoch!==backendEpoch)return;const e=$('rechint');if(e)e.textContent='모임을 불러오는 데 시간이 걸리고 있어요.'},8000);
+  const h2=setTimeout(()=>{if(epoch!==backendEpoch)return;const e=$('rechint');if(e)e.textContent='연결이 지연되고 있어요. 잠시만 기다려 주세요.'},20000);
   try{
     const d=await callFn('recommend-meetings',{});
+    if(epoch!==backendEpoch)return;
+    if(requested!==signature()){R.recDirty=true;reload=true;return}
     const byId={};
     (d.candidates||[]).forEach(c=>{
       byId[c.id]=ensureMeeting(c.id,{em:c.emoji||'🌙',name:c.title,region:c.region,when:c.when_label,cap:c.capacity,tags:c.tags||[],
@@ -255,15 +261,24 @@ async function loadRecommendations(){
     const list=[];
     (d.recommendations||[]).forEach(rc=>{
       const m=byId[rc.meeting_id]; if(!m||list.includes(m))return;
+      m.ai=esc(rc.reason||'');
       list.push(m);
     });
     Object.values(byId).forEach(m=>{if(!list.includes(m))list.push(m)});
     const note=d.fallback?'기본 순서로 모임을 보여드려요.':'';
-    R.rec={list,note,model:d.model}; R.recDirty=false;
+    R.rec={list,note,model:d.model,loadedAt:Date.now()}; R.recDirty=false;
     renderMatchCards(list,note);
   }catch(e){
+    if(epoch!==backendEpoch)return;
+    if(requested!==signature()){R.recDirty=true;reload=true;return}
     $('meets').innerHTML='<div class="empty"><i>'+ico('users')+'</i><b>모임을 불러오지 못했어요</b>연결을 확인하고 다시 시도해 주세요.<button class="cta line sm" onclick="R.recDirty=true;loadRecommendations()">다시 시도</button></div>';
-  }finally{clearTimeout(h1);clearTimeout(h2);R.recLoading=false}
+  }finally{
+    clearTimeout(h1);clearTimeout(h2);
+    if(epoch===backendEpoch){
+      R.recLoading=false;
+      if(reload&&S.tab==='match')void loadRecommendations();
+    }
+  }
 }
 /* 채팅방 로드 · Realtime */
 function upsertMember(p){ if(p.user_id===ME)return; PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙',ints:Array.isArray(p.interests)?p.interests:[]} }

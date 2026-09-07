@@ -1,11 +1,13 @@
-// recommend-meetings — 익명 프로필과 후보 모임을 규칙 엔진으로 채점해 순위·이유를 돌려준다.
-// 외부 LLM 을 호출하지 않으므로 응답이 즉시 나오고, 같은 입력이면 항상 같은 순서가 나온다.
+// recommend-meetings — 익명 프로필과 규칙 후보를 GPT에 전달해 순위·이유를 돌려준다.
+// GPT 응답 검증·시간 제한·캐시를 적용하고, 실패하면 기존 규칙 순서로 대체한다.
 // 후보는 선호 지역(profiles.regions) 안의 열린 모임으로 서버가 먼저 거른다 (하드 제약).
 // 요청: POST {}  (Authorization: Bearer <세션 JWT>)
 // 응답: 200 { recommendations, candidates, model, fallback, regions } / 401 UNAUTHORIZED·NO_PROFILE
 import { preflight, json, fail, errorResponse } from '../_shared/cors.ts';
 import { requireUser, serviceClient } from '../_shared/supabase.ts';
-import { ageBand, rankByRules, RULE_ENGINE_MODEL } from '../_shared/recommendation.ts';
+import { ageBand, RULE_ENGINE_MODEL } from '../_shared/recommendation.ts';
+import { tokenUsage } from '../_shared/openai.ts';
+import { recommendWithAI } from '../_shared/ai-matching.ts';
 
 const FN = 'recommend-meetings';
 
@@ -164,8 +166,12 @@ Deno.serve(async (req) => {
       return json({ recommendations: [], candidates: [], model: RULE_ENGINE_MODEL, fallback: false, regions: regionsUsed });
     }
 
-    // 5. 규칙 엔진 채점 — 순위와 같은 순서로 후보 목록도 정렬해 돌려준다
-    const recommendations = rankByRules(ruleProfile, candidates);
+    // 5. GPT 재정렬 — 오류 시 규칙 순서를 반환하고 후보도 같은 순서로 정렬한다
+    const result = await recommendWithAI({
+      profile: ruleProfile, candidates, userId: user.id,
+      apiKey: Deno.env.get('OPENAI_API_KEY') ?? '',
+    });
+    const { recommendations } = result;
     const rankById = new Map(recommendations.map((r) => [r.meeting_id, r.rank]));
     candidates.sort((a, b) => (rankById.get(a.id) ?? Infinity) - (rankById.get(b.id) ?? Infinity));
 
@@ -173,16 +179,17 @@ Deno.serve(async (req) => {
     const { error: logError } = await svc.from('ai_recommendation_runs').insert({
       user_id: user.id,
       function_name: FN,
-      model: RULE_ENGINE_MODEL,
+      model: result.model,
       meeting_ids: recommendations.map((r) => r.meeting_id),
-      success: true,
-      fallback: false,
+      success: !result.fallback,
+      fallback: result.fallback,
       latency_ms: Date.now() - started,
-      error_type: null,
+      error_type: result.error_type,
     });
     if (logError) console.error(`[${FN}] 실행 기록 저장 실패: ${logError.code ?? 'unknown'}`);
+    console.info(JSON.stringify({ function_name: FN, ...tokenUsage(result.usage), latency_ms: Date.now() - started }));
 
-    return json({ recommendations, candidates, model: RULE_ENGINE_MODEL, fallback: false, regions: regionsUsed });
+    return json({ recommendations, candidates, model: result.model, fallback: result.fallback, cached: result.cached, regions: regionsUsed });
   } catch (err) {
     return errorResponse(err, FN);
   }
