@@ -5,6 +5,8 @@ AI가 프로필에 맞는 소모임을 추천하고, 익명 채팅에서 시작�
 
 **데모:** [junyeong-nero.github.io/hanwha-ai-solution/src/](https://junyeong-nero.github.io/hanwha-ai-solution/src/) · 휴대폰 화면(375×812) 기준으로 설계했습니다.
 
+**소개 영상:** [1분 54초 자막 시연 영상과 재생 안내](outputs/demo-video/README.md) · TTS 없이 화면 설명과 배경음으로 핵심 흐름을 소개합니다.
+
 ## 무엇을 푸는가
 
 회사에는 사람이 많지만 만나는 사람은 늘 비슷합니다. 부족한 것은 사람이 아니라 **서로를 알 수 있는 접점과 만나고 싶은 이유**입니다. 그래서 만남을 지정하는 대신, 관심사·생활권·관계 성향을 해석해 "이 모임이 왜 나에게 맞는지"를 설명하는 쪽을 택했습니다. 문제 정의와 데이터 근거는 [docs/introduction.md](docs/introduction.md)에 있습니다.
