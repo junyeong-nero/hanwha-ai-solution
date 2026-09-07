@@ -676,3 +676,22 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .av-slot[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--orange)}
 .av-slot:focus-visible{outline:2px solid var(--tx);outline-offset:1px}
 #avcandidates .cta{margin:8px 0}#avstatus{color:var(--orange-soft);font-size:13px;min-height:24px}
+
+/* 첫 프로필 설정과 다시 볼 수 있는 사용 가이드 */
+.guide-entry{margin-bottom:14px}
+.profile-guide,.usage-guide,.profile-next{margin-bottom:14px}
+.profile-guide h2{font-size:19px;line-height:1.45;margin:12px 0 8px}
+.profile-guide p,.usage-guide p{font-size:13px;color:var(--tx2);line-height:1.65}
+.setup-steps{list-style:none;padding:0;margin:12px 0 0}
+.setup-steps li+li{border-top:1px solid var(--hair)}
+.setup-steps button{display:block;width:100%;min-height:44px;text-align:left;padding:12px 0}
+.setup-steps b,.setup-steps span{display:block}
+.setup-steps b,.usage-steps b{font-size:14px;color:var(--tx)}
+.setup-steps span{margin-top:4px;font-size:13px;line-height:1.6;color:var(--tx2)}
+.usage-guide summary{min-height:44px;align-content:center;cursor:pointer;font-size:14px;font-weight:700;line-height:1.6}
+.usage-steps{padding-left:22px;margin:12px 0}
+.usage-steps li{padding:8px 0 8px 4px;color:var(--orange)}
+.usage-steps p{margin-top:6px}
+.profile-next>b{font-size:14px;line-height:1.6}
+.profile-next .hint{margin:8px 0 12px}
+.setup-steps button:focus-visible,.usage-guide summary:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:var(--r-s)}
