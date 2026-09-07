@@ -50,21 +50,19 @@ function renderMatchCards(list,note){
     const joined=S.joined.includes(m.id), shown=joined?roomTotal(m.id):others;
     const avs=(m.members||[]).slice(0,4).map(pid=>'<span>'+esc((PEOPLE[pid]||{}).av||'🌙')+'</span>').join('')
       +(others>4?'<span class="more">+'+(others-4)+'</span>':'');
-    const hit=m.tags.filter(t=>mineSet.has(t)).length;   // 내 관심사·취미와 겹치는 태그 수
-    const badge=m.mine?'<span class="badge or">내 모임</span>':joined?'<span class="badge ok">'+ico('check')+'참가 중</span>':hit?'<span class="badge or">'+ico('spark')+'취향 '+hit+'개 일치</span>':'';
+    const badge=m.mine?'<span class="badge">내 모임</span>':'';
     return '<div class="card meet'+(joined?' joined':'')+'">'
       +'<div class="hd"><div class="em">'+esc(m.em||'🌙')+'</div><div style="flex:1;min-width:0">'
       +'<h3>'+esc(m.name)+'</h3>'
       +'<div class="meta"><span>'+ico('pin')+esc(m.region)+'</span><span>'+ico('clock')+esc(m.when)+'</span><span>'+ico('users')+shown+'/'+m.cap+'명</span></div>'
       +'</div>'+badge+'</div>'
       +'<div class="tags">'+m.tags.map(t=>'<span class="tag'+(mineSet.has(t)?' or':'')+'">#'+esc(t)+'</span>').join('')+'</div>'
-      +'<div class="ai"><span class="mi">🌙</span><div><span class="lb">MoonLight AI 추천 이유</span>'+m.ai+'</div></div>'
       +'<div class="ft"><div class="who">'+(avs?'<span class="avs">'+avs+'</span>':'')
       +'<span class="k">'+(kn?'아는 얼굴 <b>'+kn+'명</b> · 처음 보는 '+(others-kn)+'명':others?'모두 새로운 만남 · '+others+'명':'첫 멤버를 기다리는 중')+'</span></div></div>'
       +(kn?'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div><span class="lb">아는 얼굴 <b>'+ratio+'%</b></span></div>':'')
       +(joined
         ?'<button class="cta soft" onclick="openJoined(\''+m.id+'\')">'+ico('check')+'참가 중 · 채팅방 열기</button>'
-        :'<button class="cta" onclick="joinMeet(\''+m.id+'\')">참가하기</button>')
+        :'<button class="cta line" onclick="joinMeet(\''+m.id+'\')">참가하기</button>')
       +'</div>';
   }).join('');
 }
@@ -155,4 +153,3 @@ async function submitCreate(){
   }catch(e){ $('c-err').textContent='모임을 만들지 못했어요 · 다시 시도해 주세요' }
   finally{btn.disabled=false;btn.textContent='모임 만들기'}
 }
-

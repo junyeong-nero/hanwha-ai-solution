@@ -265,7 +265,7 @@ test('채팅방·사진첩·내 행성 화면은 탭 바를 덮지 않고, 탭 �
 test('장애 상황마다 한국어 안내와 다시 시도 문구가 있다', () => {
   assert.match(html, /네트워크 오류/);
   assert.match(html, /다시 시도/);
-  assert.match(html, /AI 응답이 지연되어 기본 추천을 보여드려요/);
+  assert.match(html, /기본 순서로 모임을 보여드려요/);
   assert.match(html, /AI 응답이 지연되어 기본 약속안을 보여드려요/);
   assert.match(html, /세션이 만료됐어요/);
 });

@@ -181,11 +181,11 @@ async function loadRecommendations(){
   R.recLoading=true;
   $('matchnote').innerHTML='';
   // 스켈레톤 카드 — 응답을 기다리는 동안 레이아웃이 튀지 않게 한다
-  $('meets').innerHTML='<p class="hint" id="rechint" style="margin:2px 0 12px;color:var(--orange-soft);font-weight:700">🌙 MoonLight AI가 프로필을 읽고 어울리는 모임을 고르는 중…</p>'
+  $('meets').innerHTML='<p class="hint" id="rechint" role="status">모임을 불러오는 중…</p>'
     +[1,2].map(()=>'<div class="card skcard"><div class="r"><div class="sk" style="width:52px;height:52px;border-radius:16px"></div><div style="flex:1"><div class="sk" style="height:16px;width:70%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:45%"></div></div></div><div class="sk" style="height:58px;border-radius:14px;margin-bottom:12px"></div><div class="sk" style="height:48px;border-radius:16px"></div></div>').join('');
   // 응답이 늦어질 때 기다림을 설명한다 (콜드 스타트 · 서버 지연)
-  const h1=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='🌙 관심사·지역·인원을 맞춰 보는 중이에요 · 조금만요'},8000);
-  const h2=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='☁️ 서버 응답이 늦어지고 있어요 · 곧 보여 드릴게요'},20000);
+  const h1=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='모임을 불러오는 데 시간이 걸리고 있어요.'},8000);
+  const h2=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='연결이 지연되고 있어요. 잠시만 기다려 주세요.'},20000);
   try{
     const d=await callFn('recommend-meetings',{});
     const byId={};
@@ -197,15 +197,14 @@ async function loadRecommendations(){
     const list=[];
     (d.recommendations||[]).forEach(rc=>{
       const m=byId[rc.meeting_id]; if(!m||list.includes(m))return;
-      m.ai=esc(rc.reason||'')+((rc.cautions||[]).length?' <span style="color:var(--tx3)">· '+esc(rc.cautions.join(' · '))+'</span>':'');
       list.push(m);
     });
-    Object.values(byId).forEach(m=>{if(!list.includes(m)){m.ai=m.ai||'기본 추천';list.push(m)}});
-    const note=d.fallback?'☁️ AI 응답이 지연되어 기본 추천을 보여드려요':'';
+    Object.values(byId).forEach(m=>{if(!list.includes(m))list.push(m)});
+    const note=d.fallback?'기본 순서로 모임을 보여드려요.':'';
     R.rec={list,note,model:d.model}; R.recDirty=false;
     renderMatchCards(list,note);
   }catch(e){
-    $('meets').innerHTML='<div class="empty"><i>☁️</i><b>추천을 불러오지 못했어요</b>연결을 확인하고 다시 시도해 주세요.<button class="cta line sm" onclick="R.recDirty=true;loadRecommendations()">다시 시도</button></div>';
+    $('meets').innerHTML='<div class="empty"><i>'+ico('users')+'</i><b>모임을 불러오지 못했어요</b>연결을 확인하고 다시 시도해 주세요.<button class="cta line sm" onclick="R.recDirty=true;loadRecommendations()">다시 시도</button></div>';
   }finally{clearTimeout(h1);clearTimeout(h2);R.recLoading=false}
 }
 /* 채팅방 로드 · Realtime */
@@ -307,4 +306,3 @@ async function resetDemo(){
   try{ await callFn('reset-demo',{},{'x-demo-reset-token':tok}); toast('초기화 완료','발표 데이터를 비웠어요'); setTimeout(()=>location.reload(),900); }
   catch(e){ toast('초기화 실패',e.code==='FORBIDDEN'?'토큰이 올바르지 않아요':'다시 시도해 주세요') }
 }
-
