@@ -40,11 +40,17 @@ function renderMeta(id){
   $('rmeta').textContent='멤버 '+total+' · 익명 '+anon+'명'+(r.attended.size?' · 만남 완료 '+r.attended.size+'/'+total:'');
   $('memCount').textContent=total;
   $('albBtn').style.visibility=r.iAttended?'visible':'hidden';
+  if(CUR===id&&$('memwrap').classList.contains('on'))renderMembers(id);
 }
 /* 채팅방 멤버 보기: 표시 이름 · 만남 완료 여부 */
 async function openMembers(){
   const id=CUR; if(!id)return;
   if(BACKEND)await refreshMembers(id);
+  if(CUR!==id||!S.rooms[id])return;
+  renderMembers(id);
+  $('memwrap').classList.add('on');
+}
+function renderMembers(id){
   const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id]; if(!m||!r)return;
   const P=S.profile, myCo=co(P.company);
   const rows=[{id:MYID(),av:P.av,name:P.realName||P.nick,sub:(myCo?myCo.name:'')+' · 나 ('+P.nick+')',me:true,ints:[...P.interests,...P.hobbies]}]
@@ -60,7 +66,6 @@ async function openMembers(){
   }).join('');
   const total=roomTotal(id), anon=m.members.filter(p=>!S.met[p]).length;
   $('memsum').textContent='멤버 '+total+'명 · 익명 '+anon+'명'+' · 만남 완료 '+r.attended.size+'/'+total;
-  $('memwrap').classList.add('on');
 }
 function hideMembers(){$('memwrap').classList.remove('on')}
 async function openRoom(id){
