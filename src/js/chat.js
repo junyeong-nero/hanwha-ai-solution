@@ -218,6 +218,10 @@ async function recommendPollPlaces(id){
       const epoch=backendEpoch;
       const d=await callFn('suggest-meeting-plan',{meeting_id:id}),pl=d.plan;
       if(epoch!==backendEpoch||S.rooms[id]!==r)return;
+      if(!pl?.candidates?.length&&d.search?.status==='no_new'){
+        if(CUR===id)toast('새로운 후보가 없어요','기존 후보를 비교하거나 원하는 지역·음식을 채팅에 남겨 주세요');
+        return;
+      }
       if(!pl?.candidates?.length)throw Error(SEARCH_TOAST[d.search?.status]||'장소를 찾지 못했어요. 다른 지역이나 음식 이야기를 남기고 다시 시도해 주세요');
       applyPlan(r,{...pl,time_label:'',confirmed:false,source:d.fallback?'fallback':'llm'},d.search);
       msg=r.msgs.find(m=>m.planId===pl.id);
@@ -225,11 +229,15 @@ async function recommendPollPlaces(id){
       // 네트워크 없는 데모 예시. 실제 검색 결과나 대화 이해 결과로 표시하지 않는다.
       const text=r.msgs.filter(m=>m.f!=='sys'&&m.f!=='ai').slice(-30).map(m=>m.x||'').join(' ');
       const spicy=text.includes('닭발'),region=mm.region||'근처';
+      const previous=r.msgs.filter(m=>m.plan?.recommendationOnly).at(-1)?.plan.cands||[];
       const cands=[
         {name:region+' 데모 '+(spicy?'닭발 식당':'식당'),category:spicy?'닭발':'식당',address:region+' · 가상의 데모 장소',why:spicy?'대화에 나온 ‘닭발’을 반영한 식당 예시예요.':'모임 지역에서 함께 식사할 수 있는 후보 예시예요.'},
         {name:region+' 데모 카페',category:'카페',address:region+' · 가상의 데모 장소',why:'식사 후에도 이야기를 이어갈 카페 후보 예시예요.'},
-        {name:region+' 데모 티룸',category:'찻집',address:region+' · 가상의 데모 장소',why:'식사 대신 차를 마시며 만나는 선택지도 비교해 볼 수 있어요.'}
-      ];
+        {name:region+' 데모 티룸',category:'찻집',address:region+' · 가상의 데모 장소',why:'식사 대신 차를 마시며 만나는 선택지도 비교해 볼 수 있어요.'},
+        {name:region+' 데모 '+(spicy?'닭발 골목집':'한식당'),category:spicy?'닭발':'한식',address:region+' · 가상의 데모 장소',why:'이전 후보와 다른 식당을 비교하는 예시예요.'},
+        {name:region+' 데모 디저트 카페',category:'카페',address:region+' · 가상의 데모 장소',why:'디저트를 먹으며 대화할 수 있는 후보 예시예요.'},
+        {name:region+' 데모 찻집',category:'찻집',address:region+' · 가상의 데모 장소',why:'차를 마시며 이야기할 다른 후보 예시예요.'}
+      ].filter(c=>!previous.some(p=>p.name===c.name)).slice(0,3);
       msg={f:'ai',planId:'local-'+crypto.randomUUID(),source:'demo',plan:{cands,meetAt:null,recommendationOnly:true},t:nowT(),dk:dayKey()};
       r.msgs.push(msg);
     }

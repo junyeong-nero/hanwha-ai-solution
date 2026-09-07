@@ -27,8 +27,9 @@ export type SearchProvider = 'kakao' | 'openrouter' | 'none';
  * - ok: 후보를 찾음 / empty: 요청은 성공했지만 결과 0건
  * - quota: 할당량 초과(HTTP 429) / auth: 키·도메인 문제(401·403) / error: 그 밖의 실패
  * - no_key: 검색 키가 없어 아예 요청하지 않음
+ * - no_new: 직전 후보를 제외한 뒤 검색 범위 안에 새 장소가 없음
  */
-export type SearchStatus = 'ok' | 'empty' | 'quota' | 'auth' | 'error' | 'no_key';
+export type SearchStatus = 'ok' | 'empty' | 'quota' | 'auth' | 'error' | 'no_key' | 'no_new';
 
 export interface SearchResult {
   provider: SearchProvider;
@@ -43,6 +44,8 @@ export interface SearchResult {
 export interface SearchOptions {
   region: string;
   keywords: string[];
+  /** 직전 추천의 장소 키 — 같은 장소를 새 후보로 반환하지 않는다 */
+  excludeKeys?: string[];
   kakaoKey?: string;
   openRouterKey?: string;
   /** OpenRouter 모델 (기본 openrouter/free) */
@@ -208,11 +211,12 @@ async function searchKakao(
   used: string[],
 ): Promise<Place[]> {
   const places: Place[] = [];
-  const seen = new Set<string>();
+  const seen = new Set<string>(opts.excludeKeys ?? []);
+  const fetchLimit = Math.min(15, limit + seen.size);
 
   for (const query of queries.slice(0, MAX_KAKAO_REQUESTS)) {
     used.push(query);
-    const url = `${KAKAO_ENDPOINT}?query=${encodeURIComponent(query)}&size=${limit}`;
+    const url = `${KAKAO_ENDPOINT}?query=${encodeURIComponent(query)}&size=${fetchLimit}`;
     const res = await fetchWithTimeout(
       fetchImpl,
       url,
@@ -222,7 +226,7 @@ async function searchKakao(
     if (!res.ok) throw new SearchError(statusFromHttp(res.status));
     const payload = (await res.json()) as { documents?: unknown } | null;
     let room = true;
-    for (const place of mapKakaoDocuments(payload?.documents, limit)) {
+    for (const place of mapKakaoDocuments(payload?.documents, fetchLimit)) {
       room = pushUnique(places, seen, place, limit);
       if (!room) break;
     }
@@ -381,10 +385,11 @@ export async function searchPlaces(opts: SearchOptions): Promise<SearchResult> {
       used.push(...queries.slice(0, 1));
       places = await searchOpenRouter(opts, fetchImpl, timeoutMs, limit, region, keywords);
     }
+    places = places.filter((place) => !opts.excludeKeys?.includes(placeKey(place)));
     return {
       provider,
       places,
-      status: places.length > 0 ? 'ok' : 'empty',
+      status: places.length > 0 ? 'ok' : opts.excludeKeys?.length ? 'no_new' : 'empty',
       queries: used,
       alternatives: places.length > 0 ? [] : buildAlternatives(region, keywords, used),
     };

@@ -28,3 +28,41 @@ test('의도 분석 실패·빈 출력·키 없음은 러닝으로 고정하지 
     const out=await inferPlaceIntent({meeting,lines,...options});assert.equal(out.fallback,true);assert.deepEqual(out.keywords,['식당','카페']);
   }
 });
+
+test('재추천은 직전 장소 ID를 제외하고 추가 검색 후보만 AI와 폴백에 전달한다',async()=>{
+  const urls=[];
+  const options={region:'판교',keywords:['닭발'],kakaoKey:'test',fetchImpl:async url=>{
+    urls.push(new URL(url));
+    const size=Number(new URL(url).searchParams.get('size'));
+    return Response.json({documents:Array.from({length:size},(_,i)=>({id:String(i+1),place_name:`닭발 ${i+1}`,address_name:'판교'}))});
+  }};
+  const first=await searchPlaces(options);
+  const second=await searchPlaces({...options,excludeKeys:first.places.map(p=>'id:'+p.id)});
+  assert.equal(urls[0].searchParams.get('size'),'5');
+  assert.equal(urls[1].searchParams.get('size'),'10');
+  assert.deepEqual(second.places.map(p=>p.id),['6','7','8','9','10']);
+  for(const apiKey of ['', 'test']){
+    const result=await suggestWithAI({meeting,lines,places:second.places,apiKey,now:new Date(),fetchImpl:async(_,init)=>{
+      const places=JSON.parse(JSON.parse(init.body).input[1].content).places;
+      assert.ok(places.every(p=>second.places.some(c=>c.name===p.name)));
+      // AI가 이전 장소를 돌려줘도 검증 단계에서 걸러져야 한다.
+      return response({place:'닭발 1',time:'장소 후보',meet_at:null,activity:'식사',nearby:[],candidates:[{name:'닭발 1',why:'이전 장소'}]});
+    }});
+    assert.ok(result.plan.candidates.length>0);
+    assert.ok(result.plan.candidates.every(p=>!first.places.some(old=>old.id===p.id)));
+  }
+});
+
+test('중복뿐이면 다음 검색어도 시도하고 새 후보 없음으로 끝나며 검색 오류는 구분한다',async()=>{
+  let calls=0;
+  const options={region:'판교',keywords:['카페','찻집'],kakaoKey:'test',excludeKeys:['id:1','n:이름만 있는 카페|판교'],fetchImpl:async()=>{
+    calls++;
+    return Response.json({documents:[{id:'1',place_name:'카페',address_name:'판교'},{place_name:'이름만 있는 카페',address_name:'판교'}]});
+  }};
+  const result=await searchPlaces(options);
+  assert.equal(calls,3);assert.equal(result.status,'no_new');assert.deepEqual(result.places,[]);
+  const error=await searchPlaces({...options,fetchImpl:async()=>new Response('',{status:429})});
+  assert.equal(error.status,'quota');
+  const partial=await searchPlaces({...options,fetchImpl:async()=>Response.json({documents:[{id:'1',place_name:'이전'},{id:'2',place_name:'새 후보'}]})});
+  assert.equal(partial.status,'ok');assert.deepEqual(partial.places.map(p=>p.id),['2']);
+});
