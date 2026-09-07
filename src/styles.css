@@ -576,6 +576,17 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   .hscroll{margin:0 -24px;padding-left:24px;padding-right:24px}
 }
 
+/* 넓은 화면의 시트는 중앙에 두고, 빈 상태는 카드 열 전체를 쓴다. */
+@media (min-width:600px){
+  .sheet{
+    left:50%;right:auto;width:min(calc(100% - 32px),640px);bottom:16px;
+    border-radius:var(--r-xl);transform:translateX(-50%);animation-name:up-wide;
+  }
+  @keyframes up-wide{from{transform:translate(-50%,40%);opacity:.7}to{transform:translate(-50%,0);opacity:1}}
+  .meetgrid > .empty{grid-column:1 / -1}
+  .empty .cta{max-width:320px;margin-left:auto;margin-right:auto}
+}
+
 /* 웹: 태블릿과 브라우저형 화면 */
 @media (min-width:600px) and (max-width:1023px){
   #app{
@@ -584,9 +595,9 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
     border-left:1px solid #1b2038; border-right:1px solid #1b2038;
   }
   .tabpane{
-    padding:clamp(24px,4vw,42px) clamp(24px,5vw,56px) 34px;
+    padding:clamp(24px,4vw,42px) clamp(24px,5vw,56px) calc(var(--nav-h) + 34px);
   }
-  .hscroll{margin:0;padding-left:0;padding-right:0}
+  .hscroll{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
   .space{width:min(50vw,420px);height:min(50vw,420px);}
   .spacestats{
     display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;
@@ -596,13 +607,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
     display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;
   }
   .meetgrid > .meet{margin-bottom:0;}
-  #roomlist{max-width:820px;}
   #album .pgrid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:960px;}
-  .sheet{
-    left:50%; right:auto; width:min(calc(100% - 32px),640px); bottom:16px;
-    border-radius:var(--r-xl); transform:translateX(-50%); animation-name:up-wide;
-  }
-  @keyframes up-wide{from{transform:translate(-50%,40%);opacity:.7}to{transform:translate(-50%,0);opacity:1}}
 }
 
 /* PC: 데스크톱 작업 공간 */
@@ -622,24 +627,34 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   nav#nav button.on .ni{background:transparent}
   nav#nav svg{width:24px;height:24px;}
   .navbdg{top:7px;left:calc(50% + 7px);}
-  .tabpane{left:112px;padding:34px clamp(32px,5vw,80px) 42px;}
-  .hscroll{margin:0;padding-left:0;padding-right:0}
+  /* 제목·설명·목록·하단 행동이 같은 콘텐츠 경계를 공유한다. */
+  .tabpane{left:112px;padding:34px max(32px,calc((100% - 112px - 1080px) / 2)) 42px;}
+  #tab-chat,#tab-profile{padding-inline:max(32px,calc((100% - 112px - 920px) / 2))}
+  #tab-match{padding-bottom:110px}
+  .hscroll{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
   .sheet{max-width:640px;}
   .tabpane > .top h1.app{font-size:27px;}
   .tabpane > .sub{font-size:14px;}
-  #tab-home .space{width:min(32vw,420px);height:min(32vw,420px);margin-top:12px;}
-  #tab-home .spacestats,
-  #tab-home #colist{max-width:860px;}
+  /* 홈의 다음 행동과 은하계를 나란히 두어 연결 현황도 바로 보이게 한다. */
+  #tab-home.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;align-content:start;
+    grid-template-areas:"top top" "sub sub" "guide galaxy" "next galaxy" "next caption" "stats stats" "section section" "companies companies"}
+  #tab-home:has(#nextcard:empty){grid-template-areas:"top top" "sub sub" "guide guide" "galaxy galaxy" "caption caption" "stats stats" "section section" "companies companies"}
+  #tab-home > .top{grid-area:top}
+  #tab-home > .sub{grid-area:sub}
+  #tab-home > .guide-entry{grid-area:guide;align-self:start}
+  #nextcard{grid-area:next}
+  #nextcard:empty{display:none}
+  #tab-home .hero{grid-area:galaxy;margin:0;padding:0;min-width:0}
+  #tab-home .space{width:min(100%,360px);height:auto;aspect-ratio:1;margin:0 auto}
+  #homehint{grid-area:caption}
+  #tab-home .spacestats{grid-area:stats}
+  #tab-home > .sec{grid-area:section}
+  #colist{grid-area:companies}
   .meetgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1080px;}
   .meetgrid > .meet{margin-bottom:0;}
-  #tab-chat #roomlist{max-width:920px;}
-  #tab-profile > .card,
-  #tab-profile > .savebar,
-  #tab-profile > .pfoot,
-  #tab-profile > .hint,
-  #tab-profile > .sec,
-  #tab-profile > .t{max-width:920px;}
-  .fab{right:40px}
+  #createbox{margin-top:16px}
+  .savebar{bottom:16px}
+  .fab{right:max(32px,calc((100% - 112px - 1080px) / 2));bottom:24px}
   #roomview,#album,#satview{left:112px;bottom:0;}
   #toast{left:128px;right:32px;max-width:760px;margin:0 auto;}
 }
