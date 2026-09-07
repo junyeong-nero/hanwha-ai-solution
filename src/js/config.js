@@ -141,6 +141,12 @@ const WHENS=['평일 점심','평일 저녁','금요일 저녁','주말 오전',
 const EMOJIS=['🌙','🏃','🍜','☕','🎲','📷','📚','🥃','🎬','⚽'];
 const co=id=>COMPANIES.find(c=>c.id===id);
 const myCo=()=>co(S.profile.company);
+/* 마지막으로 저장한 프로필 스냅샷 — 매칭 탭은 저장된 값만 쓴다.
+   서버 추천도 저장된 프로필로 돌아가므로, 저장 전 변경이 화면에만 먼저 반영돼 결과와 어긋나는 일을 막는다 */
+const PSAVED={v:null};
+function snapProfile(){PSAVED.v=JSON.parse(JSON.stringify(S.profile))}
+const savedProfile=()=>PSAVED.v||S.profile;
+snapProfile();
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));   // null·숫자도 안전
 const safeUrl=u=>/^https?:\/\//i.test(String(u||''))?String(u):'#';   // 후보지 링크는 http(s)만 (javascript: 차단)

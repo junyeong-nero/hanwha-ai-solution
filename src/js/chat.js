@@ -99,13 +99,22 @@ async function openRoom(id){
     subscribeRoom(id);
   }
   CUR=id; const r=S.rooms[id];
+  $('typing').style.display='none';   // 다른 방에서 돌던 입력 중 표시는 넘기지 않는다
   r.unread=0; updateBdg();
   renderMeta(id);
   renderBanner();renderMsgs();
   $('roomview').classList.add('on');
   startDueWatch();
 }
-function closeRoom(){$('roomview').classList.remove('on');CUR=null;stopDueWatch();if(BACKEND)unsubscribeRoom();renderRooms()}
+function closeRoom(){$('roomview').classList.remove('on');CUR=null;stopDueWatch();$('typing').style.display='none';if(BACKEND)unsubscribeRoom();renderRooms()}
+/* 매칭 카드의 "채팅방 열기" — 채팅 탭으로 옮기면서 그 방을 바로 연다 */
+function openJoined(id){go('chat');openRoom(id)}
+/* + 메뉴 "모임 정보" — 직접 만든 모임과 추천 모임을 구분해 안내한다 */
+function showMeetingInfo(){
+  const m=MEETINGS.find(x=>x.id===CUR); if(!m)return;
+  const meta=esc(m.region||'')+' · '+esc(m.when||'')+' · 정원 '+m.cap+'명';
+  toast('모임 정보',m.mine?'<b>내가 만든 모임</b> · '+meta:meta+' · 매칭 탭 AI 추천으로 열린 모임이에요');
+}
 function renderBanner(){
   const r=S.rooms[CUR]; if(!r)return;
   const total=roomTotal(CUR), n=r.attended.size;
@@ -193,6 +202,10 @@ async function aiPlan(){
   if(r.msgs.some(m=>m.f==='ai')){toast('AI 약속','이미 이 방에 추천 약속이 있어요');return}
   $('typing').style.display='block';$('typing').textContent='MoonLight AI가 대화를 읽고 있어요…';
   if(BACKEND){
+    // 무료 모델은 20~30초 걸릴 수 있다 — 단계별로 기다림을 설명하고, 방을 떠나 있어도 도착을 알린다
+    const mm=MEETINGS.find(x=>x.id===id)||{name:'모임'};
+    const t1=setTimeout(()=>{if(CUR===id)$('typing').textContent='실제 장소를 검색해 후보를 고르는 중이에요 · 조금만요'},8000);
+    const t2=setTimeout(()=>{if(CUR===id)$('typing').textContent='AI 응답이 늦어지고 있어요 · 다른 탭을 봐도 도착하면 알려 드려요'},20000);
     try{
       const d=await callFn('suggest-meeting-plan',{meeting_id:id});
       const pl=d.plan||{};
@@ -201,8 +214,9 @@ async function aiPlan(){
       else if(d.search&&d.search.status==='ok')toast('후보지 검증','실제 장소 '+((pl.candidates||[]).length)+'곳을 찾아 지도에 표시했어요');
       else if(d.search&&d.search.status!=='ok')toast('후보지 검색',SEARCH_TOAST[d.search.status]||'후보지를 찾지 못했어요');
       if(CUR===id){renderMsgs();renderBanner()}
+      else toast('약속 제안 도착','<b>'+esc(mm.name)+'</b> 방에 AI 추천 약속이 올라왔어요');
     }catch(e){ if(e.code!=='UNAUTHORIZED')toast('AI 약속','약속 제안에 실패했어요 · 다시 시도해 주세요') }
-    finally{$('typing').style.display='none'}
+    finally{clearTimeout(t1);clearTimeout(t2);if(CUR===id)$('typing').style.display='none'}
     return;
   }
   setTimeout(()=>{
@@ -308,7 +322,7 @@ function openAlbum(){
   if(!r.photos.length)r.photos=placeholderPhotos(m);
   $('albTitle').textContent=m.name+' 사진첩';
   $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'">'+esc(p.l)+'</div>').join('')
-    +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3);box-shadow:none">＋ 사진 추가</button>';
+    +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3);box-shadow:none" onclick="toast(\'사진 추가\',\'사진 업로드는 발표 이후 파일럿에서 지원돼요\')">＋ 사진 추가</button>';
   $('album').classList.add('on');
 }
 function closeAlbum(){$('album').classList.remove('on')}

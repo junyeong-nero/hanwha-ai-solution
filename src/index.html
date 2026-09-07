@@ -23,6 +23,7 @@
         <div class="acts"><button class="ib av" id="homeAv" onclick="go('profile')" aria-label="내 프로필">🌙</button></div>
       </header>
       <p class="sub">만남이 성사될수록, 내 우주가 밝아집니다.</p>
+      <div id="nextcard"></div>
       <div class="hero"><div class="space" id="space"></div></div>
       <p class="hint" id="homehint" style="text-align:center;margin-top:6px">아는 사람이 생긴 계열사가 이 은하계에 합류합니다 · 빛나는 행성 = 만남이 성사된 계열사</p>
       <div class="spacestats" id="spacestats"></div>
@@ -233,7 +234,7 @@
       <button class="psheet-item" onclick="hidePlus();openMembers()"><i>👥</i><div>채팅방 멤버 보기<small>누가 있는지 · 확정 투표 · 만남 완료 여부</small></div></button>
       <button class="psheet-item" id="plusRate" onclick="hidePlus();openRating(CUR)"><i>⭐</i><div>만남 평가하기<small>별 0.5~5점 · 매칭 정확도 학습에 쓰여요 · 만남 완료 후</small></div></button>
       <button class="psheet-item" id="plusAlbum" onclick="hidePlus();openAlbum()"><i>🖼️</i><div>모임 사진첩<small>만남이 성사되면 열려요</small></div></button>
-      <button class="psheet-item" onclick="hidePlus();toast('모임 정보','이 모임은 <b>매칭 탭의 AI 추천</b>으로 만들어졌어요.')"><i>ℹ️</i><div>모임 정보</div></button>
+      <button class="psheet-item" onclick="hidePlus();showMeetingInfo()"><i>ℹ️</i><div>모임 정보<small>지역 · 시간대 · 정원</small></div></button>
       </div>
     </div>
   </div>
@@ -357,6 +358,7 @@
         <input id="e-nick" maxlength="8" placeholder="달토끼" autocomplete="off" enterkeyhint="go" onkeydown="if(event.key==='Enter')enterDemo()">
         <p class="eerr" id="e-err"></p>
         <button class="cta" id="e-btn" onclick="enterDemo()">입장하기</button>
+        <p class="hint" style="text-align:center;margin-top:10px">첫 접속은 서버가 깨어나느라 10초쯤 걸릴 수 있어요</p>
       </div>
       <p class="hint" style="text-align:center;margin-top:14px">사번은 본인 확인과 데이터 복원에만 쓰이며 다른 사용자와 AI에게 공개되지 않아요</p>
     </div>

@@ -85,6 +85,18 @@ function renderHome(){
   g.entering.clear();
 
   const met=Object.keys(S.met).length, rest=COMPANIES.length-list.length;
+  // 다음 할 일 — 프로필 → 참가 → 만남 완료. 세 단계가 모두 끝나면 카드는 사라진다
+  const P=S.profile, steps=[
+    {ok:P.interests.length+P.hobbies.length>0, t:'관심사·취미 설정', d:'AI 추천의 재료가 돼요', go:'profile', cta:'프로필 설정하기'},
+    {ok:S.joined.length>0, t:'어울리는 모임 참가', d:'매칭 탭에서 골라요', go:'match', cta:'모임 찾기'},
+    {ok:met>0, t:'만나고 만남 완료 누르기', d:'실명이 열리고 행성이 빛나요', go:'chat', cta:'채팅방 보기'},
+  ];
+  const next=steps.find(s=>!s.ok);
+  $('nextcard').innerHTML=next
+    ?'<div class="card next"><div class="nh"><b>다음 할 일</b><small>'+steps.filter(s=>s.ok).length+' / 3 완료</small></div>'
+      +steps.map(s=>'<div class="ns'+(s.ok?' ok':s===next?' cur':'')+'"><span class="ck">'+(s.ok?ico('check'):'')+'</span><div><b>'+s.t+'</b><small>'+s.d+'</small></div></div>').join('')
+      +'<button class="cta sm" onclick="go(\''+next.go+'\')">'+next.cta+'</button></div>'
+    :'';
   $('homehint').innerHTML=met
     ?(rest
       ?'<b style="color:var(--orange-soft)">아는 사람이 생긴 계열사</b>가 이 은하계에 합류합니다 · 아직 '+rest+'곳이 우주 밖에 있어요'

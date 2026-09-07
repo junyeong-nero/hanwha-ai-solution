@@ -4,7 +4,7 @@
 let sb=null;      // supabase-js 클라이언트
 let ME=null;      // 현재 사용자 id (auth.uid)
 let CH=null;      // 열려 있는 채팅방의 Realtime 채널
-const R={rec:null,recLoading:false,recDirty:true,saveTimer:null,seen:new Set()};
+const R={rec:null,recLoading:false,recDirty:true,saveTimer:null,seen:new Set(),warmed:false};
 const ENTRY_MSG={
   INVALID_CODE:'입장 코드가 올바르지 않아요',
   EXPIRED_CODE:'입장 코드가 만료됐어요. 발표 화면의 새 코드를 확인해 주세요',
@@ -21,6 +21,12 @@ function netFail(what){toast('네트워크 오류',(what||'요청')+'에 실패�
 function showEntry(){
   if(!$('e-co').options.length)$('e-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
   $('entry').classList.add('on');entryErr('');
+  warmLogin();
+}
+/* 입장 화면이 열리면 로그인 함수를 미리 깨운다 — 콜드 스타트(8~10초)를 사용자가 버튼을 누르기 전에 치른다 */
+function warmLogin(){
+  if(!sb||R.warmed)return; R.warmed=true;
+  sb.functions.invoke('demo-login',{body:{warm:true}}).catch(()=>{});
 }
 function hideEntry(){$('entry').classList.remove('on')}
 function entryErr(m){$('e-err').textContent=m||''}
@@ -94,6 +100,7 @@ async function enterDemo(){
   if(!/^\d{6}$/.test(code))return entryErr('입장 코드 6자리를 입력해 주세요');
   if(!coId||!emp||!name)return entryErr('계열사·사번·이름을 모두 입력해 주세요');
   const btn=$('e-btn'); btn.disabled=true; btn.textContent='확인 중…'; entryErr('');
+  const slow=setTimeout(()=>{btn.textContent='서버를 깨우는 중… 첫 접속은 10초쯤 걸려요'},3000);
   try{
     const d=await callFn('demo-login',{code,company_id:coId,employee_no:emp,real_name:name,nickname:nick});
     const {error}=await sb.auth.setSession(d.session); if(error)throw error;
@@ -101,9 +108,10 @@ async function enterDemo(){
     ME=session.user.id;
     if(!(await loadProfile()))throw Object.assign(new Error('NO_PROFILE'),{code:'NO_PROFILE'});
     hideEntry(); await afterLogin();
-    toast(d.is_new?'환영해요 🌙':'다시 오셨네요 🌙',d.is_new?'프로필 탭에서 관심사와 선호 지역을 설정해 보세요':'저장된 프로필과 채팅을 불러왔어요');
+    if(d.is_new)go('profile');   // 첫 로그인은 프로필 설정부터 — 추천의 재료가 없으면 매칭이 비어 보인다
+    toast(d.is_new?'환영해요 🌙':'다시 오셨네요 🌙',d.is_new?'관심사와 선호 지역을 고르고 저장하면 매칭이 시작돼요':'저장된 프로필과 채팅을 불러왔어요');
   }catch(e){ entryErr(ENTRY_MSG[e.code]||'입장에 실패했어요. 다시 시도해 주세요') }
-  finally{btn.disabled=false;btn.textContent='입장하기'}
+  finally{clearTimeout(slow);btn.disabled=false;btn.textContent='입장하기'}
 }
 /* 프로필 저장·복원 */
 function profileRow(){
@@ -132,6 +140,7 @@ async function loadProfile(){
   S.dirty=false;
   P.interests.forEach(v=>{if(!INTS.includes(v))INTS.push(v)});
   P.hobbies.forEach(v=>{if(!HOBS.includes(v))HOBS.push(v)});
+  snapProfile();   // 서버에 저장된 값이 곧 "저장된 프로필"
   return true;
 }
 async function afterLogin(){
@@ -172,8 +181,11 @@ async function loadRecommendations(){
   R.recLoading=true;
   $('matchnote').innerHTML='';
   // 스켈레톤 카드 — 응답을 기다리는 동안 레이아웃이 튀지 않게 한다
-  $('meets').innerHTML='<p class="hint" style="margin:2px 0 12px;color:var(--orange-soft);font-weight:700">🌙 MoonLight AI가 프로필을 읽고 어울리는 모임을 고르는 중…</p>'
+  $('meets').innerHTML='<p class="hint" id="rechint" style="margin:2px 0 12px;color:var(--orange-soft);font-weight:700">🌙 MoonLight AI가 프로필을 읽고 어울리는 모임을 고르는 중…</p>'
     +[1,2].map(()=>'<div class="card skcard"><div class="r"><div class="sk" style="width:52px;height:52px;border-radius:16px"></div><div style="flex:1"><div class="sk" style="height:16px;width:70%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:45%"></div></div></div><div class="sk" style="height:58px;border-radius:14px;margin-bottom:12px"></div><div class="sk" style="height:48px;border-radius:16px"></div></div>').join('');
+  // 응답이 늦어질 때 기다림을 설명한다 (콜드 스타트 · 서버 지연)
+  const h1=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='🌙 관심사·지역·인원을 맞춰 보는 중이에요 · 조금만요'},8000);
+  const h2=setTimeout(()=>{const e=$('rechint');if(e)e.textContent='☁️ 서버 응답이 늦어지고 있어요 · 곧 보여 드릴게요'},20000);
   try{
     const d=await callFn('recommend-meetings',{});
     const byId={};
@@ -194,7 +206,7 @@ async function loadRecommendations(){
     renderMatchCards(list,note);
   }catch(e){
     $('meets').innerHTML='<div class="empty"><i>☁️</i><b>추천을 불러오지 못했어요</b>연결을 확인하고 다시 시도해 주세요.<button class="cta line sm" onclick="R.recDirty=true;loadRecommendations()">다시 시도</button></div>';
-  }finally{R.recLoading=false}
+  }finally{clearTimeout(h1);clearTimeout(h2);R.recLoading=false}
 }
 /* 채팅방 로드 · Realtime */
 function upsertMember(p){ if(p.user_id===ME)return; PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙'} }

@@ -10,19 +10,21 @@ function setFilter(k,v){
   renderMatch();
 }
 function renderFilters(){
-  const regs=[...new Set(S.profile.regions)];
+  const regs=[...new Set(savedProfile().regions)];
+  if(MF.region&&!regs.includes(MF.region))MF.region=null;   // 프로필에서 뺀 지역의 필터는 자동으로 푼다
   $('mfilters').innerHTML='<button class="chip'+(!MF.region&&!MF.mine?' on':'')+'" onclick="setFilter(\'all\')">전체</button>'
     +regs.map(r=>'<button class="chip'+(MF.region===r?' on':'')+'" data-mf-region="'+esc(r)+'">'+ico('pin')+esc(r)+'</button>').join('')
     +'<button class="chip'+(MF.mine?' on':'')+'" onclick="setFilter(\'mine\')">내가 만든 모임</button>';
 }
 function renderMatch(){
-  const P=S.profile, c=co(P.company);
+  const P=savedProfile(), c=co(P.company);   // 저장된 프로필 기준 (저장 전 변경은 반영되지 않는다)
   $('matchsub').innerHTML='<div class="pf"><span><b>'+esc(P.nick)+'</b>님 기준</span><span>·</span><span>'+esc(c?c.name:'')+'</span><span>·</span><span>'+esc(P.regions.join(' · '))+'</span><span>·</span><span>'+P.sizeMin+'~'+P.sizeMax+'명</span></div>'
-    +'<button class="edit" onclick="go(\'profile\')">설정 변경</button>';
+    +(S.dirty?'<button class="edit warn" onclick="go(\'profile\')">저장 안 됨 · 저장</button>':'<button class="edit" onclick="go(\'profile\')">설정 변경</button>');
   renderFilters();
   if(BACKEND){loadRecommendations();return}
   // 선호 지역 밖 모임은 무조건 제외한다 (서버 모드에서도 같은 규칙)
   const list=MEETINGS.filter(m=>P.regions.includes(m.region)).sort((a,b)=>{
+    if(!!a.mine!==!!b.mine)return a.mine?-1:1;   // 내가 만든 모임은 맨 위 (서버 모드와 같은 규칙)
     const ka=knownIn(a)/(a.members.length||1), kb=knownIn(b)/(b.members.length||1);
     return P.dir==='deep'? kb-ka : ka-kb;
   });
@@ -30,7 +32,7 @@ function renderMatch(){
 }
 function renderMatchCards(list,note){
   $('matchnote').innerHTML=note||'';
-  const P=S.profile, mineSet=new Set([...P.interests,...P.hobbies]);
+  const P=savedProfile(), mineSet=new Set([...P.interests,...P.hobbies]);
   const shownList=list.filter(m=>(!MF.region||m.region===MF.region)&&(!MF.mine||m.mine));
   if(!list.length){
     $('meets').innerHTML='<div class="empty"><i>🌘</i><b>모임을 찾지 못했어요</b>선호 지역('+esc(P.regions.join('·'))+')에 열린 모임이 없어요.<br>프로필에서 지역을 늘리거나 직접 만들어 보세요.'
@@ -59,8 +61,10 @@ function renderMatchCards(list,note){
       +'<div class="ai"><span class="mi">🌙</span><div><span class="lb">MoonLight AI 추천 이유</span>'+m.ai+'</div></div>'
       +'<div class="ft"><div class="who">'+(avs?'<span class="avs">'+avs+'</span>':'')
       +'<span class="k">'+(kn?'아는 얼굴 <b>'+kn+'명</b> · 처음 보는 '+(others-kn)+'명':others?'모두 새로운 만남 · '+others+'명':'첫 멤버를 기다리는 중')+'</span></div></div>'
-      +'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div><span class="lb"><b>'+ratio+'%</b></span></div>'
-      +'<button class="cta" '+(joined?'disabled':'')+' onclick="joinMeet(\''+m.id+'\')">'+(joined?'참가 완료 · 채팅 탭에서 확인':'참가하기')+'</button>'
+      +(kn?'<div class="band"><div class="bar"><div class="fill" style="width:'+ratio+'%"></div></div><span class="lb">아는 얼굴 <b>'+ratio+'%</b></span></div>':'')
+      +(joined
+        ?'<button class="cta soft" onclick="openJoined(\''+m.id+'\')">'+ico('check')+'참가 중 · 채팅방 열기</button>'
+        :'<button class="cta" onclick="joinMeet(\''+m.id+'\')">참가하기</button>')
       +'</div>';
   }).join('');
 }
@@ -147,6 +151,7 @@ async function submitCreate(){
       toast('모임 생성','<b>'+esc(name)+'</b> 채팅방이 열렸어요');
     }
     hideCreate();
+    go('chat'); await openRoom(id);   // 만든 방으로 바로 들어간다
   }catch(e){ $('c-err').textContent='모임을 만들지 못했어요 · 다시 시도해 주세요' }
   finally{btn.disabled=false;btn.textContent='모임 만들기'}
 }

@@ -56,6 +56,8 @@ Deno.serve(async (req) => {
     if (!secret) throw new Error('DEMO_LOGIN_SECRET 미설정');
 
     const body = await readJsonBody(req);
+    // 워밍업 — 입장 화면이 열릴 때 클라이언트가 보내는 빈 호출. 검사 없이 바로 응답해 콜드 스타트만 미리 치른다
+    if (body.warm === true) return json({ ok: true, warm: true });
     const code = typeof body.code === 'string' ? body.code.trim() : '';
     const companyId = typeof body.company_id === 'string' ? body.company_id.trim().toLowerCase() : '';
     const employeeNo = normalizeEmployeeNo(body.employee_no);

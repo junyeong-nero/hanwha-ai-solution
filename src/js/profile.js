@@ -25,7 +25,7 @@ async function saveProfileNow(){
   if(!S.dirty)return;
   const b=$('saveBtn'); b.disabled=true; b.textContent='저장 중…';
   if(BACKEND){ const ok=await saveProfile(true); if(!ok){renderSaveBtn();return} }
-  S.dirty=false; R.recDirty=true; renderSaveBtn();
+  S.dirty=false; R.recDirty=true; renderSaveBtn(); snapProfile();
   toast('저장 완료','바뀐 설정이 다음 매칭 추천에 반영돼요');
 }
 function renderProfile(){
