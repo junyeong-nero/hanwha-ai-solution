@@ -34,10 +34,12 @@ async function saveProfileNow(){
   const b=$('saveBtn'); b.disabled=true; b.textContent='저장 중…';
   if(BACKEND){ const ok=await saveProfile(true); if(!ok){renderSaveBtn();return false} }
   S.dirty=false; R.recDirty=true; renderSaveBtn(); snapProfile();
+  completeProfileIntro();
   toast('저장 완료','바뀐 설정이 다음 매칭 추천에 반영돼요');
   return true;
 }
 function renderProfile(){
+  renderProfileIntro();
   const P=S.profile;
   $('pfav').textContent=P.av;
   if(document.activeElement!==$('nick'))$('nick').value=P.nick;
@@ -145,18 +147,37 @@ function confirmAdd(){
 }
 
 
-/* 가이드는 프로필에 남겨 두고 홈에서도 다시 열 수 있다. */
-function focusProfileField(id){
-  const target=$(id);
-  target.scrollIntoView({block:'center'});
-  const control=target.matches('button, input, select')?target:target.querySelector('button, input, select');
-  if(control)control.focus({preventScroll:true});
+/* 도움말은 탭 이동 없이 연다. 네이티브 모달로 배경 조작을 막고 닫으면 호출한 버튼으로 복귀한다. */
+let usageGuideTrigger=null;
+function openUsageGuide(trigger){
+  const dialog=$('usageGuide');
+  if(!dialog.open){usageGuideTrigger=trigger||document.activeElement;dialog.showModal();dialog.querySelector('.sbody').scrollTop=0;}
 }
-function openUsageGuide(){
-  go('profile');
-  $('usageGuide').open=true;
-  $('usageGuide').scrollIntoView({block:'start'});
-  $('usageGuide').querySelector('summary').focus({preventScroll:true});
+function closeUsageGuide(){
+  $('usageGuide').close();
+  if(usageGuideTrigger?.isConnected)usageGuideTrigger.focus({preventScroll:true});
+  usageGuideTrigger=null;
+}
+function trapUsageGuideFocus(event){
+  if(event.key!=='Tab')return;
+  const controls=$('usageGuide').querySelectorAll('button,[tabindex="0"]');
+  const first=controls[0],last=controls[controls.length-1];
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
+}
+/* 안내 완료는 이 기기의 계정별로 보관한다. 저장소가 막혀도 현재 세션에서는 유지한다. */
+const PROFILE_INTRO_DONE=new Set();
+function profileIntroKey(){return 'moonlight-profile-intro:'+(BACKEND&&typeof ME!=='undefined'&&ME?ME:'demo')}
+function renderProfileIntro(){
+  const key=profileIntroKey();
+  let done=PROFILE_INTRO_DONE.has(key);
+  try{done=done||localStorage.getItem(key)==='done'}catch(e){}
+  $('profileIntro').hidden=done;
+}
+function completeProfileIntro(){
+  const key=profileIntroKey();PROFILE_INTRO_DONE.add(key);
+  try{localStorage.setItem(key,'done')}catch(e){}
+  renderProfileIntro();
 }
 let profileBrowsePending=false;
 async function saveProfileAndBrowse(){
@@ -166,7 +187,7 @@ async function saveProfileAndBrowse(){
   button.disabled=true;
   button.textContent='설정 확인 중…';
   try{
-    if(await saveProfileNow())go('match');
+    if(await saveProfileNow()){completeProfileIntro();go('match');}
   }catch(e){
     renderSaveBtn();
     toast('저장 실패','연결을 확인하고 다시 시도해 주세요. 변경한 설정은 화면에 남아 있어요');

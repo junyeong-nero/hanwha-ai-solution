@@ -679,24 +679,21 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .emrow button{width:44px;height:44px;border-radius:13px;background:var(--card2);border:1px solid var(--line);font-size:21px}
 .emrow button.on{border-color:var(--orange);background:var(--orange-a18);box-shadow:0 0 0 3px var(--orange-a12)}
 
-/* 첫 프로필 설정과 다시 볼 수 있는 사용 가이드 */
-.guide-entry{margin-bottom:14px}
-.profile-guide,.usage-guide,.profile-next{margin-bottom:14px}
-.profile-guide h2{font-size:19px;line-height:1.45;margin:12px 0 8px}
-.profile-guide p,.usage-guide p{font-size:13px;color:var(--tx2);line-height:1.65}
-.setup-steps{list-style:none;padding:0;margin:12px 0 0}
-.setup-steps li+li{border-top:1px solid var(--hair)}
-.setup-steps button{display:block;width:100%;min-height:44px;text-align:left;padding:12px 0}
-.setup-steps b,.setup-steps span{display:block}
-.setup-steps b,.usage-steps b{font-size:14px;color:var(--tx)}
-.setup-steps span{margin-top:4px;font-size:13px;line-height:1.6;color:var(--tx2)}
-.usage-guide summary{min-height:44px;align-content:center;cursor:pointer;font-size:14px;font-weight:700;line-height:1.6}
+/* 입력을 먼저 보여 주고 자세한 사용법은 도움말 시트에 둔다. */
+.guide-entry,.profile-next{margin-bottom:14px}
+.profile-help{min-height:44px}
+.help-dialog{position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:var(--tx)}
+.help-dialog::backdrop{background:var(--bg);opacity:.75}
+.help-dialog .sheet{max-width:600px;margin:0 auto;max-height:calc(100dvh - 40px - env(safe-area-inset-top))}
+.help-dialog .sh .ib{width:44px;height:44px}
+.help-dialog .sbody{overscroll-behavior:contain}
 .usage-steps{padding-left:22px;margin:12px 0}
 .usage-steps li{padding:8px 0 8px 4px;color:var(--orange)}
-.usage-steps p{margin-top:6px}
+.usage-steps b{font-size:14px;color:var(--tx)}
+.usage-steps p{margin-top:6px;font-size:13px;color:var(--tx2);line-height:1.65}
 .profile-next>b{font-size:14px;line-height:1.6}
 .profile-next .hint{margin:8px 0 12px}
-.setup-steps button:focus-visible,.usage-guide summary:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:var(--r-s)}
+.profile-help:focus-visible,.help-dialog button:focus-visible,.help-dialog .sbody:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
 
 /* 장소 후보를 대화 속에서 비교한다. 모바일은 한 열, 넓은 채팅방은 두 열이다. */
 #rbanner{flex-wrap:wrap;background:var(--orange-a12);border-color:var(--orange-a30)}
