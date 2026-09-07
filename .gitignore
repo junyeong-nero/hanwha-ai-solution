@@ -5,5 +5,15 @@ supabase/.temp/
 supabase/.branches/
 node_modules/
 
+# 로컬 AI 도구의 작업 트리와 브라우저 실행 기록
+.claude/worktrees/
+.claude/settings.local.json
+.playwright-mcp/
+
+# 운영체제 메타데이터와 Python 실행 캐시
+.DS_Store
+__pycache__/
+*.py[cod]
+
 # 영상 제작 원본과 중간 산출물은 로컬에 보존
 outputs/

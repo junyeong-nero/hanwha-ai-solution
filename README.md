@@ -1,3 +1,7 @@
+[![MoonLight Hanwha — AI 모임 추천에서 새로운 연결까지. 실제 웹앱의 홈과 매칭 화면](assets/screenshots/readme-banner.png)](https://junyeong-nero.github.io/hanwha-ai-solution/)
+
+<!-- 배너 재생성: python3 scripts/render-readme-banner.py (Python Playwright·Chromium 필요) -->
+
 # MoonLight Hanwha
 
 한화 그룹사 구성원을 위한 **사내 네트워킹 모바일 웹앱 프로토타입**입니다.
@@ -103,5 +107,5 @@ npm test
 ├── tests/                  # npm test (Node.js 24+)
 ├── docs/                   # 기능 명세 · 소개 · 배포 절차 · 설계 문서
 ├── scripts/                # 배포 · Node 버전 검사
-└── assets/                 # 제출용 video.mp4 · ppt.html · report.md / 폰트 · 과제 안내
+└── assets/                 # 제출 자료 · 폰트 · 과제 안내 · screenshots/ 배너와 앱 화면
 ```
