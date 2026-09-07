@@ -82,7 +82,7 @@ test('SIGNED_OUT 이벤트도 로그아웃과 같은 초기화 경로를 사용�
 test('백엔드 모드는 로그인 전에 로컬 데모 홈을 렌더링하지 않는다', () => {
   const startup = html.match(/\/\* ================= 시작 ================= \*\/([\s\S]*?)<\/script>/)?.[1];
   assert.ok(startup, '시작 시퀀스가 있어야 한다');
-  assert.match(startup, /if\(BACKEND\)initBackend\(\);\s*else\{restoreAvailabilityRooms\(\);renderHome\(\);renderProfile\(\);updateBdg\(\);\}/);
+  assert.match(startup, /if\(BACKEND\)initBackend\(\);\s*else\{restoreAvailabilityRooms\(\);restorePollRooms\(\);renderHome\(\);renderProfile\(\);updateBdg\(\);\}/);
   // 모드 무관 초기화(이벤트 바인딩 등)는 허용하되, 데모 렌더는 else 분기 밖에 있으면 안 된다
   const beforeBranch = startup.slice(0, startup.indexOf('if(BACKEND)'));
   assert.doesNotMatch(beforeBranch, /renderHome\(\)|renderProfile\(\)|updateBdg\(\)/);
