@@ -48,13 +48,16 @@ async function openMembers(){
   const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id]; if(!m||!r)return;
   const ai=[...r.msgs].reverse().find(x=>x.f==='ai'), votes=ai?(r.votes[ai.planId]||new Set()):null;
   const P=S.profile, myCo=co(P.company);
-  const rows=[{id:MYID(),av:P.av,name:P.realName||P.nick,sub:(myCo?myCo.name:'')+' · 나 ('+P.nick+')',me:true}]
+  const rows=[{id:MYID(),av:P.av,name:P.realName||P.nick,sub:(myCo?myCo.name:'')+' · 나 ('+P.nick+')',me:true,ints:[...P.interests,...P.hobbies]}]
     .concat(m.members.map(pid=>{const p=PEOPLE[pid]||UNKNOWN, c=co(p.co), known=!!(S.met[pid]&&p.real);
-      return {id:pid,av:p.av,name:known?p.real:p.nick,sub:known?(c?c.name:''):'익명 · 만남 완료 후 실명이 보여요',known};}));
+      return {id:pid,av:p.av,name:known?p.real:p.nick,sub:known?(c?c.name:''):'익명 · 만남 완료 후 실명이 보여요',known,ints:p.ints||[]};}));
   $('memlist').innerHTML=rows.map(x=>{
     const att=r.attended.has(x.id), voted=!!(votes&&votes.has(x.id));
-    return '<div class="memrow"><div class="mav">'+esc(x.av||'🌙')+'</div><div class="nm"><b>'+esc(x.name)+(x.me?' <small style="color:var(--orange)">ME</small>':'')+'</b><small>'+esc(x.sub)+'</small></div>'
-      +'<div class="bd">'+(ai?'<span class="mbadge'+(voted?' on':'')+'">'+(voted?'확정 ✓':'미확정')+'</span>':'')
+    // 관심사 태그는 익명 상태에서도 보인다 — 실명·사번 없이 대화 소재만
+    const tags=x.ints.length?'<span class="mtags">'+x.ints.slice(0,3).map(t=>'<i>#'+esc(t)+'</i>').join('')+'</span>':'';
+    return '<div class="memrow"><div class="mav">'+esc(x.av||'🌙')+'</div><div class="nm"><b>'+esc(x.name)+(x.me?' <small style="color:var(--orange)">ME</small>':'')+'</b><small>'+esc(x.sub)+'</small>'+tags+'</div>'
+      +'<div class="bd">'+(x.known?'<button class="inv" onclick="inviteNext(\''+x.id+'\')">다음 모임</button>':'')
+      +(ai?'<span class="mbadge'+(voted?' on':'')+'">'+(voted?'확정 ✓':'미확정')+'</span>':'')
       +'<span class="mbadge'+(att?' full':'')+'">'+(att?'만남 완료':'만남 전')+'</span></div></div>';
   }).join('');
   const total=roomTotal(id), anon=m.members.filter(p=>!S.met[p]).length;
@@ -102,6 +105,7 @@ async function openRoom(id){
   restoreAvailability(id);
   CUR=id; const r=S.rooms[id];
   $('typing').style.display='none';   // 다른 방에서 돌던 입력 중 표시는 넘기지 않는다
+  $('cin').value=''; updateCount();
   if(!BACKEND)r.unread=0; updateBdg();
   renderMeta(id);
   renderBanner();renderMsgs();
@@ -110,6 +114,65 @@ async function openRoom(id){
   if(BACKEND)await markRoomRead(id);
 }
 function closeRoom(){closeAvailability();$('roomview').classList.remove('on');CUR=null;stopDueWatch();$('typing').style.display='none';if(BACKEND)unsubscribeRoom();renderRooms()}
+/* 첫 인사 추천 칩 — 내가 아직 아무 말도 안 한 방에서만 보인다 */
+function renderOpeners(){
+  const r=S.rooms[CUR], show=!!(r&&!r.msgs.some(m=>m.f==='me'));
+  $('openers').innerHTML=show?OPENERS.map(t=>'<button class="chip" onclick="sendOpener(this)">'+esc(t)+'</button>').join(''):'';
+  $('openers').style.display=show?'':'none';
+}
+function sendOpener(b){ $('cin').value=b.textContent; sendMsg(); }
+/* 메시지 500자 — 400자부터 남은 글자 수를 보여 준다 */
+function updateCount(){ const n=$('cin').value.length; $('cincount').textContent=n>400?n+'/500':''; }
+/* 모임 나가기 — 만남 완료 전까지만. 서버가 내 투표와 참가를 함께 지운다 */
+async function leaveMeeting(){
+  const id=CUR, r=S.rooms[id], m=MEETINGS.find(x=>x.id===id); if(!id||!r)return;
+  hidePlus();
+  if(r.iAttended){toast('모임 나가기','만남을 완료한 모임은 나갈 수 없어요 · 연결이 유지돼요');return}
+  if(!await askConfirm('모임에서 나갈까요?','채팅 기록이 사라지고 이 방에서 한 확정 투표도 취소돼요','나가기',true))return;
+  if(BACKEND){
+    const {error}=await sb.rpc('leave_meeting',{p_meeting_id:id});
+    if(error){toast('모임 나가기',/완료/.test(error.message||'')?'만남을 완료한 모임은 나갈 수 없어요':'나가지 못했어요 · 다시 시도해 주세요');return}
+    R.recDirty=true;
+  }
+  if(!BACKEND){
+    try{
+      localStorage.removeItem('moonlight-availability-'+id);
+      const keys=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key.startsWith('moonlight-poll-'))keys.push(key)}
+      for(const key of keys){try{if(JSON.parse(localStorage.getItem(key))?.meeting_id===id)localStorage.removeItem(key)}catch(e){}}
+    }catch(e){}
+  }
+  closeRoom();
+  S.joined=S.joined.filter(x=>x!==id); delete S.rooms[id];
+  if(!BACKEND&&m&&m.mine){m.members=m.members.filter(p=>p!=='me')}
+  updateBdg(); renderRooms();
+  toast('모임 나가기','<b>'+esc(m?m.name:'모임')+'</b>에서 나왔어요');
+}
+/* 확정 취소 — 아직 확정되지 않은 약속의 내 투표를 거둔다 */
+async function unvote(i){
+  const id=CUR, r=S.rooms[id], msg=r&&r.msgs[i]; if(!msg||!msg.planId||msg.plan.collecting)return;
+  const set=r.votes[msg.planId]; if(!set||!set.has(MYID()))return;
+  if(r.plannedId===msg.planId){toast('확정 취소','이미 확정된 약속이에요');return}
+  if(BACKEND){
+    const {error}=await sb.rpc('withdraw_plan_vote',{p_plan_id:msg.planId});
+    if(error){toast('확정 취소',/확정/.test(error.message||'')?'이미 확정된 약속이에요':'취소하지 못했어요 · 다시 시도해 주세요');return}
+    set.delete(ME);
+  }else set.delete('me');
+  renderMsgs(); toast('확정 취소','확정을 거뒀어요 · 다시 누르면 확정돼요');
+}
+/* 확정된 약속을 캘린더 파일(.ics)로 — 열면 기본 캘린더에 일정으로 들어간다 */
+function addToCalendar(){
+  const r=S.rooms[CUR], m=MEETINGS.find(x=>x.id===CUR), p=r&&r.planned; if(!p||!p.meetAt)return;
+  const st=new Date(p.meetAt); if(isNaN(st))return; const en=new Date(st.getTime()+2*3600000);
+  const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const clean=s=>String(s||'').replace(/[\r\n,;]/g,' ');
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//MoonLight Hanwha//KO','BEGIN:VEVENT','UID:'+CUR+'@moonlight.hanwha','DTSTAMP:'+f(new Date()),
+    'DTSTART:'+f(st),'DTEND:'+f(en),'SUMMARY:'+clean(m?m.name:'모임')+' · MoonLight','LOCATION:'+clean(p.place),'DESCRIPTION:'+clean(p.act),'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a=document.createElement('a'); a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics); a.download='moonlight-'+CUR+'.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('캘린더','약속을 캘린더 파일로 내려받았어요 · 열면 일정에 추가돼요');
+}
+/* 아는 얼굴과 다음 모임 — 만들기 시트를 열고 그 사람을 미리 초대해 둔다 */
+function inviteNext(pid){ hideMembers(); closeRoom(); go('match'); openCreate(); cinv(pid); toast('다음 모임','<b>'+esc((PEOPLE[pid]||{}).real||'친구')+'</b> 님을 초대 목록에 담았어요'); }
 /* 매칭 카드의 "채팅방 열기" — 채팅 탭으로 옮기면서 그 방을 바로 연다 */
 function openJoined(id){go('chat');openRoom(id)}
 /* + 메뉴 "모임 정보" — 직접 만든 모임과 추천 모임을 구분해 안내한다 */
@@ -123,68 +186,79 @@ function renderBanner(){
   const total=roomTotal(CUR), n=r.attended.size;
   let h='';
   if(r.iAttended) h='🌕 만남 완료 '+n+'/'+total+(n>=total?' · 모두 완료! 베일이 벗겨졌어요':' · 함께 완료한 동료부터 실명으로 보여요');
-  else if(r.planned) h=ico('cal')+'<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.planned.when)+' · '+esc(r.planned.place)+'</span><button onclick="doReveal()">만남 완료</button>';
+  else if(r.planned) h=(r.planned.meetAt?'<button class="cal" onclick="addToCalendar()" aria-label="캘린더에 추가">'+ico('cal')+'</button>':ico('cal'))
+    +'<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.planned.when)+' · '+esc(r.planned.place)+'</span><button onclick="doReveal()">만남 완료</button>';
   $('rbanner').innerHTML=h; $('rbanner').classList.toggle('on',!!h);
 }
 function renderMsgs(){
   const r=S.rooms[CUR], ms=r.msgs;
   const who=m=>(m.f==='sys'||m.f==='ai')?null:m.f;   // 묶음 기준 발신자 (시스템·AI 카드는 묶지 않는다)
+  const lastAi=[...ms].reverse().find(m=>m.f==='ai');   // 최신 제안만 살아 있고, 대체된 카드는 회색으로 남긴다
+  let lastDk=null;
   $('msgs').innerHTML=ms.map((m,i)=>{
     const prev=ms[i-1], next=ms[i+1];
     const cont=!!(prev&&who(m)&&who(prev)===who(m));   // 같은 사람의 연속 메시지 — 아바타·이름을 생략한다
     const tail=!(next&&who(m)&&who(next)===who(m));    // 묶음의 마지막에만 시간을 붙인다
     const tm=tail&&m.t?'<time>'+esc(m.t)+'</time>':'';
-    if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+esc(m.x)+'</div></div>';   // 닉네임·LLM 텍스트가 섞이므로 반드시 이스케이프
-    if(m.f==='me')return '<div class="msg me'+(cont?' cont':'')+'"><div><div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
+    let div='';
+    if(m.dk&&m.dk!==lastDk){lastDk=m.dk;div='<div class="msg date"><span>'+esc(dateLabel(m.dk))+'</span></div>'}   // 날짜가 바뀌면 구분선
+    if(m.f==='sys')return div+'<div class="msg sys"><div class="bub">'+esc(m.x)+'</div></div>';   // 닉네임·LLM 텍스트가 섞이므로 반드시 이스케이프
+    if(m.f==='me')return div+'<div class="msg me'+(cont?' cont':'')+'"><div><div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
     if(m.f==='ai'){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
+      const stale=m!==lastAi&&r.plannedId!==m.planId;   // 새 제안으로 대체된 카드
       const unanimous=!p.collecting&&votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
       const done=r.plannedId===m.planId||unanimous||auto, pct=auto?100:Math.min(100,Math.round(votes/total*100));
       // 후보지: 지도 + 목록. 목록과 Marker 선택은 selectCand 로 양방향 동기화된다
       const note=searchNoteHtml(m.search);   // 검색 결과 없음·할당량 초과·오류 안내
       const cands=(p.cands||[]).length
         ? '<div class="cands"><b>후보지 · '+(BACKEND?'실제 장소 검색 결과 ':'데모 후보 ')+p.cands.length+'곳</b>'
-          +planMapHtml(m.planId,p.cands)+candListHtml(m.planId,p.cands,done||p.collecting)+note+'</div>'
+          +planMapHtml(m.planId,p.cands)+candListHtml(m.planId,p.cands,done||p.collecting||stale)+note+'</div>'
         : (note?'<div class="cands">'+note+'</div>':'');
-      return '<div class="msg aimsg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
-        +'<div class="bub plan"><h4>'+ico('spark')+'AI 추천 약속</h4>'
+      const btn=stale
+        ?'<button disabled>새 제안으로 대체됐어요</button>'
+        :'<button '+(p.collecting?'hidden ':'')+(done||mine||(p.schedule&&!p.schedule.selected)?'disabled':'')+' onclick="confirmPlan('+i+')">'+(auto?'시간이 지나 확정됨':done?'약속 확정됨':mine?'확정했어요 ✓ · 다른 멤버 기다리는 중':'이 약속으로 확정')+'</button>'
+          +(mine&&!done&&!p.collecting?'<button class="unvote" onclick="unvote('+i+')">확정 취소</button>':'');
+      return div+'<div class="msg aimsg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+(stale?' <small>이전 제안</small>':'')+'</div>'
+        +'<div class="bub plan'+(stale?' stale':'')+'"><h4>'+ico('spark')+'AI 추천 약속</h4>'
         +'<div class="row"><i>📍</i><span><b>'+esc(p.place)+'</b></span></div>'
         +'<div class="row"><i>🕖</i><span>'+esc(p.when)+'</span></div>'
         +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
         +'<div class="row"><i>🍜</i><span>'+esc(p.food)+'</span></div>'
         +cands
-        +(!p.collecting&&!done?'<button class="cta line" onclick="openRoomPoll()">장소·시간 의견 모으기</button>':'')
-        +'<button '+(p.collecting?'hidden ':'')+'class="cta line" onclick="openAvailability(\''+m.planId+'\')">가능 시간 조율</button>'
+        +(!p.collecting&&!done&&!stale?'<button class="cta line" onclick="openRoomPoll()">장소·시간 의견 모으기</button>':'')
+        +'<button '+(p.collecting||stale?'hidden ':'')+'class="cta line" onclick="openAvailability(\''+m.planId+'\')">가능 시간 조율</button>'
         +(p.collecting?'<button onclick="loadPoll(\''+p.pollId+'\')">'+(done?'확정 결과 · 내 의견 보기':'의견 제출 · 방장 비교 화면')+'</button>':'')
         +'<div class="vote"'+(p.collecting?' hidden':'')+'><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div>'
         +'<div class="lb"><span>'+(auto?'<b>시간 지나 자동 확정 🌕</b>':done?'<b>전원 확정 🌕</b>':'확정 <b>'+votes+'</b> / '+total+'명')+'</span>'
-        +'<span>'+(auto?'약속 시간이 지났어요':done?'약속이 잡혔어요':'모두 누르면 확정돼요')+'</span></div></div>'
-        +'<button '+(p.collecting?'hidden ':'')+(done||mine||(p.schedule&&!p.schedule.selected)?'disabled':'')+' onclick="confirmPlan('+i+')">'+(auto?'시간이 지나 확정됨':done?'약속 확정됨':mine?'확정했어요 ✓ · 다른 멤버 기다리는 중':'이 약속으로 확정')+'</button>'
+        +'<span>'+(stale?'이전 제안이에요':auto?'약속 시간이 지났어요':done?'약속이 잡혔어요':'모두 누르면 확정돼요')+'</span></div></div>'
+        +btn
         +'</div></div></div>';
     }
     const p=PEOPLE[m.f]||UNKNOWN;
-    return '<div class="msg'+(cont?' cont':'')+'"><div class="mav">'+esc(p.av||'🌙')+'</div><div>'+(cont?'':'<div class="who">'+label(m.f,r)+'</div>')+'<div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
+    return div+'<div class="msg'+(cont?' cont':'')+'"><div class="mav">'+esc(p.av||'🌙')+'</div><div>'+(cont?'':'<div class="who">'+label(m.f,r)+'</div>')+'<div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
   }).join('');
   mountPlanMaps();   // 새로 그려진 지도 컨테이너에 카카오맵을 붙인다 (placeholder 모드에서는 아무 일도 하지 않는다)
+  renderOpeners();
   $('msgs').scrollTop=$('msgs').scrollHeight;
 }
 async function sendMsg(){
   const v=$('cin').value.trim(); if(!v||!CUR)return;
   const r=S.rooms[CUR];
   if(BACKEND){
-    const body=v.slice(0,500); $('cin').value='';   // 메시지 500자 제한
+    const body=v.slice(0,500); $('cin').value=''; updateCount();   // 메시지 500자 제한
     const {data,error}=await sb.from('messages').insert({meeting_id:CUR,sender_id:ME,body}).select('id,sender_id,body,created_at').single();
     if(error){netFail('메시지 전송');$('cin').value=body;return}
     if(pushMsg(r,data))renderMsgs();   // Realtime으로 같은 메시지가 와도 id로 한 번만 그린다
     return;
   }
-  r.msgs.push({f:'me',x:v,t:nowT()});
-  $('cin').value=''; renderMsgs();
+  r.msgs.push({f:'me',x:v,t:nowT(),dk:dayKey()});
+  $('cin').value=''; updateCount(); renderMsgs();
   const m=MEETINGS.find(x=>x.id===CUR);
   if(!m.members.length)return;   // 아직 멤버가 없는 방(직접 만든 모임)은 답장 시뮬레이션 없음
   const pid=m.members[Math.floor(Math.random()*m.members.length)];
   showTyping(pid, r, ()=>{
-    r.msgs.push({f:pid,x:REPLIES[Math.floor(Math.random()*REPLIES.length)],t:nowT()});
+    r.msgs.push({f:pid,x:REPLIES[Math.floor(Math.random()*REPLIES.length)],t:nowT(),dk:dayKey()});
     if(CUR)renderMsgs();
   });
 }
@@ -198,15 +272,25 @@ function showTyping(pid,room,cb){
 /* + 메뉴 */
 function openPlus(){
   $('pollMenuIcon').innerHTML=ico('cal');
-  $('plusAlbum').disabled=!S.rooms[CUR].iAttended;
-  $('plusRate').disabled=!S.rooms[CUR].iAttended;
+  const r=S.rooms[CUR];
+  $('plusAlbum').disabled=!r.iAttended;
+  $('plusRate').disabled=!r.iAttended;
+  $('plusLeave').disabled=r.iAttended;   // 만남 완료 후에는 나갈 수 없다
+  const ai=[...r.msgs].reverse().find(m=>m.f==='ai');
+  $('plusAiLbl').textContent=ai&&r.plannedId!==ai.planId&&!planDue(ai.plan)?'AI 약속 다시 제안받기':'AI 추천 약속 잡기';
   $('pluswrap').classList.add('on');
 }
 function hidePlus(){$('pluswrap').classList.remove('on')}
 async function aiPlan(){
   hidePlus();
   const id=CUR, r=S.rooms[id];
-  if(r.msgs.some(m=>m.f==='ai')){toast('AI 약속','이미 이 방에 추천 약속이 있어요');return}
+  // 다시 제안: 확정 전이면 새 카드를 받을 수 있다 (이전 카드는 회색으로 남고 투표는 새 카드에서 다시 시작)
+  const existing=[...r.msgs].reverse().find(m=>m.f==='ai');
+  if(existing?.plan.collecting){toast('의견 조율','의견 수집을 시작한 약속은 다시 제안할 수 없어요');return}
+  if(existing){
+    if(r.plannedId===existing.planId||planDue(existing.plan)){toast('AI 약속','이미 확정된 약속이 있어요 · 만난 뒤 만남 완료를 눌러 주세요');return}
+    if(!await askConfirm('약속을 다시 제안받을까요?','지금 카드는 이전 제안으로 남고, 확정 투표는 새 카드에서 다시 시작해요','다시 제안'))return;
+  }
   if(r.planPending){toast('AI 약속','제안을 만드는 중이에요 · 도착하면 알려 드릴게요');return}   // 기다리는 동안 중복 요청 금지
   $('typing').style.display='block';$('typing').textContent='MoonLight AI가 대화를 읽고 있어요…';
   if(BACKEND){
@@ -249,10 +333,12 @@ async function aiPlan(){
     if(CUR===id)$('typing').style.display='none';
     r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     const mm=MEETINGS.find(x=>x.id===id)||{region:'',when:'',tags:[]};
-    const base=PLANS[id]||{place:(mm.region||'근처')+' 만남의 장소',when:mm.when||'시간 미정',act:((mm.tags||[])[0]||'모임')+' 함께하기',food:'근처 카페 한 곳'};   // 직접 만든 모임용 기본 약속
+    const base0=PLANS[id]||{place:(mm.region||'근처')+' 만남의 장소',when:mm.when||'시간 미정',act:((mm.tags||[])[0]||'모임')+' 함께하기',food:'근처 카페 한 곳'};   // 직접 만든 모임용 기본 약속
     // 로컬 데모: 직접 만든 모임도 의견 조율을 시연할 수 있도록 데모임을 밝힌 후보를 제공한다
     const cands=PLAN_CANDS[id]||(mm.mine?[{name:(mm.region||'근처')+' 데모 카페',address:'데모 후보 · 실제 검색 결과가 아니에요'},{name:(mm.region||'근처')+' 데모 식당',address:'데모 후보 · 실제 검색 결과가 아니에요'}]:[]);
-    const msg={f:'ai',plan:Object.assign({},base,{cands,meetAt:base.inH==null?null:new Date(Date.now()+base.inH*3600000).toISOString()}),planId:'local-'+id,t:nowT(),
+    const seq=(r.planSeq=(r.planSeq||0)+1);   // 다시 제안하면 다음 후보를 장소로 골라 다른 카드를 낸다
+    const base=Object.assign({},base0,cands.length&&seq>1?{place:cands[(seq-1)%cands.length].name}:{});
+    const msg={f:'ai',plan:Object.assign({},base,{cands,meetAt:base.inH==null?null:new Date(Date.now()+base.inH*3600000).toISOString()}),planId:'local-'+id+(seq>1?'-'+seq:''),t:nowT(),
       search:cands.length?{provider:'demo',status:'ok',alternatives:[]}:{provider:'demo',status:'empty',alternatives:[(mm.region||'회사')+' 카페',(mm.region||'회사')+' 맛집']}};
     r.msgs.push(msg);
     checkPlanDone(id,msg);   // 이미 지난 약속이면 투표 없이 바로 확정된다
@@ -351,7 +437,7 @@ function openAlbum(){
   if(!r.iAttended)return;
   if(!r.photos.length)r.photos=placeholderPhotos(m);
   $('albTitle').textContent=m.name+' 사진첩';
-  $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'">'+esc(p.l)+'</div>').join('')
+  $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'"><span class="sample">샘플</span>'+esc(p.l)+'</div>').join('')
     +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3);box-shadow:none" onclick="toast(\'사진 추가\',\'사진 업로드는 발표 이후 파일럿에서 지원돼요\')">＋ 사진 추가</button>';
   $('album').classList.add('on');
 }

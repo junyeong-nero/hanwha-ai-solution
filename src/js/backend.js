@@ -71,7 +71,7 @@ async function initBackend(){
 }
 async function logout(){
   if(!BACKEND||!sb||!ME)return;
-  if(!window.confirm('로그아웃할까요?'))return;
+  if(!await askConfirm('로그아웃할까요?','같은 계열사·사번으로 다시 입장하면 프로필과 채팅이 그대로 복원돼요','로그아웃',true))return;
   try{
     const result=await sb.auth.signOut();
     if(result&&result.error)throw result.error;
@@ -118,6 +118,7 @@ async function enterDemo(){
     hideEntry(); await afterLogin();
     if(d.is_new)go('profile');   // 첫 로그인은 프로필 설정부터 — 추천의 재료가 없으면 매칭이 비어 보인다
     toast(d.is_new?'환영해요 🌙':'다시 오셨네요 🌙',d.is_new?'관심사와 선호 지역을 고르고 저장하면 매칭이 시작돼요':'저장된 프로필과 채팅을 불러왔어요');
+    if(!d.is_new&&nick&&nick!==S.profile.nick)setTimeout(()=>toast('닉네임','입력한 닉네임은 처음 입장 때만 쓰여요 · 프로필 탭에서 바꿀 수 있어요'),2800);
   }catch(e){ entryErr(ENTRY_MSG[e.code]||'입장에 실패했어요. 다시 시도해 주세요') }
   finally{clearTimeout(slow);btn.disabled=false;btn.textContent='입장하기'}
 }
@@ -265,7 +266,7 @@ async function loadRecommendations(){
   }finally{clearTimeout(h1);clearTimeout(h2);R.recLoading=false}
 }
 /* 채팅방 로드 · Realtime */
-function upsertMember(p){ if(p.user_id===ME)return; PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙'} }
+function upsertMember(p){ if(p.user_id===ME)return; PEOPLE[p.user_id]={real:p.real_name,nick:p.nickname,co:p.company_id,av:p.avatar||'🌙',ints:Array.isArray(p.interests)?p.interests:[]} }
 async function refreshMembers(id){
   const {data,error}=await sb.rpc('room_members',{p_meeting_id:id}); if(error)return;
   const m=ensureMeeting(id,{}); m.members=[];
@@ -274,7 +275,7 @@ async function refreshMembers(id){
 }
 function pushMsg(r,x){
   if(!x||R.seen.has(x.id))return false; R.seen.add(x.id);
-  r.msgs.push({id:x.id,f:x.sender_id===null?'sys':x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at)}); return true;
+  r.msgs.push({id:x.id,f:x.sender_id===null?'sys':x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at),dk:dayKey(x.created_at)}); return true;
 }
 function applyPlan(r,pl,search){
   if(!pl||!pl.id)return;
@@ -345,6 +346,15 @@ function subscribeRoom(id){
       const r=S.rooms[id]; if(!r||!p.new)return;
       (r.votes[p.new.plan_id]||(r.votes[p.new.plan_id]=new Set())).add(p.new.user_id);
       const msg=r.msgs.find(x=>x.planId===p.new.plan_id); if(msg)checkPlanDone(id,msg);
+      if(typeof AV!=='undefined'&&AV&&AV.room===id)renderAvailability();
+      if(CUR===id){renderMsgs();renderBanner()}
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'meeting_plan_votes'},async()=>{
+      // DELETE는 필터·이전 행의 비키 열을 보장하지 않으므로 권한이 적용된 현재 투표를 다시 읽는다.
+      const r=S.rooms[id];if(!r)return;
+      const {data,error}=await sb.from('meeting_plan_votes').select('plan_id,user_id').eq('meeting_id',id);
+      if(error||S.rooms[id]!==r)return;
+      r.votes={};for(const v of data||[])(r.votes[v.plan_id]||(r.votes[v.plan_id]=new Set())).add(v.user_id);
       if(typeof AV!=='undefined'&&AV&&AV.room===id)renderAvailability();
       if(CUR===id){renderMsgs();renderBanner()}
     })

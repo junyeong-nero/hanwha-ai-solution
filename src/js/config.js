@@ -41,16 +41,16 @@ const COMPANIES=[
   {id:'connect', name:'한화커넥트',    c:'#F43F5E'},
 ];
 const PEOPLE={
-  p1:{real:'오세림', nick:'달빛서기',   co:'inv',  av:'🐰'},
-  p2:{real:'이하늘', nick:'은하수달',   co:'sol',  av:'🦊'},
-  p3:{real:'김서연', nick:'보름달곰',   co:'life', av:'🐻'},
-  p4:{real:'박지훈', nick:'고요한혜성', co:'sys',  av:'🐺'},
-  p5:{real:'정우진', nick:'새벽위성',   co:'aero', av:'🦉'},
-  p6:{real:'최민아', nick:'달무리여우', co:'gal',  av:'🐱'},
-  p7:{real:'한지원', nick:'초승달항해사',co:'ocean',av:'🐧'},
-  p8:{real:'강도윤', nick:'월광산책자', co:'hotel',av:'🐹'},
-  p9:{real:'윤소이', nick:'별헤는밤',   co:'life', av:'🦌'},
-  p10:{real:'서준호',nick:'만월기사',   co:'inv',  av:'🐯'},
+  p1:{real:'오세림', nick:'달빛서기',   co:'inv',  av:'🐰', ints:['위스키','전시']},
+  p2:{real:'이하늘', nick:'은하수달',   co:'sol',  av:'🦊', ints:['러닝','캠핑']},
+  p3:{real:'김서연', nick:'보름달곰',   co:'life', av:'🐻', ints:['자동화','사진']},
+  p4:{real:'박지훈', nick:'고요한혜성', co:'sys',  av:'🐺', ints:['러닝','보드게임']},
+  p5:{real:'정우진', nick:'새벽위성',   co:'aero', av:'🦉', ints:['러닝','커피']},
+  p6:{real:'최민아', nick:'달무리여우', co:'gal',  av:'🐱', ints:['위스키','사진']},
+  p7:{real:'한지원', nick:'초승달항해사',co:'ocean',av:'🐧', ints:['맛집','등산']},
+  p8:{real:'강도윤', nick:'월광산책자', co:'hotel',av:'🐹', ints:['위스키','맛집']},
+  p9:{real:'윤소이', nick:'별헤는밤',   co:'life', av:'🦌', ints:['자동화','산책']},
+  p10:{real:'서준호',nick:'만월기사',   co:'inv',  av:'🐯', ints:['자동화','주식']},
 };
 const MEETINGS=[
   {id:'m1', em:'🏃', name:'판교 퇴근 후 20분 러닝 크루', region:'판교', when:'평일 저녁', cap:6,
@@ -126,6 +126,7 @@ const S={
   feedback:{},                           // 로컬 데모용 만남 평가 (meeting id -> {rating, comment})
   joined:[],                             // 참가한 모임 id
   rooms:{},                              // id -> {msgs, unread, planned, photos, votes, attended, iAttended}
+  ui:{coAll:false},                      // 화면 상태 — 홈 계열사 목록 펼침 여부
   homeOrbit:{                            // 홈 은하계 — 아는 사람이 생긴 계열사가 궤도를 돌며 합류한다
     seed:Math.floor(Math.random()*1e9),  // 세션 단위 시드 — 궤도 시작 각도와 슬롯 선택에 쓴다
     slots:{},                            // 계열사 -> {ring, slot} 궤도 자리 (한 번 정하면 고정)
@@ -164,6 +165,11 @@ const ICON={
   cal:'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
 };
 const ico=(n,cls)=>'<span class="ic'+(cls?' '+cls:'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICON[n]||'')+'</svg></span>';
+/* 날짜 키(YYYY-MM-DD)와 채팅 날짜 구분선 라벨 */
+const dayKey=d=>{const x=d?new Date(d):new Date();if(isNaN(x))return '';return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+function dateLabel(dk){const t=dayKey(),y=dayKey(new Date(Date.now()-864e5));if(dk===t)return '오늘';if(dk===y)return '어제';const p=dk.split('-');return Number(p[1])+'월 '+Number(p[2])+'일'}
+/* 빈 방의 첫 인사 추천 — 누르면 그대로 보낸다 */
+const OPENERS=['안녕하세요! 반가워요 👋','다들 어느 사옥에서 근무하세요?','언제가 편하세요? 저는 평일 저녁이 좋아요','처음이라 조금 떨리네요 😅 잘 부탁드려요'];
 function nowT(){const d=new Date(),h=d.getHours();return (h<12?'오전 ':'오후 ')+((h%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')}
 function toast(a,b){$('toast').innerHTML='<div><b>'+a+'</b> · '+b+'</div>';$('toast').classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
 
