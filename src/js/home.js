@@ -108,14 +108,20 @@ function renderHome(){
    +'<div class="card"><b>'+S.joined.length+'개</b><span>참여 중인 모임</span></div>';
   $('cocount').textContent=act.size+' / '+COMPANIES.length+'곳 활성';
   $('homeAv').textContent=S.profile.av;
-  $('colist').innerHTML=COMPANIES.map(c=>{
+  // 계열사 목록 — 활성(아는 사람 있음)·내 계열사를 먼저, 나머지는 접어 둔다.
+  // 전 계열사 행을 항상 그려 두고 CSS 로만 숨겨, 펼치기 전에도 목록 구조는 같다
+  const top=c=>act.has(c.id)||c.id===S.profile.company;
+  const sorted=[...COMPANIES].sort((a,b)=>(top(a)?0:1)-(top(b)?0:1));
+  const hidden=sorted.filter(c=>!top(c)).length;
+  $('colist').innerHTML=sorted.map(c=>{
     const lit=act.has(c.id);
     const n=Object.keys(S.met).filter(p=>PEOPLE[p]&&PEOPLE[p].co===c.id).length;
-    return '<button class="corow" style="width:100%;text-align:left" onclick="showCo(&quot;'+c.id+'&quot;)" data-co="'+c.id+'">'
+    return '<button class="corow'+(!top(c)&&!S.ui.coAll?' hid':'')+'" style="width:100%;text-align:left" onclick="showCo(&quot;'+c.id+'&quot;)" data-co="'+c.id+'">'
       +'<span class="pd" style="background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 8px '+c.c:'none')+'"></span>'
       +'<span class="nm">'+esc(c.name)+(c.id===S.profile.company?' <small style="color:var(--orange);font-size:10.5px">MY</small>':'')+'</span>'
       +'<span class="st '+(lit?'lit':'')+'">'+(lit?'커넥션 활성 · '+n+'명':'미개척')+'</span>'+ico('chev','chev')+'</button>';
-  }).join('');
+  }).join('')
+  +(hidden?'<button class="cotg'+(S.ui.coAll?' open':'')+'" onclick="S.ui.coAll=!S.ui.coAll;renderHome()">'+(S.ui.coAll?'접기':'아직 우주 밖인 '+hidden+'곳 보기')+ico('chev','chev')+'</button>':'');
 }
 
 /* 로그아웃 등으로 사용자가 바뀌면 은하계를 처음 상태로 되돌린다

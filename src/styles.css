@@ -306,6 +306,19 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .meet .tags{margin-top:14px;display:flex;flex-wrap:wrap;margin-bottom:auto;padding-bottom:16px}
 .meet .tag{background:transparent;border-color:transparent;padding-left:0;margin-bottom:0}
 .meet .ft{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--hair)}
+.dt .em{width:52px;height:52px;border-radius:16px;background:linear-gradient(145deg,var(--card3),var(--card2));border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.dt .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:var(--tx2);margin-top:5px;font-weight:600}
+.dt .meta span{display:inline-flex;align-items:center;gap:4px}
+.dt .meta .ic{color:var(--tx3);width:14px;height:14px}
+.dt .tags{margin-top:9px;display:flex;flex-wrap:wrap}
+.dt .ai{
+  margin-top:12px;font-size:13px;line-height:1.58;color:var(--tx2);
+  background:linear-gradient(135deg,rgba(243,115,33,.10),rgba(243,115,33,.04));border:1px solid rgba(243,115,33,.22);border-radius:14px;padding:11px 13px 11px 12px;
+  display:flex;gap:9px;align-items:flex-start;
+}
+.dt .ai .mi{width:26px;height:26px;border-radius:50%;background:var(--orange-a18);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.dt .ai .lb{display:block;font-size:11px;font-weight:800;color:var(--orange-soft);letter-spacing:.2px;margin-bottom:2px}
+.dt .ai b{color:var(--orange-soft)}
 .meet .ft .who{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 .meet .ft .who .k{font-size:12px;color:var(--tx3);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meet .ft .who .k b{color:var(--orange-soft)}
@@ -462,7 +475,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 #album{position:absolute;top:0;left:0;right:0;bottom:var(--nav-h);z-index:36;background:var(--bg);display:none;flex-direction:column;padding:calc(6px + env(safe-area-inset-top)) 16px 16px}
 #album.on{display:flex}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;overflow-y:auto}
-.photo{aspect-ratio:1;border-radius:16px;display:flex;align-items:flex-end;padding:10px;font-size:11.5px;color:rgba(255,255,255,.92);font-weight:700;box-shadow:var(--sh-1);text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.photo{position:relative;aspect-ratio:1;border-radius:16px;display:flex;align-items:flex-end;padding:10px;font-size:11.5px;color:rgba(255,255,255,.92);font-weight:700;box-shadow:var(--sh-1);text-shadow:0 1px 4px rgba(0,0,0,.4)}
 
 /* ===== 베일 벗기기 ===== */
 #veil{position:absolute;inset:0;z-index:90;background:radial-gradient(60% 40% at 50% 40%,#141a36,#04060F 70%);display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:30px}
@@ -630,6 +643,32 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   #roomview,#album,#satview{left:112px;bottom:0;}
   #toast{left:128px;right:32px;max-width:760px;margin:0 auto;}
 }
+
+/* ===== UX 후속: 상세 시트 · 확인 시트 · 첫 인사 칩 · 날짜 구분선 · 이전 제안 · 멤버 태그 ===== */
+.dthd{display:flex;gap:12px;align-items:center;min-width:0}
+.dthd b{font-size:17px;font-weight:800;letter-spacing:-.3px;display:block;line-height:1.3}
+.cta.danger{background:linear-gradient(135deg,#FF8A8A,#E24B4B);box-shadow:0 10px 26px rgba(226,75,75,.3)}
+.openers{margin:0;padding:6px 12px 8px;border-top:1px solid var(--hair);background:rgba(9,12,24,.7)}
+.openers .chip{min-height:44px;font-size:13px;margin:0}
+.cnt{font-size:11px;color:var(--warn);font-weight:800;flex-shrink:0}
+.cnt:empty{display:none}
+.msg.date{align-self:center;margin:14px 0 2px}
+.msg.date span{font-size:11px;color:var(--tx3);font-weight:700;background:var(--card);border:1px solid var(--hair);border-radius:999px;padding:4px 10px}
+.plan.stale{opacity:.55;filter:saturate(.5)}
+.plan .unvote{background:none;color:var(--tx3);box-shadow:none;min-height:44px;font-size:12px;margin-top:4px;font-weight:700}
+.sample{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;background:rgba(0,0,0,.45);border-radius:6px;padding:2px 6px;letter-spacing:.2px}
+.corow.hid{display:none}
+.cotg{width:100%;display:flex;align-items:center;justify-content:center;gap:4px;min-height:46px;font-size:13px;font-weight:800;color:var(--orange-soft)}
+.cotg .chev{width:14px;height:14px;transform:rotate(90deg)}
+.cotg.open .chev{transform:rotate(-90deg)}
+.mtags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.mtags i{font-style:normal;font-size:10.5px;color:var(--tx2);background:var(--card2);border-radius:6px;padding:1px 6px;font-weight:600}
+.memrow .inv{font-size:11.5px;font-weight:800;color:var(--orange-soft);background:var(--orange-a12);border-radius:9px;padding:0 10px;min-height:44px;white-space:nowrap}
+#rbanner .cal{margin-left:0;background:var(--card2);color:var(--orange-soft);min-width:44px;min-height:44px;padding:0;box-shadow:none;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+#rbanner .cal .ic{width:16px;height:16px}
+.seg.sizes button{padding:6px 4px;min-height:52px;line-height:1.25}
+.seg.sizes button small{display:block;font-size:10.5px;font-weight:600;opacity:.75}
+#f-co:disabled{border-style:dashed;color:var(--tx2)}
 
 /* ===== 모임 만들기 ===== */
 .cwrap{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;padding-bottom:4px;scrollbar-width:none}
