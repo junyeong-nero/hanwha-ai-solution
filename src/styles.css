@@ -643,6 +643,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   #tab-home > .sub{grid-area:sub}
   #tab-home > .guide-entry{grid-area:guide;align-self:start}
   #nextcard{grid-area:next}
+  #nextcard:empty{display:none}
   #tab-home .hero{grid-area:galaxy;margin:0;padding:0;min-width:0}
   #tab-home .space{width:min(100%,360px);height:auto;aspect-ratio:1;margin:0 auto}
   #homehint{grid-area:caption}
