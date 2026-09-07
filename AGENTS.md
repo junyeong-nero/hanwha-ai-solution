@@ -100,6 +100,7 @@ npm test
 - `responsive-ui.test.mjs` — 반응형 CSS 구조
 - `backend-contract.test.mjs` — 비밀 키 미노출, 이중 모드·입장 화면·Realtime 호출 계약
 - `edge-functions.test.mjs` — 마이그레이션 스키마 검사, `_shared/` 순수 함수(입장 코드·추천 규칙 엔진·LLM 파서·익명화)
+- `home-graph.test.mjs` — 홈 관계 그래프. `helpers/app-context.mjs` 가 `config.js`·`home.js` 를 브라우저와 같은 전역에서 실행해 실제 행성 좌표(겹침·화면 밖·재렌더 안정성)를 검사한다
 
 `src/` 를 검사하는 테스트는 `tests/helpers/source.mjs` 가 `index.html` 의 `<link>`·`<script src>` 를 실제 파일 내용으로 인라인해 만든 단일 문자열(`html`)을 씁니다. `src/` 에 CSS·JS 파일을 새로 추가하면 index.html 에 태그만 걸어 두면 되고, 테스트 쪽은 따로 손댈 필요가 없습니다.
 

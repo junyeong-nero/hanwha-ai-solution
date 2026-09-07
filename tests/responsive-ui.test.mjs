@@ -25,8 +25,9 @@ test('web layout provides two columns and pc overlays stay bounded', () => {
   assert.match(html, /@media\s*\(min-width:\s*1024px\)[\s\S]*\.sheet[\s\S]*max-width:\s*640px/);
 });
 
+// 실제 좌표 계산 검증은 home-graph.test.mjs 에 있고, 여기서는 폭에 반응하는 구조만 본다.
 test('홈 행성 배치는 계열사 수가 늘어나도 우주 영역 안에 들어온다', () => {
   assert.doesNotMatch(html, /const r=44\+i\*15\.6/);
-  assert.match(html, /Math\.ceil\(Math\.sqrt\(COMPANIES\.length\)\)/);
   assert.match(html, /clientWidth/);
+  assert.match(html, /const maxPct=50-HOME_PAD\/w\*100/);
 });
