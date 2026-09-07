@@ -181,7 +181,7 @@ test('약속 카드는 웹 검색 후보지 목록을 보여준다', () => {
 });
 
 test('프로필: 복수 선호 지역 · 저장 버튼 · 같은 성별 우선 · 인재경영원', () => {
-  assert.match(html, /regions:\['판교'\]/);
+  assert.match(html, /regions:\['인재경영원'\]/);
   assert.match(html, /function tglRegion\(r\)/);
   assert.match(html, /id="saveBtn"/);
   assert.match(html, /async function saveProfileNow\(\)/);

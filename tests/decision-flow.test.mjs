@@ -5,7 +5,7 @@ import {loadApp} from './helpers/app-context.mjs';
 
 function fixture(backend=false){
   const app=loadApp({files:['config.js','match.js','chat.js','map.js','backend.js','places.js','home.js'],globals:{crypto:webcrypto,location:{search:backend?'':'?demo=1'}}});
-  app.evaluate(`globalThis.toast=()=>{};CUR='m1';ensureRoom('m1');S.joined=['m1'];$('cin').value='';$('cin').focus=()=>{};`);
+  app.evaluate(`MEETINGS.push(...['m1','m2'].map(id=>({...MEETINGS[0],id})));globalThis.toast=()=>{};CUR='m1';ensureRoom('m1');S.joined=['m1'];$('cin').value='';$('cin').focus=()=>{};`);
   return app;
 }
 

@@ -53,24 +53,6 @@ const PEOPLE={
   p10:{real:'서준호',nick:'만월기사',   co:'inv',  av:'🐯', ints:['자동화','주식']},
 };
 const MEETINGS=[
-  {id:'m1', em:'🏃', name:'판교 퇴근 후 20분 러닝 크루', region:'판교', when:'평일 저녁', cap:6,
-   tags:['러닝','운동'], members:['p2','p4','p5'],
-   ai:'회원님의 관심사 <b>러닝</b>과 퇴근 동선이 겹쳐요. 세 분 모두 판교에서 근무 중이라 부담 없이 모이기 좋아요.'},
-  {id:'m2', em:'🥃', name:'각자 한 잔씩 바꿔 마시기', region:'판교', when:'금요일 저녁', cap:5,
-   tags:['위스키','취향'], members:['p1','p6','p8'],
-   ai:'취미 <b>위스키</b>가 겹치는 멤버들이에요. 이미 아는 얼굴이 있어 첫 만남의 어색함이 덜할 거예요.'},
-  {id:'m3', em:'📊', name:'엑셀 자동화 미니 클리닉', region:'여의도', when:'수요일 점심', cap:6,
-   tags:['자동화','업무'], members:['p3','p4','p9','p10'],
-   ai:'관심사 <b>자동화</b> 기반 추천이에요. 서로 다른 4개 계열사가 모여 업무 방식을 비교해볼 수 있어요.'},
-  {id:'m4', em:'🍲', name:'회사 앞 국밥 원정대', region:'장교', when:'화요일 점심', cap:4,
-   tags:['맛집','점심'], members:['p7','p8','p9'],
-   ai:'모두 처음 만나는 조합이에요. <b>넓은 인맥</b>을 원하는 회원님께 새로운 연결이 될 수 있어요.'},
-  {id:'m5', em:'🎲', name:'보드게임 달밤 모임', region:'판교', when:'목요일 저녁', cap:6,
-   tags:['보드게임','전시'], members:['p2','p5','p6','p7'],
-   ai:'선호 지역 <b>판교</b>와 저녁 시간대가 딱 맞아요. 계열사 4곳이 섞인 다양한 조합입니다.'},
-  {id:'m6', em:'📷', name:'주말 사진 산책단', region:'서울숲', when:'토요일 오후', cap:5,
-   tags:['사진','산책'], members:['p3','p6'],
-   ai:'취미 <b>사진</b>이 겹쳐요. 소규모라 회원님이 설정한 모임 규모에 가장 가까운 모임이에요.'},
   {id:'m7', em:'🌿', name:'인재경영원 교육 후 저녁 산책', region:'인재경영원', when:'평일 저녁', cap:6,
    tags:['산책','러닝'], members:['p9','p10'],
    ai:'교육 기간에 <b>인재경영원</b>에서 만나기 좋은 모임이에요. 저녁 산책은 처음 만나는 사이에도 부담이 없어요.'},
@@ -106,7 +88,7 @@ const REPLIES=[
 const S={
   tab:'home',
   profile:{
-    nick:'달토끼', av:'🌙', company:'inv', regions:['판교'], age:27, gender:null, mbti:'ENFP',
+    nick:'달토끼', av:'🌙', company:'inv', regions:['인재경영원'], age:27, gender:null, mbti:'ENFP',
     interests:['러닝','자동화'], hobbies:['위스키','사진'], sizeMin:4, sizeMax:6,
     sameGender:false, scope:'all', dir:'wide',
   },

@@ -162,7 +162,8 @@ Deno.serve(async (req) => {
           company_id: companyId,
           real_name: realName,
           nickname: nickname || '달토끼',
-          region: '판교',
+          region: '인재경영원',
+          regions: ['인재경영원'],
         },
         { onConflict: 'user_id' },
       );
