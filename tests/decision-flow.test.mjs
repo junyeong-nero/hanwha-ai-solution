@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {loadApp} from './helpers/app-context.mjs';
 
 function fixture(backend=false){
-  const app=loadApp({files:['config.js','match.js','chat.js','map.js','backend.js','responses.js'],globals:{location:{search:backend?'':'?demo=1'}}});
+  const app=loadApp({files:['config.js','match.js','chat.js','map.js','backend.js','availability.js','responses.js'],globals:{location:{search:backend?'':'?demo=1'}}});
   app.evaluate(`
     globalThis.toast=()=>{};
     globalThis.storage=new Map();
@@ -71,11 +71,14 @@ test('의견 구독은 직접 연 링크에서도 재연결 시 확정을 복구
   assert.equal(app.evaluate('POLL'),null);
 });
 
-test('데모 추천 연타는 하나의 후보 카드만 생성한다',async()=>{
+test('약속 시작 연타는 장소 요청을 하나만 만들고 닫힌 화면을 다시 열지 않는다',async()=>{
   const app=fixture();
-  app.evaluate(`globalThis.timers=[];globalThis.setTimeout=fn=>timers.push(fn);renderMsgs=()=>{};renderBanner=()=>{};CUR='flow';ensureMeeting('flow',q.meeting);ensureRoom('flow');`);
-  await app.evaluate('aiPlan()');await app.evaluate('aiPlan()');
-  assert.equal(app.evaluate('timers.length'),1);
-  app.evaluate('timers[0]()');
-  assert.equal(app.evaluate("S.rooms.flow.msgs.filter(m=>m.f==='ai').length"),1);
+  app.evaluate(`CUR='flow';ensureMeeting('flow',q.meeting);ensureRoom('flow');globalThis.calls=0;globalThis.release=null;recommendPollPlaces=()=>{calls++;return new Promise(resolve=>release=resolve)};`);
+  await app.evaluate('aiPlan()');
+  app.evaluate(`const day=n=>new Date(Date.now()+n*86400000+9*3600000).toISOString().slice(0,10);$('pollStart').value=day(2);$('pollEnd').value=day(3);$('pollFrom').value='18:00';$('pollTo').value='22:00';$('pollDeadline').value=day(1)+'T22:00';`);
+  const pending=app.evaluate('createPoll()');await app.evaluate('createPoll()');
+  assert.equal(app.evaluate('calls'),1);
+  app.evaluate("POLL_VERSION++;release({planId:'p',plan:{cands:[{name:'장소'}]}})");await pending;
+  assert.equal(app.evaluate('POLL'),null);
+  assert.equal(app.evaluate('POLL_BUSY'),false);
 });

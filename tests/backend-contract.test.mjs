@@ -205,7 +205,7 @@ test('채팅방 멤버 보기: 헤더 버튼·+ 메뉴·시트', () => {
 
 test('약속 카드는 웹 검색 후보지 목록을 보여준다', () => {
   assert.match(html, /class="cands"/);
-  assert.match(html, /candidates:pl\.candidates\|\|\[\]/);
+  assert.match(html, /applyPlan\(r,\{\.\.\.pl,time_label:pl\.time/);
   assert.match(html, /target="_blank" rel="noopener"/);
 });
 
@@ -272,7 +272,7 @@ test('장애 상황마다 한국어 안내와 다시 시도 문구가 있다', (
   assert.match(html, /네트워크 오류/);
   assert.match(html, /다시 시도/);
   assert.match(html, /기본 순서로 모임을 보여드려요/);
-  assert.match(html, /AI 응답이 지연되어 기본 약속안을 보여드려요/);
+  assert.match(html, /대화 분석이 지연되어 일반 식당·카페 후보가 포함될 수 있어요/);
   assert.match(html, /세션이 만료됐어요/);
 });
 
@@ -367,7 +367,8 @@ test('다른 기기에서 한 내 체크인도 Realtime 으로 반영된다', ()
 });
 
 test('로컬 데모: 직접 만든 모임에서도 AI 약속·답장이 죽지 않는다', () => {
-  assert.ok(html.includes('const base0=PLANS[id]||{place:'));
+  assert.ok(html.includes('async function recommendPollPlaces(id)'));
+  assert.ok(html.includes('데모 후보 · 실제 검색 결과가 아니에요'));
   assert.ok(html.includes('if(!m.members.length)return;'));
 });
 

@@ -1,7 +1,7 @@
 // suggest-meeting-plan — 카카오 장소 검색으로 실제 후보지를 찾고, 최근 대화를 익명화해 OpenAI GPT 에 보내 약속 카드를 만든다.
 // 요청: POST { meeting_id }  (Authorization: Bearer <세션 JWT>)
 // 응답: 200 { plan: { id, place, time, meet_at, activity, nearby, candidates }, fallback, search_used, search } / 403 NOT_MEMBER
-// meet_at: 약속 시각(KST ISO 8601) 또는 null — 시간이 지나면 settle_due_plans 가 이 값을 보고 자동 확정한다
+// 새 추천의 meet_at은 null — 시간표에서 방장이 선택해 확정할 때만 채운다
 // search_used: 'kakao' | 'none' — 후보지를 어떤 검색으로 찾았는지 (하위 호환)
 // search: { provider, status, queries, alternatives } — 검색 결과 없음·할당량 초과·오류를 화면에서 구분하기 위한 정보
 // LLM 이 지어낸 장소는 verifyPlan 이 검색 결과와 대조해 걸러 낸다 — 후보지는 실재하는 장소만 남는다.
@@ -10,6 +10,7 @@ import { requireUser, serviceClient } from '../_shared/supabase.ts';
 import { OPENAI_MODEL, tokenUsage } from '../_shared/openai.ts';
 import { suggestWithAI } from '../_shared/ai-plan.ts';
 import { anonymizeMessages } from '../_shared/chat.ts';
+import { inferPlaceIntent } from '../_shared/place-intent.ts';
 import { searchPlaces } from '../_shared/search.ts';
 
 const FN = 'suggest-meeting-plan';
@@ -41,11 +42,13 @@ Deno.serve(async (req) => {
 
     const { data: meeting, error: meetingError } = await svc
       .from('meetings')
-      .select('id, title, region, tags, when_label')
+      .select('id, title, region, tags, when_label, created_by')
       .eq('id', meetingId)
       .maybeSingle();
     if (meetingError) throw meetingError;
     if (!meeting) return fail(404, 'NOT_FOUND', '모임을 찾을 수 없어요');
+
+    if (meeting.created_by && meeting.created_by !== user.id) return fail(403, 'NOT_HOST', '방장이 약속 잡기를 시작하면 시간과 장소를 선택할 수 있어요');
 
     const meetingForPrompt = {
       title: String(meeting.title ?? ''),
@@ -73,14 +76,11 @@ Deno.serve(async (req) => {
     const model = OPENAI_MODEL;
     const apiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
 
-    // 3. 실제 장소 검색으로 후보지 리스트업 — 태그를 키워드로, 첫 태그를 활동 힌트로 쓴다.
-    //    카카오 REST 키(서버 전용)로 검색한다. 키가 없으면 기본 약속 카드를 제공한다.
-    //    검색 실패는 약속 추천을 막지 않는다 (빈 목록 + status 로 이유 전달).
-    const activityHint = meetingForPrompt.tags[0] ? `${meetingForPrompt.tags[0]} 모임` : '모임 장소';
-    const keywords = [...new Set([...meetingForPrompt.tags, activityHint])];
+    // 3. 대화 의도 → 실제 장소 검색 → 검증된 후보 추천 순서로 진행한다.
+    const intent = await inferPlaceIntent({ meeting: meetingForPrompt, lines, apiKey });
     const search = await searchPlaces({
-      region: meetingForPrompt.region,
-      keywords,
+      region: intent.region,
+      keywords: intent.keywords,
       kakaoKey: Deno.env.get('KAKAO_REST_KEY') ?? undefined,
     });
     const places = search.places;
@@ -89,15 +89,15 @@ Deno.serve(async (req) => {
     const result = await suggestWithAI({ meeting: meetingForPrompt, lines, places, now, apiKey });
     const { plan: finalPlan, fallback } = result;
 
-    // 6. 저장 후 계약 형태로 반환 (time ↔ time_label 매핑, candidates 는 jsonb, meet_at 은 자동 확정용 시각)
+    // 6. 시간은 미정으로 저장한다. LLM 추정 시각이 자동 확정되는 것을 막는다.
     const { data: inserted, error: insertError } = await svc
       .from('meeting_plans')
       .insert({
         meeting_id: meetingId,
         created_by: user.id,
         place: finalPlan.place,
-        time_label: finalPlan.time,
-        meet_at: finalPlan.meet_at,
+        time_label: '가능 시간 조율 중',
+        meet_at: null,
         activity: finalPlan.activity,
         nearby: finalPlan.nearby,
         candidates: finalPlan.candidates,
@@ -113,13 +113,13 @@ Deno.serve(async (req) => {
       function_name: FN,
       model,
       meeting_ids: [meetingId],
-      success: !fallback,
-      fallback,
+      success: !fallback && !intent.fallback,
+      fallback: fallback || intent.fallback,
       latency_ms: Date.now() - started,
-      error_type: result.error_type,
+      error_type: result.error_type || intent.error_type,
     });
     if (logError) console.error(`[${FN}] 실행 기록 저장 실패: ${logError.code ?? 'unknown'}`);
-    console.info(JSON.stringify({ function_name: FN, ...tokenUsage(result.usage), latency_ms: Date.now() - started }));
+    console.info(JSON.stringify({ function_name: FN, ...tokenUsage(result.usage), intent_usage: tokenUsage(intent.usage), latency_ms: Date.now() - started }));
 
     return json({
       plan: {
@@ -133,7 +133,8 @@ Deno.serve(async (req) => {
         selected_place: inserted.selected_place ?? null,
         schedule_host: inserted.schedule_host,
       },
-      fallback,
+      fallback: fallback || intent.fallback,
+      intent_fallback: intent.fallback,
       search_used: search.provider,
       search: {
         provider: search.provider,
