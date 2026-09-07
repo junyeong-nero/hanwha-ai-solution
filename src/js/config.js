@@ -7,7 +7,7 @@
    카카오 개발자 콘솔에서 배포 도메인(github.io · 로컬)을 등록해 다른 사이트에서는 동작하지 않게 막는다.
    장소 검색에 쓰는 REST 키는 서버 전용이라 여기 넣지 않는다 — Edge Function 비밀값(KAKAO_REST_KEY)에만 둔다.
    비어 있으면 지도는 좌표 기반 placeholder 로 대체되고 후보 비교·선택은 그대로 동작한다. */
-const CONFIG={SUPABASE_URL:'https://nxqukthjluwoaqehpxtl.supabase.co',SUPABASE_ANON_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cXVrdGhqbHV3b2FxZWhweHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MjM3MjEsImV4cCI6MjEwMzk5OTcyMX0.2SZc2BZSGmN9VpM66MZs2UwkKmGzEHeGQLfQ3K7fmCg',KAKAO_JS_KEY:'',DEMO_MODE:true};
+const CONFIG={SUPABASE_URL:'https://vcmlqiovovflrkkjbzlt.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_1ngvGKkMYVVlODiu_aWH3A_72Wq58Pn',KAKAO_JS_KEY:'',DEMO_MODE:true};
 /* ?demo=1 로 열면 백엔드 설정이 있어도 로컬 데모 모드로 돈다 — 발표장 네트워크 장애 대비 · 디자인 확인용 */
 const LOCAL_DEMO=typeof location!=='undefined'&&/[?&]demo=1(&|$)/.test(location.search);
 const BACKEND=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_ANON_KEY)&&!LOCAL_DEMO;

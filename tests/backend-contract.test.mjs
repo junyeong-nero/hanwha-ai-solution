@@ -20,14 +20,20 @@ test('환경 예시는 공개 키와 함수 설정을 구분한다', () => {
   assert.doesNotMatch(env, /OPENROUTER_API_KEY\s*=\s*\S/);
 });
 
-test('이중 모드: CONFIG에는 URL과 anon 키만 들어가고, 키가 있으면 role 이 anon 이어야 한다', () => {
+test('이중 모드: CONFIG에는 URL과 공개 publishable 또는 anon 키만 들어간다', () => {
   const m = html.match(/const CONFIG=\{SUPABASE_URL:'([^']*)',SUPABASE_ANON_KEY:'([^']*)',KAKAO_JS_KEY:'([^']*)',DEMO_MODE:(true|false)\}/);
   assert.ok(m, 'CONFIG 블록 형식');
   const [, url, key] = m;
   if (url || key) {
     assert.match(url, /^https:\/\/[a-z]{20}\.supabase\.co$/);
-    const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString('utf8'));
-    assert.equal(payload.role, 'anon', 'CONFIG 의 키는 anon(publishable) 키여야 한다');
+    assert.doesNotMatch(key, /^sb_secret_/, '서버 비밀 키는 브라우저에 넣을 수 없다');
+    if (key.startsWith('sb_publishable_')) {
+      assert.match(key, /^sb_publishable_[A-Za-z0-9_-]+$/, '공개 publishable 키 형식');
+    } else {
+      assert.equal(key.split('.').length, 3, '레거시 키는 JWT 형식이어야 한다');
+      const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString('utf8'));
+      assert.equal(payload.role, 'anon', '레거시 CONFIG 키는 anon 역할이어야 한다');
+    }
   }
   assert.match(html, /const BACKEND=!!\(CONFIG\.SUPABASE_URL&&CONFIG\.SUPABASE_ANON_KEY\)/);
   // supabase-js는 백엔드 모드에서만 동적으로 로드한다 (정적 <script src>로 넣지 않는다)
