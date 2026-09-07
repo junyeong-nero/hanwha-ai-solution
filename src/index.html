@@ -240,6 +240,10 @@
   </div>
 
   <!-- 만남 평가 시트 (별 0.5~5) -->
+  <div class="sheetwrap" id="availabilitywrap">
+    <div class="dimbg" onclick="closeAvailability()"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="가능 시간 조율"><div class="grip"></div><div class="sh"><b>가능 시간 조율</b><button class="ib" style="min-width:44px;min-height:44px" onclick="closeAvailability()" aria-label="닫기">×</button></div><div class="sbody" id="availabilitybody"></div></div>
+  </div>
   <div class="sheetwrap" id="ratewrap">
     <div class="dimbg" onclick="hideRating()"></div>
     <div class="sheet">
@@ -374,6 +378,7 @@
 <script src="js/home.js"></script>
 <script src="js/match.js"></script>
 <script src="js/chat.js"></script>
+<script src="js/availability.js"></script>
 <script src="js/map.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/backend.js"></script>

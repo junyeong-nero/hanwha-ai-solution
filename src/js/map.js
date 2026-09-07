@@ -232,6 +232,7 @@ async function pickPlace(planId){
     if(error){netFail('장소 선택');return}
   }
   msg.plan.place=c.name; msg.plan.selected=c;
+  if(typeof persistAvailability==='function')persistAvailability(CUR);
   renderMsgs(); renderBanner();
   toast('장소 선택',esc(c.name)+' 으로 정했어요 · 모두 확정하면 약속이 잡혀요');
 }

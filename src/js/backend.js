@@ -44,6 +44,7 @@ function clearBackendState(){
   MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
   S.joined=[]; S.rooms={}; S.dirty=false; if(typeof updateBdg==='function')updateBdg();
   if(typeof resetHomeOrbit==='function')resetHomeOrbit();   // 홈 은하계도 사용자별로 초기화
+  if(typeof closeAvailability==='function')closeAvailability();
   if(typeof resetPlanMaps==='function')resetPlanMaps();     // 후보 장소 선택·지도도 사용자별로 초기화
   R.rec=null; R.recLoading=false; R.recDirty=true; R.seen.clear();
   if(typeof CUR!=='undefined')CUR=null;
@@ -276,13 +277,15 @@ function pushMsg(r,x){
 function applyPlan(r,pl,search){
   if(!pl||!pl.id)return;
   const plan={place:pl.place||'',when:pl.time_label||'',meetAt:pl.meet_at||null,act:pl.activity||'',food:(pl.nearby||[]).join(' · '),
-    cands:Array.isArray(pl.candidates)?pl.candidates:[],selected:pl.selected_place||null};
+    schedule:pl.schedule||null,scheduleHost:pl.schedule_host||null,cands:Array.isArray(pl.candidates)?pl.candidates:[],selected:pl.selected_place||null};
   let msg=r.msgs.find(m=>m.f==='ai'&&m.planId===pl.id);
   if(!msg){
     if(!r.msgs.some(m=>m.f==='ai'))r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     msg={f:'ai',plan,planId:pl.id,t:fmtT(pl.created_at)||nowT()}; r.msgs.push(msg);
   }
+  if((msg.plan?.schedule?.revision||0)>(plan.schedule?.revision||0))return;
   msg.plan=plan; msg.source=pl.source;
+  if(typeof AV!=='undefined'&&AV&&AV.planId===pl.id){AV.msg=msg;if(!AV.dirty&&!AV.busy){AV.revision=plan.schedule?.revision||0;AV.draft=new Set(plan.schedule?.responses?.[MYID()]||[]);renderAvailability()}}
   if(search)msg.search=search;   // 검색 상태는 추천 응답에서만 오고, Realtime 갱신 때는 이전 값을 유지한다
   // 다른 멤버가 고른 장소를 내 화면의 선택 상태에도 맞춘다 (Realtime 양방향 동기화)
   if(plan.selected){
@@ -338,6 +341,7 @@ function subscribeRoom(id){
       const r=S.rooms[id]; if(!r||!p.new)return;
       (r.votes[p.new.plan_id]||(r.votes[p.new.plan_id]=new Set())).add(p.new.user_id);
       const msg=r.msgs.find(x=>x.planId===p.new.plan_id); if(msg)checkPlanDone(id,msg);
+      if(typeof AV!=='undefined'&&AV&&AV.room===id)renderAvailability();
       if(CUR===id){renderMsgs();renderBanner()}
     })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'meeting_attendance',filter:'meeting_id=eq.'+id},async p=>{
