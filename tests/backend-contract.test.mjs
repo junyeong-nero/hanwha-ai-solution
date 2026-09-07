@@ -247,7 +247,7 @@ test('칩 값은 onclick에 직접 삽입하지 않고 data 속성과 위임 이
   assert.match(html, /function bindChipEvents\(\)/);
   assert.match(html, /document\.addEventListener\('click'/);
   assert.doesNotMatch(html, /\.value\.trim\(\)\.replace\(\/\["'\\\\<>\]\/g,''\)/);
-  assert.match(html, /data-create-kind="region"/);
+  assert.match(html, /<select id="c-region"[^>]*onchange="cset\('region',this.value\)"/);
   assert.match(html, /data-create-kind="tag"/);
 });
 
