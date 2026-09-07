@@ -12,7 +12,7 @@ function renderRooms(){
   $('roomlist').innerHTML=S.joined.map(id=>{
     const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id];
     if(!m||!r)return '';
-    const last=r.msgs.length?r.msgs[r.msgs.length-1]:{x:r.last||'대화를 시작해 보세요',t:r.lastT||''};
+    const last=BACKEND?{x:r.last||'대화를 시작해 보세요',t:r.lastT||''}:r.msgs.length?r.msgs[r.msgs.length-1]:{x:r.last||'대화를 시작해 보세요',t:r.lastT||''};
     const isAi=last.f==='ai', lastTxt=isAi?'MoonLight AI가 약속을 제안했어요':(last.x||'');
     const right=r.unread?'<span class="ub">'+r.unread+'</span>':r.planned?'<span class="pl">'+ico('cal')+' 약속 확정</span>':'';
     return '<button class="room" onclick="openRoom(\''+id+'\')">'
@@ -95,17 +95,18 @@ function startDueWatch(){
 function stopDueWatch(){ if(DUE_T){clearInterval(DUE_T);DUE_T=null} }
 async function openRoom(id){
   if(BACKEND){
-    try{await loadRoom(id)}catch(e){netFail('채팅방 열기');return}
+    try{if(await loadRoom(id)===false)return}catch(e){netFail('채팅방 열기');return}
     subscribeRoom(id);
   }
   restoreAvailability(id);
   CUR=id; const r=S.rooms[id];
   $('typing').style.display='none';   // 다른 방에서 돌던 입력 중 표시는 넘기지 않는다
-  r.unread=0; updateBdg();
+  if(!BACKEND)r.unread=0; updateBdg();
   renderMeta(id);
   renderBanner();renderMsgs();
   $('roomview').classList.add('on');
   startDueWatch();
+  if(BACKEND)await markRoomRead(id);
 }
 function closeRoom(){closeAvailability();$('roomview').classList.remove('on');CUR=null;stopDueWatch();$('typing').style.display='none';if(BACKEND)unsubscribeRoom();renderRooms()}
 /* 매칭 카드의 "채팅방 열기" — 채팅 탭으로 옮기면서 그 방을 바로 연다 */

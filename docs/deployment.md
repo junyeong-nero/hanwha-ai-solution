@@ -156,8 +156,13 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 
 ## 가능 시간 조율 (#33) 배포·검증
 
-1. `0012_plan_availability.sql` 마이그레이션을 먼저 적용합니다.
+1. `0013_plan_availability.sql` 마이그레이션을 먼저 적용합니다.
 2. 방장 ID 응답이 추가된 `suggest-meeting-plan` Edge Function을 배포한 뒤 프런트엔드를 배포합니다.
 3. 서로 다른 사용자로 같은 약속을 열어 가능 시간을 각각 저장하고, 실시간 집계·방장 후보 선택·전원 확정을 확인합니다. 운영 Supabase에서 이 확인은 별도로 필요합니다.
 
 기본 순수 함수 회귀는 `npm test`에 포함됩니다. SQL과 모바일 통합 검증을 재현하려면 임시 개발 패키지(`npm install --no-save --package-lock=false playwright @electric-sql/pglite`)와 Chromium(`npx playwright install chromium`)을 준비합니다. SQL 검증은 `node tests/manual/availability-sql.mjs`, 모바일 검증은 저장소 루트에서 `python3 -m http.server 8033`을 실행한 뒤 `node tests/manual/availability-browser.mjs`입니다. SQL 검증은 최소 Auth·약속 스키마에 실제 마이그레이션을 적용하는 PGlite 테스트이며, 운영 RLS·네트워크 Realtime 검증을 대신하지 않습니다.
+### 안 읽은 메시지 배지 (#12)
+
+프런트엔드 배포 전에 `0012_room_unread.sql` 마이그레이션을 적용합니다. `meeting_members.last_read_at`, `mark_room_read` RPC와 `room_summaries.unread_count`가 함께 필요합니다. 기존 회원은 참가 이후 받은 메시지부터 안 읽은 것으로 집계됩니다.
+
+두 계정으로 같은 모임에 참가한 뒤, 한 계정은 방을 닫고 다른 계정에서 메시지를 보내 목록 미리보기·방 배지·하단 합계가 갱신되는지 확인합니다. 방을 열면 읽음이 저장되고, 새로고침해도 유지되어야 합니다. 앱을 숨긴 채 받은 메시지와 재연결 중 받은 메시지도 확인합니다.

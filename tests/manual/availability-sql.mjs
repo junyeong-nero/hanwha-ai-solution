@@ -8,7 +8,7 @@ create table meeting_members(meeting_id uuid,user_id uuid,joined_at timestamptz)
 create table meeting_plans(id uuid primary key,meeting_id uuid,created_by uuid,created_at timestamptz default now(),confirmed boolean default false,meet_at timestamptz,time_label text);
 create table meeting_plan_votes(plan_id uuid,user_id uuid);
 `);
-await db.exec(fs.readFileSync(new URL('../../supabase/migrations/0012_plan_availability.sql',import.meta.url),'utf8'));
+await db.exec(fs.readFileSync(new URL('../../supabase/migrations/0013_plan_availability.sql',import.meta.url),'utf8'));
 const host='00000000-0000-0000-0000-000000000001',guest='00000000-0000-0000-0000-000000000002', outsider='00000000-0000-0000-0000-000000000003',room='00000000-0000-0000-0000-000000000004',plan='00000000-0000-0000-0000-000000000005';
 await db.exec(`insert into auth.users values ('${host}'),('${guest}'),('${outsider}');insert into meetings values('${room}','${host}');insert into meeting_members values('${room}','${host}',now()-interval '1 day'),('${room}','${guest}',now()-interval '1 day');insert into meeting_plans(id,meeting_id,created_by) values('${plan}','${room}','${host}')`);
 const login=uid=>db.query("select set_config('test.uid',$1,false)",[uid]);
