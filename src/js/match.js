@@ -37,13 +37,17 @@ function renderMatchCards(list,note){
 async function joinMeet(id){
   const m=MEETINGS.find(x=>x.id===id);
   if(BACKEND){
-    // 중복 참가는 무시(no-op). RLS: 본인 행만 insert 가능
+    // 중복 참가는 무시(no-op). RLS: 본인 행만 insert 가능하고, 서버가 모임 상태·정원도 본다 (#11)
     const {error}=await sb.from('meeting_members').upsert({meeting_id:id,user_id:ME},{onConflict:'meeting_id,user_id',ignoreDuplicates:true});
-    if(error){netFail('모임 참가');return}
+    if(error){
+      // 42501 = 정책·정원 트리거가 막은 참가. 화면이 낡았을 수 있으니 추천 목록을 다시 받는다
+      if(error.code==='42501'){toast('참가할 수 없어요','정원이 찼거나 마감된 모임이에요');await loadRecommendations();return}
+      netFail('모임 참가');return;
+    }
     if(!S.joined.includes(id))S.joined.push(id);
     await loadRooms();
     if(R.rec)renderMatchCards(R.rec.list,R.rec.note);
-    toast('참가 완료','<b>'+esc(m.name)+'</b> 채팅방이 열렸어요');
+    toast('참가 완료','<b>'+esc(m.name)+'</b> 채팅방이 열렸어요 · 참가 이전 대화는 보이지 않아요');
     return;
   }
   S.joined.push(id);
