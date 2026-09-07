@@ -53,6 +53,12 @@ export function cleanString(value: unknown, maxLen: number): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, maxLen);
 }
 
+/** 링크는 http(s) 만 허용한다. javascript: 등 다른 스킴은 빈 문자열로 바꾼다 (프론트는 '#' 로 표시) */
+export function safeHttpUrl(url: unknown): string {
+  const s = typeof url === 'string' ? url.trim() : '';
+  return /^https?:\/\//i.test(s) ? s : '';
+}
+
 /** 문자열 배열만 남기고 정리한다 */
 export function cleanStringArray(value: unknown, maxLen: number, maxItems: number): string[] {
   if (!Array.isArray(value)) return [];

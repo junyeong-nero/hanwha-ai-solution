@@ -74,11 +74,17 @@ npx supabase secrets set DEMO_RESET_TOKEN=<길고 무작위인 문자열>
 npx supabase secrets set DEMO_LOGIN_SECRET=<길고 무작위인 다른 문자열>
 ```
 
-선택 — 약속 후보지 **실제 웹 검색**용 카카오 로컬 API 키 (https://developers.kakao.com → 앱 만들기 → REST API 키). 없으면 OpenRouter 웹 검색 플러그인(요청당 약 $0.02, 크레딧 필요)을, 그것도 안 되면 검색 없이 진행합니다:
+권장 — 약속 후보지를 **실재하는 장소로 검증**하는 카카오 로컬 API 키 (https://developers.kakao.com → 앱 만들기 → **REST API 키**). 없으면 OpenRouter 웹 검색 플러그인(요청당 약 $0.02, 크레딧 필요)을, 그것도 안 되면 검색 없이 진행합니다(후보지는 "검색 미확인"으로 표시됩니다):
 
 ```bash
 npx supabase secrets set KAKAO_REST_KEY=<카카오 REST API 키>
 ```
+
+> **키 두 개를 구분하세요 (이슈 #34).**
+> - **REST API 키 = 서버 전용.** 장소 검색에만 쓰이며 Edge Function 비밀값으로만 둡니다. 브라우저·저장소에 들어가면 안 됩니다 (`npm test` 의 `plan-map` 테스트가 `KakaoAK`·`KAKAO_REST_KEY=` 노출을 잡습니다).
+> - **JavaScript 키 = 공개용.** 지도를 그리는 데만 쓰며 `src/js/config.js` 의 `CONFIG.KAKAO_JS_KEY` 에 넣습니다. 같은 콘솔의 **앱 설정 → 플랫폼 → Web** 에 배포 도메인(`https://junyeong-nero.github.io`)과 로컬 주소를 등록해 다른 사이트에서 쓰지 못하게 막습니다.
+>
+> `KAKAO_JS_KEY` 가 비어 있으면 지도는 좌표를 상대 위치로 환산한 placeholder 로 그려지고, 후보 비교·선택은 그대로 동작합니다.
 
 `DEMO_LOGIN_SECRET`은 사번 기반 계정의 비밀번호를 파생하는 서버 비밀키입니다. 유출되면 사번만으로 남의 세션을 만들 수 있으니 32자 이상 무작위 값을 쓰고 저장소에 넣지 않습니다.
 
@@ -109,9 +115,9 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 
 ## 5. 프론트엔드 연결과 QR
 
-1. `src/js/config.js` 상단의 `CONFIG`를 채웁니다.
+1. `src/js/config.js` 상단의 `CONFIG`를 채웁니다. `KAKAO_JS_KEY`는 도메인을 등록한 **JavaScript 키**이며, 비워 두면 지도만 placeholder로 대체됩니다.
    ```js
-   const CONFIG={SUPABASE_URL:'https://<ref>.supabase.co',SUPABASE_ANON_KEY:'<anon 키>',DEMO_MODE:true};
+   const CONFIG={SUPABASE_URL:'https://<ref>.supabase.co',SUPABASE_ANON_KEY:'<anon 키>',KAKAO_JS_KEY:'<카카오 JavaScript 키>',DEMO_MODE:true};
    ```
 2. Node.js 24 이상에서 `npm test`가 통과하는지 확인합니다 (비밀 키가 HTML에 들어가면 `backend-contract` 테스트가 실패합니다). Node 24 미만이면 테스트 명령이 원인을 한국어로 안내하고 종료합니다.
 3. 커밋·푸시하면 GitHub Pages가 자동 재배포됩니다 (1~2분).
@@ -134,7 +140,8 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 2-1. **다른 기기**에서 같은 계열사·사번·이름으로 로그인 → 같은 프로필·참가 모임·채팅이 복원되는지, 같은 사번에 **다른 이름**을 넣으면 "사번과 이름이 일치하지 않아요"가 나오는지
 3. 매칭 탭 → 추천 카드가 **대기 없이 바로** 뜨고 **추천 이유**가 보임 (추천은 규칙 엔진이라 LLM 지연·fallback 안내가 없음)
 4. 모임 `참가` → 채팅 탭에 방 생성, 두 번째 기기로 같은 모임 참가 후 양방향 메시지 수신
-5. `＋` → `AI 추천 약속 잡기` → 카드 도착 (다른 기기에도 Realtime으로 표시) → `이 약속으로 확정`
+5. `＋` → `AI 추천 약속 잡기` → 카드 도착 (다른 기기에도 Realtime으로 표시) → 후보지 지도에 Marker 여러 개, 목록 카드를 누르면 Marker가 함께 강조되는지 → `이 장소로 정하기` 를 누르면 다른 기기의 만남 장소도 같이 바뀌는지 → `이 약속으로 확정`
+5-1. 후보지가 비거나(검색 결과 없음) 카카오 할당량이 걸리면 카드 아래에 이유와 대체 검색어 안내가 뜨는지 (지도 없이도 약속 카드는 그대로 동작)
 6. 상단 배너 `만남 완료 (데모)` → 베일 애니메이션 → 실명·계열사 표시, 사진첩 열림
 7. 홈 탭 → 행성 점등·연결된 동료 수 증가. 만남 완료를 한 번 더 눌러도 중복 증가 없음
 8. 프로필 탭에서 선호 지역 변경 → 매칭 탭 재요청 시 순서 변화

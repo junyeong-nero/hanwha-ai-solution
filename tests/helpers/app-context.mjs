@@ -6,12 +6,28 @@ import vm from 'node:vm';
 
 const srcDir = new URL('../../src/js/', import.meta.url);
 
-const stubElement = (width) => ({
-  innerHTML: '',
-  textContent: '',
-  clientWidth: width,
-  classList: { add() {}, remove() {} },
-});
+/** 브라우저 요소의 최소 흉내 — 클래스·속성·innerHTML 만 실제로 기억한다 */
+const stubElement = (width) => {
+  const classes = new Set();
+  const attrs = new Map();
+  return {
+    innerHTML: '',
+    textContent: '',
+    clientWidth: width,
+    style: {},
+    scrolled: 0,
+    classList: {
+      add: (...names) => names.forEach((n) => classes.add(n)),
+      remove: (...names) => names.forEach((n) => classes.delete(n)),
+      contains: (n) => classes.has(n),
+      toggle: (n, on) => (on === undefined ? (classes.has(n) ? classes.delete(n) : classes.add(n)) : on ? classes.add(n) : classes.delete(n)),
+    },
+    setAttribute: (k, v) => attrs.set(k, String(v)),
+    getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
+    querySelector: () => null,
+    scrollIntoView() { this.scrolled += 1; },
+  };
+};
 
 /**
  * @param {object} options
@@ -30,6 +46,10 @@ export function loadApp({ files = ['config.js', 'home.js'], width = 320 } = {}) 
     // 포커스 복원만 확인하면 되므로, 선택자를 그대로 기억하는 가짜 요소를 돌려준다
     querySelector(selector) {
       return { focus: () => focused.push(selector) };
+    },
+    // 카카오맵 SDK를 쓰지 않는 테스트에서는 지도 컨테이너가 없다
+    querySelectorAll() {
+      return [];
     },
   };
   const context = vm.createContext({ document, window: {}, console });

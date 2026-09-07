@@ -252,13 +252,35 @@ nav#nav svg{width:23px;height:23px}
 .plan .row i{font-style:normal;flex-shrink:0}
 .plan button{width:100%;margin-top:10px;background:var(--orange);color:#fff;font-size:13px;font-weight:700;padding:10px;border-radius:9px}
 .plan button:disabled{background:var(--card2);color:var(--tx3)}
-/* 후보지 목록 · 전원 확정 진행 바 */
+/* 후보지 지도 · 목록 · 전원 확정 진행 바 */
 .cands{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
 .cands b{font-size:12px;color:var(--tx2)}
-.cand{margin-top:6px;font-size:12.5px;line-height:1.4}
-.cand a{color:var(--orange-soft);font-weight:700;text-decoration:none}
+/* 지도: 카카오맵 SDK(.kmap) 또는 좌표를 상대 위치로 환산한 placeholder(.ph) */
+.planmap{position:relative;height:152px;margin:9px 0 2px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#101528}
+.planmap .kmap{position:absolute;inset:0}
+.planmap.ph{background:linear-gradient(160deg,#141A31,#101528)}
+.planmap .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(154,161,188,.1) 1px,transparent 1px),linear-gradient(90deg,rgba(154,161,188,.1) 1px,transparent 1px);background-size:28px 28px}
+.plan .planmap .pin{position:absolute;width:44px;height:44px;margin:0;padding:0;transform:translate(-50%,-50%);background:none;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.planmap .pin i{font-style:normal;width:24px;height:24px;border-radius:50%;background:var(--card2);border:1.5px solid var(--tx3);color:var(--tx2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.planmap .pin.on i{background:var(--orange);border-color:#fff;color:#fff;transform:scale(1.2)}
+.planmap .cap{position:absolute;left:8px;right:8px;bottom:8px;font-size:11.5px;color:var(--tx2);background:rgba(11,14,26,.82);border-radius:8px;padding:5px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.planmap .cap b{color:var(--moon)}
+/* 후보 카드: 누르면 지도 Marker와 함께 선택된다 (터치 타겟 44px) */
+.cand{margin-top:6px;font-size:12.5px;line-height:1.4;display:flex;gap:4px;border:1px solid transparent;border-radius:10px;background:rgba(30,36,64,.5)}
+.cand.on{border-color:rgba(243,115,33,.6);background:rgba(243,115,33,.1)}
+.plan .cand .pick{flex:1;width:auto;min-width:0;margin:0;padding:8px 10px;background:none;color:inherit;font-size:12.5px;font-weight:400;border-radius:10px;display:flex;gap:8px;align-items:flex-start;text-align:left;min-height:44px}
+.cand .no{width:20px;height:20px;flex-shrink:0;border-radius:50%;background:var(--card2);color:var(--tx2);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.cand.on .no{background:var(--orange);color:#fff}
+.cand .txt{min-width:0}
+.cand .txt b{color:var(--tx);font-weight:700}
+.cand .cat{display:inline-block;margin-left:5px;font-size:10.5px;color:var(--tx3);border:1px solid var(--line);border-radius:6px;padding:0 5px}
+.cand .cat.warn{color:#F5C86B;border-color:rgba(245,200,107,.45)}
 .cand small{display:block;color:var(--tx3)}
 .cand em{display:block;font-style:normal;color:var(--tx2)}
+.cand .detail{display:flex;align-items:center;flex-shrink:0;padding:0 10px;min-height:44px;font-size:11.5px;font-weight:700;color:var(--orange-soft);text-decoration:none}
+.plan .pickbtn{margin-top:8px;min-height:44px;background:var(--card2);color:var(--orange-soft);border:1px solid rgba(243,115,33,.45);font-size:12.5px}
+/* 검색 결과 없음 · 할당량 초과 · 오류 안내 */
+.cnote{margin-top:8px;font-size:11.5px;line-height:1.5;color:#F5C86B}
 .vote{margin-top:10px}
 .vote .bar{height:7px;border-radius:4px;background:var(--card2);overflow:hidden}
 .vote .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--orange),var(--orange-soft));transition:width .4s}

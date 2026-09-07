@@ -1,8 +1,13 @@
 /* ================= 백엔드 설정 (이중 모드) =================
    GitHub Pages 배포 시 Supabase 프로젝트 URL과 publishable(anon) 키만 채운다.
    비어 있으면 아래 하드코딩 데이터만으로 동작하는 로컬 데모 모드가 된다 (네트워크 요청 없음).
-   secret key·OpenRouter 키는 절대 여기 넣지 않는다 — Edge Function 비밀값에만 둔다. */
-const CONFIG={SUPABASE_URL:'https://nxqukthjluwoaqehpxtl.supabase.co',SUPABASE_ANON_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cXVrdGhqbHV3b2FxZWhweHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MjM3MjEsImV4cCI6MjEwMzk5OTcyMX0.2SZc2BZSGmN9VpM66MZs2UwkKmGzEHeGQLfQ3K7fmCg',DEMO_MODE:true};
+   secret key·OpenRouter 키는 절대 여기 넣지 않는다 — Edge Function 비밀값에만 둔다.
+
+   KAKAO_JS_KEY 는 카카오맵 JavaScript 키(공개용)다. 지도를 그리는 데만 쓰이고,
+   카카오 개발자 콘솔에서 배포 도메인(github.io · 로컬)을 등록해 다른 사이트에서는 동작하지 않게 막는다.
+   장소 검색에 쓰는 REST 키는 서버 전용이라 여기 넣지 않는다 — Edge Function 비밀값(KAKAO_REST_KEY)에만 둔다.
+   비어 있으면 지도는 좌표 기반 placeholder 로 대체되고 후보 비교·선택은 그대로 동작한다. */
+const CONFIG={SUPABASE_URL:'https://nxqukthjluwoaqehpxtl.supabase.co',SUPABASE_ANON_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cXVrdGhqbHV3b2FxZWhweHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MjM3MjEsImV4cCI6MjEwMzk5OTcyMX0.2SZc2BZSGmN9VpM66MZs2UwkKmGzEHeGQLfQ3K7fmCg',KAKAO_JS_KEY:'',DEMO_MODE:true};
 const BACKEND=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_ANON_KEY);
 
 /* ================= 데이터 (로컬 데모 모드 · 백엔드 모드에서는 서버 데이터로 대체됨) ================= */
@@ -100,16 +105,27 @@ const MEETINGS=[
    tags:['산책','러닝'], members:['p9','p10'],
    ai:'교육 기간에 <b>인재경영원</b>에서 만나기 좋은 모임이에요. 저녁 산책은 처음 만나는 사이에도 부담이 없어요.'},
 ];
-// 로컬 데모용 장소 후보 (실서비스에서는 서버가 웹 검색으로 채운다)
+/* 로컬 데모용 mock 장소 후보. 실서비스에서는 서버(Edge Function)가 카카오 장소 검색으로 같은 모양을 채운다
+   — 장소 ID · 이름 · 주소 · 좌표 · 분류 · 상세 링크. 좌표가 있어야 지도에서 후보를 비교할 수 있다. */
 const mapUrl=q=>'https://map.kakao.com/?q='+encodeURIComponent(q);
+let PC_SEQ=0;
+const pc=(name,address,category,lat,lng,why,q)=>({id:'demo-'+(++PC_SEQ),name,address,category,lat,lng,url:mapUrl(q||name),why,verified:true});
 const PLAN_CANDS={
-  m1:[{name:'판교 화랑공원',address:'경기 성남시 분당구 삼평동',url:mapUrl('판교 화랑공원'),why:'트랙이 평탄하고 퇴근 후 모이기 쉬워요'},{name:'판교 중앙공원',address:'경기 성남시 분당구 백현동',url:mapUrl('판교 중앙공원'),why:'3km 코스가 딱 맞아요'},{name:'탄천 산책로 판교 구간',address:'경기 성남시 분당구',url:mapUrl('탄천 산책로 판교'),why:'조명이 있어 저녁에도 안전해요'}],
-  m2:[{name:'판교 하이볼 바 달',address:'경기 성남시 분당구 판교역로',url:mapUrl('판교 하이볼'),why:'위스키 종류가 많고 조용해요'},{name:'판교 어탕국수',address:'경기 성남시 분당구 삼평동',url:mapUrl('판교 어탕국수'),why:'안주 겸 저녁으로 좋아요'}],
-  m3:[{name:'여의도 한화 라운지',address:'서울 영등포구 여의도동',url:mapUrl('여의도 63빌딩'),why:'노트북 쓰기 좋은 회의 공간'},{name:'여의도 커피 브루잉랩',address:'서울 영등포구 여의나루로',url:mapUrl('여의도 카페'),why:'점심 후 30분 정리하기 좋아요'}],
-  m4:[{name:'청진옥',address:'서울 종로구 종로3길',url:mapUrl('청진옥'),why:'장교동에서 도보 10분, 국밥 원조'},{name:'을지로 오래된 다방',address:'서울 중구 을지로',url:mapUrl('을지로 다방'),why:'후식 커피 한 잔'}],
-  m5:[{name:'판교 보드게임 카페',address:'경기 성남시 분당구 판교역로',url:mapUrl('판교 보드게임카페'),why:'초심자용 게임이 많아요'},{name:'판교 떡볶이 연구소',address:'경기 성남시 분당구',url:mapUrl('판교 떡볶이'),why:'게임 전 간단히 먹기 좋아요'}],
-  m6:[{name:'서울숲 정문',address:'서울 성동구 뚝섬로',url:mapUrl('서울숲'),why:'필름 카메라 산책 시작점'},{name:'성수 베이글',address:'서울 성동구 성수동',url:mapUrl('성수 베이글'),why:'산책 후 브런치'}],
-  m7:[{name:'인재경영원 산책로',address:'경기 용인시 처인구',url:mapUrl('한화 인재경영원'),why:'교육 후 바로 모일 수 있어요'},{name:'용인 호수공원',address:'경기 용인시',url:mapUrl('용인 호수공원'),why:'차로 10분, 저녁 산책 코스'}],
+  m1:[pc('판교 화랑공원','경기 성남시 분당구 삼평동','공원',37.4028,127.1015,'트랙이 평탄하고 퇴근 후 모이기 쉬워요'),
+      pc('판교 중앙공원','경기 성남시 분당구 백현동','공원',37.3894,127.1096,'3km 코스가 딱 맞아요'),
+      pc('탄천 산책로 판교 구간','경기 성남시 분당구','산책로',37.3999,127.1108,'조명이 있어 저녁에도 안전해요','탄천 산책로 판교')],
+  m2:[pc('판교 하이볼 바 달','경기 성남시 분당구 판교역로','바',37.3947,127.1112,'위스키 종류가 많고 조용해요','판교 하이볼'),
+      pc('판교 어탕국수','경기 성남시 분당구 삼평동','한식',37.4023,127.0985,'안주 겸 저녁으로 좋아요')],
+  m3:[pc('여의도 한화 라운지','서울 영등포구 여의도동','모임 공간',37.5199,126.9403,'노트북 쓰기 좋은 회의 공간','여의도 63빌딩'),
+      pc('여의도 커피 브루잉랩','서울 영등포구 여의나루로','카페',37.5215,126.9245,'점심 후 30분 정리하기 좋아요','여의도 카페')],
+  m4:[pc('청진옥','서울 종로구 종로3길','한식',37.5705,126.9789,'장교동에서 도보 10분, 국밥 원조'),
+      pc('을지로 오래된 다방','서울 중구 을지로','카페',37.5661,126.9910,'후식 커피 한 잔','을지로 다방')],
+  m5:[pc('판교 보드게임 카페','경기 성남시 분당구 판교역로','카페',37.3950,127.1105,'초심자용 게임이 많아요','판교 보드게임카페'),
+      pc('판교 떡볶이 연구소','경기 성남시 분당구','분식',37.3965,127.1085,'게임 전 간단히 먹기 좋아요','판교 떡볶이')],
+  m6:[pc('서울숲 정문','서울 성동구 뚝섬로','공원',37.5444,127.0374,'필름 카메라 산책 시작점','서울숲'),
+      pc('성수 베이글','서울 성동구 성수동','카페',37.5445,127.0557,'산책 후 브런치')],
+  m7:[pc('인재경영원 산책로','경기 용인시 처인구','산책로',37.2312,127.2075,'교육 후 바로 모일 수 있어요','한화 인재경영원'),
+      pc('용인 호수공원','경기 용인시','공원',37.2400,127.1780,'차로 10분, 저녁 산책 코스')],
 };
 // inH — 약속 시각을 페이지를 연 시점 기준 시간(h) 오프셋으로 둔다. 실서비스에서는 서버가 meet_at(ISO)을 준다.
 // m7 은 이미 시간이 지난 약속이라 확정 투표 없이 자동 확정되는 경로를 그대로 보여준다.

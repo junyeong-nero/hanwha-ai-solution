@@ -13,9 +13,10 @@ import {
   rankByRules,
   RULE_ENGINE_MODEL,
 } from '../supabase/functions/_shared/recommendation.ts';
-import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan } from '../supabase/functions/_shared/chat.ts';
+import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan, verifyPlan } from '../supabase/functions/_shared/chat.ts';
 import { parseMeetAt, acceptMeetAt, nowHint, MAX_HORIZON_DAYS } from '../supabase/functions/_shared/plantime.ts';
-import { searchPlaces, KAKAO_ENDPOINT } from '../supabase/functions/_shared/search.ts';
+import { searchPlaces, KAKAO_ENDPOINT, mapKakaoDocuments, toCoord } from '../supabase/functions/_shared/search.ts';
+import { verifyCandidates, matchPlace, normalizePlaceName, resolvePlaceName } from '../supabase/functions/_shared/places.ts';
 
 import { html } from './helpers/source.mjs';
 
@@ -409,9 +410,9 @@ const makeMessages = (n) => Array.from({ length: n }, (_, i) => ({
 }));
 
 const PLACES = [
-  { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페' },
-  { name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '공원' },
-  { name: '탄천 산책로', address: '경기 성남시 분당구', url: '', category: '' },
+  { id: '1', name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페', lat: 37.3947, lng: 127.1112 },
+  { id: '2', name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '공원', lat: 37.4028, lng: 127.1015 },
+  { id: '3', name: '탄천 산책로', address: '경기 성남시 분당구', url: '', category: '', lat: null, lng: null },
 ];
 
 test('anonymizeMessages: 최신 30개만 시간순으로 남기고 발신자를 참가자N으로 바꾼다', () => {
@@ -460,9 +461,12 @@ test('buildPlanPrompt: 검색된 후보지가 있으면 목록을 넣고 그 안
   const parsed = JSON.parse(user);
   assert.equal(parsed.places.length, 3);
   assert.equal(parsed.places[0].name, '판교역 스타벅스');
-  assert.equal(parsed.places[0].url, 'https://place.map.kakao.com/1');
+  assert.equal(parsed.places[0].address, '경기 성남시 분당구 판교역로 4');
   assert.equal(parsed.places[0].category, '카페');
-  assert.equal(parsed.places[2].url, undefined);
+  // 주소·좌표·링크는 검색 결과에서 채우므로 프롬프트에 링크를 넣어 지어내게 하지 않는다
+  assert.equal(parsed.places[0].url, undefined);
+  assert.equal(parsed.places[2].category, undefined);
+  assert.match(system, /name 은 목록의 값을 글자 그대로/);
 });
 
 test('parsePlan: 필수 필드가 빠지면 INVALID_LLM_OUTPUT', () => {
@@ -490,8 +494,9 @@ test('parsePlan: candidates 는 이름 없는 항목을 버리고 최대 5개만
   const plan = parsePlan(JSON.stringify({ place: '후보 1', time: '금요일 18시', activity: '산책', nearby: [], candidates }));
   assert.equal(plan.candidates.length, 5);
   assert.deepEqual(plan.candidates.map((c) => c.name), ['후보 1', '후보 2', '후보 3', '후보 4', '후보 5']);
-  assert.deepEqual(plan.candidates[0], { name: '후보 1', address: '주소 1', url: 'https://1', why: '가까워요' });
-  assert.deepEqual(plan.candidates[2], { name: '후보 3', address: '', url: '', why: '' });
+  // 검색 결과 없이 파싱한 단계라 verified 는 false — 장소 ID·좌표는 아직 없다
+  assert.deepEqual(plan.candidates[0], { id: '', name: '후보 1', address: '주소 1', url: 'https://1', category: '', lat: null, lng: null, why: '가까워요', verified: false });
+  assert.deepEqual(plan.candidates[2], { id: '', name: '후보 3', address: '', url: '', category: '', lat: null, lng: null, why: '', verified: false });
 });
 
 test('fallbackPlan: 다섯 필드를 모두 채우고 후보지가 없으면 candidates 는 빈 배열', () => {
@@ -509,10 +514,73 @@ test('fallbackPlan: 검색된 후보지가 있으면 첫 장소를 만남 장소
   assert.equal(plan.place, '판교역 스타벅스');
   assert.equal(plan.time, '평일 저녁');
   assert.equal(plan.candidates.length, 3);
-  assert.deepEqual(plan.candidates[0], { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', why: '검색된 후보지예요' });
+  assert.deepEqual(plan.candidates[0], {
+    id: '1', name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1',
+    category: '카페', lat: 37.3947, lng: 127.1112, why: '검색된 후보지예요', verified: true,
+  });
   assert.ok(plan.nearby.includes('화랑공원'));
-  const many = fallbackPlan({ title: 'x', region: '판교', tags: [], when_label: '' }, Array.from({ length: 8 }, (_, i) => ({ name: `장소 ${i}`, address: '', url: '', category: '' })));
+  const many = fallbackPlan({ title: 'x', region: '판교', tags: [], when_label: '' }, Array.from({ length: 8 }, (_, i) => ({ id: String(i), name: `장소 ${i}`, address: '', url: '', category: '', lat: null, lng: null })));
   assert.equal(many.candidates.length, 5);
+});
+
+/* ================= places.ts — 실제 장소 검증 (이슈 #34) ================= */
+
+test('normalizeName · matchPlace: 띄어쓰기·괄호가 달라도 같은 장소로 본다', () => {
+  assert.equal(normalizePlaceName(' 스타벅스 판교역점 '), '스타벅스판교역점');
+  assert.equal(matchPlace('판교역스타벅스', PLACES)?.id, '1');
+  assert.equal(matchPlace('스타벅스', PLACES)?.id, '1');            // 부분 일치
+  assert.equal(matchPlace('없는 가게', PLACES), null);
+});
+
+test('verifyCandidates: 검색 결과에 없는 장소는 후보에서 빠지고, 남은 후보는 검색 값으로 채워진다', () => {
+  const candidates = [
+    { name: '지어낸 루프탑 바', address: '아무 데나', url: 'https://fake.example', why: '분위기가 좋아요' },
+    { name: '화랑공원', why: '러닝 코스가 있어요' },
+  ];
+  const out = verifyCandidates(candidates, PLACES);
+  assert.ok(!out.some((c) => c.name === '지어낸 루프탑 바'), 'LLM 이 지어낸 장소는 확정하지 않는다');
+  assert.equal(out[0].name, '화랑공원');
+  assert.equal(out[0].id, '2');
+  assert.equal(out[0].address, '경기 성남시 분당구 삼평동');
+  assert.equal(out[0].url, 'https://place.map.kakao.com/2');
+  assert.equal(out[0].lat, 37.4028);
+  assert.equal(out[0].why, '러닝 코스가 있어요');
+  assert.equal(out[0].verified, true);
+  // 검증된 후보가 하나뿐이면 지도에서 비교할 수 있게 검색 결과로 채운다
+  assert.ok(out.length >= 2);
+});
+
+test('verifyCandidates: 검색 결과가 없으면 LLM 후보를 verified false 로 남긴다', () => {
+  const out = verifyCandidates([{ name: '판교 어딘가', why: '가까워요' }], []);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].verified, false);
+  assert.equal(out[0].id, '');
+});
+
+test('verifyCandidates: 같은 이름의 다른 장소는 ambiguous 로 표시한다 (동명이인)', () => {
+  const places = [
+    { id: '1', name: '스타벅스', address: '판교역로 4', url: '', category: '카페', lat: 37.39, lng: 127.11 },
+    { id: '2', name: '스타벅스', address: '백현동 1', url: '', category: '카페', lat: 37.4, lng: 127.1 },
+  ];
+  const out = verifyCandidates([{ name: '스타벅스', why: '가까워요' }], places);
+  assert.equal(out.length, 2);
+  assert.ok(out.every((c) => c.ambiguous), '같은 이름은 주소로 구분하도록 표시한다');
+  assert.notEqual(out[0].address, out[1].address);
+});
+
+test('resolvePlaceName · verifyPlan: 만남 장소는 검증된 후보 중 하나가 된다', () => {
+  const cands = verifyCandidates([{ name: '화랑공원', why: '좋아요' }], PLACES);
+  assert.equal(resolvePlaceName('화랑 공원', cands), '화랑공원');
+  assert.equal(resolvePlaceName('존재하지 않는 곳', cands), cands[0].name);
+
+  const plan = verifyPlan(
+    { place: '지어낸 루프탑 바', time: '금요일 19시', activity: '산책', nearby: [], meet_at: null, candidates: [{ name: '지어낸 루프탑 바', why: '분위기' }] },
+    PLACES,
+  );
+  assert.ok(plan.candidates.length > 0);
+  assert.ok(plan.candidates.every((c) => c.verified));
+  assert.equal(plan.place, plan.candidates[0].name);
+  assert.notEqual(plan.place, '지어낸 루프탑 바');
 });
 
 /* ================= plantime.ts — 약속 시각 파서 ================= */
@@ -602,31 +670,35 @@ test('fallbackPlan: when_label 에서 meet_at 을 채우고, 못 짚으면 null'
 /* ================= search.ts ================= */
 
 const KAKAO_DOCS = [
-  { place_name: '판교역 스타벅스', road_address_name: '경기 성남시 분당구 판교역로 4', address_name: '경기 성남시 분당구 백현동 1', place_url: 'https://place.map.kakao.com/1', category_group_name: '카페', category_name: '음식점 > 카페 > 커피전문점' },
-  { place_name: '화랑공원', road_address_name: '', address_name: '경기 성남시 분당구 삼평동', place_url: 'https://place.map.kakao.com/2', category_group_name: '', category_name: '여행 > 공원' },
-  { place_name: '', place_url: 'https://place.map.kakao.com/3' },
+  { id: '11', place_name: '판교역 스타벅스', road_address_name: '경기 성남시 분당구 판교역로 4', address_name: '경기 성남시 분당구 백현동 1', place_url: 'https://place.map.kakao.com/1', category_group_name: '카페', category_name: '음식점 > 카페 > 커피전문점', x: '127.1112', y: '37.3947' },
+  { id: '12', place_name: '화랑공원', road_address_name: '', address_name: '경기 성남시 분당구 삼평동', place_url: 'https://place.map.kakao.com/2', category_group_name: '', category_name: '여행 > 공원', x: '127.1015', y: '37.4028' },
+  { id: '13', place_name: '', place_url: 'https://place.map.kakao.com/3' },
+];
+const KAKAO_PLACES = [
+  { id: '11', name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페', lat: 37.3947, lng: 127.1112 },
+  { id: '12', name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '여행 > 공원', lat: 37.4028, lng: 127.1015 },
 ];
 
-test('searchPlaces: Kakao 키가 있으면 키워드 검색 결과를 후보지로 바꾼다', async () => {
+test('searchPlaces: Kakao 키가 있으면 장소 ID·주소·좌표·상세 링크를 정규화한다', async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ url, init });
     return new Response(JSON.stringify({ documents: KAKAO_DOCS }), { status: 200 });
   };
-  const out = await searchPlaces({ region: '판교', keywords: ['러닝', '운동'], kakaoKey: 'test-kakao', openRouterKey: 'test-or', fetchImpl });
+  const out = await searchPlaces({ region: '판교', keywords: ['러닝', '운동'], kakaoKey: 'test-kakao', openRouterKey: 'test-or', fetchImpl, limit: 2 });
   assert.equal(out.provider, 'kakao');
+  assert.equal(out.status, 'ok');
+  assert.deepEqual(out.queries, ['판교 러닝']);
+  assert.deepEqual(out.alternatives, []);
   assert.equal(calls.length, 1);
   assert.ok(calls[0].url.startsWith(KAKAO_ENDPOINT));
   assert.ok(calls[0].url.includes(`query=${encodeURIComponent('판교 러닝')}`));
-  assert.ok(calls[0].url.includes('size=5'));
+  assert.ok(calls[0].url.includes('size=2'));
   assert.equal(calls[0].init.headers.Authorization, 'KakaoAK test-kakao');
-  assert.deepEqual(out.places, [
-    { name: '판교역 스타벅스', address: '경기 성남시 분당구 판교역로 4', url: 'https://place.map.kakao.com/1', category: '카페' },
-    { name: '화랑공원', address: '경기 성남시 분당구 삼평동', url: 'https://place.map.kakao.com/2', category: '여행 > 공원' },
-  ]);
+  assert.deepEqual(out.places, KAKAO_PLACES);
 });
 
-test('searchPlaces: Kakao 첫 키워드 결과가 없으면 다음 키워드로 한 번 더 (최대 2회)', async () => {
+test('searchPlaces: 결과가 모자라면 다음 검색어로 넓히고 같은 장소는 한 번만 담는다 (최대 3회)', async () => {
   const calls = [];
   const fetchImpl = async (url) => {
     calls.push(url);
@@ -635,10 +707,40 @@ test('searchPlaces: Kakao 첫 키워드 결과가 없으면 다음 키워드로 
   };
   const out = await searchPlaces({ region: '판교', keywords: ['없는키워드', '카페', '세번째'], kakaoKey: 'k', fetchImpl, limit: 3 });
   assert.equal(out.provider, 'kakao');
-  assert.equal(calls.length, 2);
+  assert.equal(out.status, 'ok');
+  assert.equal(calls.length, 3);
   assert.ok(calls[1].includes(`query=${encodeURIComponent('판교 카페')}`));
   assert.ok(calls[1].includes('size=3'));
+  // 2·3번째 응답이 같은 장소라 중복 없이 한 곳만 남는다
   assert.equal(out.places.length, 1);
+  assert.deepEqual(out.queries, ['판교 없는키워드', '판교 카페', '판교 세번째']);
+});
+
+test('searchPlaces: 결과가 0건이면 status empty 와 대체 검색어를 돌려준다', async () => {
+  const fetchImpl = async () => new Response(JSON.stringify({ documents: [] }), { status: 200 });
+  const out = await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl });
+  assert.equal(out.status, 'empty');
+  assert.deepEqual(out.places, []);
+  assert.ok(out.alternatives.includes('판교 카페'));
+  assert.ok(!out.alternatives.some((q) => out.queries.includes(q)), '이미 써 본 검색어는 다시 권하지 않는다');
+});
+
+test('searchPlaces: 할당량 초과(429)와 키·도메인 오류(401·403)를 구분한다', async () => {
+  const respond = (status) => async () => new Response('{}', { status });
+  const quota = await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: respond(429) });
+  assert.equal(quota.status, 'quota');
+  assert.equal(quota.provider, 'kakao');
+  assert.equal((await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: respond(401) })).status, 'auth');
+  assert.equal((await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: respond(403) })).status, 'auth');
+  assert.equal((await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: respond(500) })).status, 'error');
+});
+
+test('searchPlaces: 한국 범위를 벗어난 좌표는 버린다', () => {
+  const [place] = mapKakaoDocuments([{ id: '9', place_name: '이상한 좌표', x: '0', y: '999' }], 5);
+  assert.equal(place.lat, null);
+  assert.equal(place.lng, null);
+  assert.equal(toCoord('127.1', 'lng'), 127.1);
+  assert.equal(toCoord('', 'lat'), null);
 });
 
 test('searchPlaces: OpenRouter 웹 플러그인 경로는 plugins 를 보내고 JSON places 를 읽는다', async () => {
@@ -665,29 +767,34 @@ test('searchPlaces: OpenRouter 웹 플러그인 경로는 plugins 를 보내고 
   assert.equal(body.temperature, 0.2);
   assert.ok(body.messages.some((m) => m.content.includes('판교') && m.content.includes('러닝')));
   assert.deepEqual(out.places, [
-    { name: '판교역 스타벅스', address: '판교역로 4', url: 'https://cafe.example/1', category: '카페' },
-    { name: '화랑공원', address: '삼평동', url: 'https://park.example/2', category: '공원' },
+    { id: '', name: '판교역 스타벅스', address: '판교역로 4', url: 'https://cafe.example/1', category: '카페', lat: null, lng: null },
+    { id: '', name: '화랑공원', address: '삼평동', url: 'https://park.example/2', category: '공원', lat: null, lng: null },
   ]);
 });
 
-test('searchPlaces: 키가 없으면 요청 없이 provider none', async () => {
+test('searchPlaces: 키가 없으면 요청 없이 status no_key', async () => {
   let calls = 0;
   const fetchImpl = async () => { calls++; return new Response('{}', { status: 200 }); };
   const out = await searchPlaces({ region: '판교', keywords: ['러닝'], fetchImpl });
-  assert.deepEqual(out, { provider: 'none', places: [] });
+  assert.deepEqual(out, { provider: 'none', places: [], status: 'no_key', queries: [], alternatives: [] });
   assert.equal(calls, 0);
 });
 
-test('searchPlaces: fetch 가 던지거나 오류 응답이어도 provider none 으로 끝난다', async () => {
+test('searchPlaces: fetch 가 던지거나 응답이 없어도 빈 후보와 status 로 끝난다 (추천을 막지 않는다)', async () => {
   const throwing = async () => { throw new Error('network down'); };
-  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: throwing }), { provider: 'none', places: [] });
-  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], openRouterKey: 'o', fetchImpl: throwing }), { provider: 'none', places: [] });
+  const kakao = await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: throwing });
+  assert.deepEqual(kakao.places, []);
+  assert.equal(kakao.status, 'error');
+  assert.ok(kakao.alternatives.length > 0, '실패해도 다음에 해 볼 검색어는 안내한다');
 
-  const failing = async () => new Response('{"error":"quota"}', { status: 429 });
-  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: failing }), { provider: 'none', places: [] });
+  const openrouter = await searchPlaces({ region: '판교', keywords: ['러닝'], openRouterKey: 'o', fetchImpl: throwing });
+  assert.deepEqual(openrouter.places, []);
+  assert.equal(openrouter.status, 'error');
 
   const hanging = () => new Promise(() => {});
-  assert.deepEqual(await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: hanging, timeoutMs: 50 }), { provider: 'none', places: [] });
+  const timeout = await searchPlaces({ region: '판교', keywords: ['러닝'], kakaoKey: 'k', fetchImpl: hanging, timeoutMs: 50 });
+  assert.deepEqual(timeout.places, []);
+  assert.equal(timeout.status, 'error');
 });
 
 /* ================= llm.ts ================= */
@@ -951,6 +1058,33 @@ test('suggest-meeting-plan: AI 프롬프트에도 호출자가 참가한 뒤의 
   const suggest = fs.readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts', import.meta.url), 'utf8');
   assert.ok(suggest.includes(".select('meeting_id, joined_at')"));
   assert.ok(suggest.includes(".gte('created_at', membership.joined_at)"));
+});
+
+/* ===== 이슈 #34: 실제 장소 검증 · 후보 선택 ===== */
+const migration0010 = fs.readFileSync(new URL('../supabase/migrations/0010_plan_place_selection.sql', import.meta.url), 'utf8');
+const suggestFn = fs.readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts', import.meta.url), 'utf8');
+
+test('#34 suggest-meeting-plan: 저장 전에 검색 결과로 검증하고 검색 상태를 함께 돌려준다', () => {
+  assert.ok(suggestFn.includes('verifyPlan(plan ?? fallbackPlan(meetingForPrompt, places, now), places)'),
+    'LLM · fallback 양쪽 모두 검증을 거친다');
+  assert.ok(suggestFn.includes("kakaoKey: Deno.env.get('KAKAO_REST_KEY')"), '장소 검색 키는 서버 환경변수에서만 읽는다');
+  assert.ok(suggestFn.includes('status: search.status'));
+  assert.ok(suggestFn.includes('alternatives: search.alternatives'));
+  assert.ok(suggestFn.includes('selected_place: inserted.selected_place ?? null'));
+});
+
+test('#34 0010 마이그레이션: 후보 목록 안의 장소만 멤버가 고를 수 있다', () => {
+  assert.ok(migration0010.includes('alter table public.meeting_plans add column if not exists selected_place jsonb;'));
+  assert.ok(migration0010.includes('create or replace function public.select_plan_place('));
+  assert.ok(migration0010.includes('security definer'));
+  assert.ok(migration0010.includes('public.is_meeting_member(v_meeting_id, auth.uid())'), '멤버만 고를 수 있다');
+  assert.ok(migration0010.includes("jsonb_array_elements(coalesce(p.candidates, '[]'::jsonb))"), '후보 목록 안에서만 고른다');
+  assert.ok(/if v_candidate is null then\s+raise exception '후보지에 없는 장소입니다'/.test(migration0010));
+  assert.ok(migration0010.includes('if v_confirmed then'), '확정된 약속의 장소는 바뀌지 않는다');
+  assert.ok(migration0010.includes('revoke all on function public.select_plan_place(uuid, text, text) from public, anon;'));
+  assert.ok(migration0010.includes('grant execute on function public.select_plan_place(uuid, text, text) to authenticated, service_role;'));
+  // 브라우저가 직접 쓸 수 있는 컬럼은 여전히 confirmed 뿐이다
+  assert.ok(!/grant update \((?!confirmed\))/.test(migration0010));
 });
 
 test('parsePlan: 후보지 URL 은 http(s) 만 남긴다 (javascript: 차단)', () => {

@@ -1,9 +1,13 @@
 // 채팅 익명화 · 약속 추천 프롬프트 · 응답 파서 · 정적 fallback (순수 모듈 — Deno · Node 모두에서 동작)
-import { extractJsonObject, cleanString, cleanStringArray } from './json.ts';
+import { extractJsonObject, cleanString, cleanStringArray, safeHttpUrl } from './json.ts';
 import { parseMeetAt, acceptMeetAt, nowHint } from './plantime.ts';
+import { verifyCandidates, resolvePlaceName, placeToCandidate, MAX_CANDIDATES } from './places.ts';
 import type { Place } from './search.ts';
+import type { PlanCandidate } from './places.ts';
 
 export type { Place } from './search.ts';
+export type { PlanCandidate } from './places.ts';
+export { safeHttpUrl } from './json.ts';
 
 export interface RawMessage {
   sender_id: string;
@@ -23,15 +27,6 @@ export interface PlanMeeting {
   when_label: string;
 }
 
-/** 약속 카드의 후보지 (투표 대상) */
-export interface PlanCandidate {
-  name: string;
-  address: string;
-  url: string;
-  /** 왜 이곳인지 한국어 한 문장 */
-  why: string;
-}
-
 export interface PlanSuggestion {
   place: string;
   time: string;
@@ -44,9 +39,7 @@ export interface PlanSuggestion {
 
 const DEFAULT_LIMIT = 30;
 const DEFAULT_MAX_LEN = 300;
-const MAX_CANDIDATES = 5;
 const MAX_PLACES_IN_PROMPT = 8;
-const FALLBACK_CANDIDATE_WHY = '검색된 후보지예요';
 
 /**
  * 메시지를 익명화한다.
@@ -94,10 +87,13 @@ function sanitizePlaces(places: unknown): Place[] {
     const name = cleanString(p.name, 80);
     if (!name) continue;
     out.push({
+      id: cleanString(p.id, 40),
       name,
       address: cleanString(p.address, 160),
       url: safeHttpUrl(cleanString(p.url, 300)),
       category: cleanString(p.category, 40),
+      lat: typeof p.lat === 'number' ? p.lat : null,
+      lng: typeof p.lng === 'number' ? p.lng : null,
     });
     if (out.length >= MAX_PLACES_IN_PROMPT) break;
   }
@@ -119,12 +115,14 @@ const SYSTEM_PROMPT_NO_PLACES = `${SYSTEM_PROMPT_BASE}
 {"place":"만남 장소","time":"만남 시간","meet_at":"2026-09-11T19:00:00+09:00","activity":"함께 할 활동","nearby":["주변 장소 1","주변 장소 2"],"candidates":[]}`;
 
 const SYSTEM_PROMPT_WITH_PLACES = `${SYSTEM_PROMPT_BASE}
-6. places 는 웹 검색으로 찾은 실제 장소 목록이에요. 만남 장소(place)는 반드시 이 목록에서 고르세요.
-7. candidates 에는 places 중에서 이 모임에 어울리는 2~5곳을 {name, address, url, why} 로 적으세요.
-   name·address·url 은 목록의 값을 그대로 쓰고, why 는 왜 이곳이 좋은지 한국어 한 문장으로 적으세요.
+6. places 는 장소 검색으로 확인한 실제 장소 목록이에요. 만남 장소(place)는 반드시 이 목록에서 고르세요.
+   목록에 없는 장소를 적으면 실재하지 않는 곳으로 보고 후보에서 빠져요.
+7. candidates 에는 places 중에서 이 모임에 어울리는 2~5곳을 {name, why} 로 적으세요.
+   name 은 목록의 값을 글자 그대로 쓰고, why 는 왜 이곳이 좋은지 한국어 한 문장으로 적으세요.
+   주소·좌표·링크는 검색 결과에서 자동으로 채워지니 적지 않아도 돼요.
 8. place 는 candidates 에 넣은 name 중 하나와 정확히 같아야 해요.
 9. 다른 설명이나 마크다운 없이 아래 형태의 JSON 객체 하나만 출력하세요.
-{"place":"candidates 의 name 중 하나","time":"만남 시간","meet_at":"2026-09-11T19:00:00+09:00","activity":"함께 할 활동","nearby":["주변 장소 1","주변 장소 2"],"candidates":[{"name":"상호명","address":"주소","url":"링크","why":"한 문장 이유"}]}`;
+{"place":"candidates 의 name 중 하나","time":"만남 시간","meet_at":"2026-09-11T19:00:00+09:00","activity":"함께 할 활동","nearby":["주변 장소 1","주변 장소 2"],"candidates":[{"name":"상호명","why":"한 문장 이유"}]}`;
 
 /**
  * 약속 추천 프롬프트. 모임 요약과 익명화된 대화만 넣는다.
@@ -161,30 +159,10 @@ export function buildPlanPrompt(
           name: p.name,
           category: p.category || undefined,
           address: p.address || undefined,
-          url: p.url || undefined,
         }))
       : undefined,
   });
   return { system: safePlaces.length > 0 ? SYSTEM_PROMPT_WITH_PLACES : SYSTEM_PROMPT_NO_PLACES, user };
-}
-
-/** candidates 배열을 정리한다. 이름 없는 항목은 버리고 최대 5개. */
-function sanitizeCandidates(value: unknown): PlanCandidate[] {
-  if (!Array.isArray(value)) return [];
-  const out: PlanCandidate[] = [];
-  for (const item of value) {
-    const c = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
-    const name = cleanString(c.name, 80);
-    if (!name) continue;
-    out.push({
-      name,
-      address: cleanString(c.address, 160),
-      url: safeHttpUrl(cleanString(c.url, 300)),
-      why: cleanString(c.why ?? c.reason, 120),
-    });
-    if (out.length >= MAX_CANDIDATES) break;
-  }
-  return out;
 }
 
 /**
@@ -210,7 +188,8 @@ export function parsePlan(raw: string, now: Date | string | number = new Date())
     time,
     activity,
     nearby: cleanStringArray(src.nearby, 80, 5),
-    candidates: sanitizeCandidates(src.candidates),
+    // 이 단계에서는 LLM 이 적은 그대로 담아 두고, verifyPlan 이 검색 결과와 맞춰 검증한다
+    candidates: verifyCandidates(src.candidates, []),
     meet_at: acceptMeetAt(src.meet_at, now) ?? acceptMeetAt(parseMeetAt(time, now), now),
   };
 }
@@ -238,12 +217,7 @@ export function fallbackPlan(
       time: whenLabel,
       activity,
       nearby: safePlaces.slice(1, 3).map((p) => p.name).concat(['근처 카페 한 곳']).slice(0, 3),
-      candidates: safePlaces.map((p) => ({
-        name: p.name,
-        address: p.address,
-        url: p.url,
-        why: FALLBACK_CANDIDATE_WHY,
-      })),
+      candidates: safePlaces.map((p) => placeToCandidate(p)),
       meet_at: meetAt,
     };
   }
@@ -258,7 +232,13 @@ export function fallbackPlan(
   };
 }
 
-/** 후보지 링크는 http(s) 만 허용한다. javascript: 등 다른 스킴은 빈 문자열로 바꾼다 (프론트는 '#' 로 표시) */
-export function safeHttpUrl(url: string): string {
-  return /^https?:\/\//i.test(url) ? url : '';
+/**
+ * 약속 카드를 실제 장소 검색 결과로 검증한다 (LLM · fallback 양쪽 모두 이 관문을 지난다).
+ * - candidates 는 검색 결과와 매칭된 곳만 남고, 장소 ID·주소·좌표·상세 링크가 검색 값으로 채워진다
+ * - place 는 남은 후보 중 하나의 이름으로 맞춘다 — 후보에 없는 장소가 만남 장소가 되는 일을 막는다
+ * 검색 결과가 없으면(키 없음·할당량 초과 등) 후보를 verified false 로 두어 화면에서 구분할 수 있게 한다.
+ */
+export function verifyPlan(plan: PlanSuggestion, places: Place[] = []): PlanSuggestion {
+  const candidates = verifyCandidates(plan.candidates, sanitizePlaces(places), MAX_CANDIDATES);
+  return { ...plan, candidates, place: resolvePlaceName(plan.place, candidates) };
 }
