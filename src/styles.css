@@ -723,14 +723,21 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .place-plan h4{font-size:19px;letter-spacing:-.5px;color:var(--tx);margin:12px 0 6px}
 .place-intro{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:14px}
 .place-candidates{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:12px}
-.place-plan .cand{display:flex;flex-direction:column;gap:0;min-width:0;margin:0;border:1px solid var(--line);border-radius:var(--r-m);background:var(--card)}
+.place-plan .cand{position:relative;display:flex;flex-direction:column;gap:0;min-width:0;margin:0;border:1px solid var(--line);border-radius:var(--r-m);background:var(--card)}
 .place-plan .cand.on{border-color:var(--orange-a30);background:var(--orange-a12)}
-.place-plan .cand .pick{padding:14px 12px;gap:9px;border-radius:var(--r-m);flex:1}
+.place-plan .cand .pick{padding:14px 12px 14px 48px;gap:9px;border-radius:var(--r-m);flex:1}
 .place-plan .cand .txt b{font-size:15px;display:block;margin-bottom:4px;line-height:1.5}
 .place-plan .cand .cat{font-size:11px;margin:0 0 6px;padding:2px 6px;border-radius:var(--r-s);color:var(--tx2)}
 .place-plan .cand small{font-size:12px;color:var(--tx2);line-height:1.6}
-.place-plan .cand em{margin-top:10px;line-height:1.65;font-size:13px;color:var(--tx)}
-.place-plan .cand em strong{display:block;font-size:11px;font-weight:600;color:var(--orange-soft);margin-bottom:3px}
+/* 추천 이유는 카드 위에 겹쳐 열려 목록 높이를 바꾸지 않는다. */
+.cand:has(.cand-reason[open]){z-index:1}
+.cand-reason summary{position:absolute;top:4px;left:4px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer;color:var(--tx2);border-radius:var(--r-s)}
+.cand-reason summary::-webkit-details-marker{display:none}
+.cand-reason summary .ic{width:18px;height:18px}
+.cand-reason[open] summary{color:var(--orange-soft);background:var(--orange-a12)}
+.cand-reason summary:focus-visible{outline:2px solid var(--orange);outline-offset:-2px}
+.cand-reason-panel{position:absolute;top:48px;left:8px;right:8px;padding:12px;background:var(--card2);border:1px solid var(--orange-a30);border-radius:var(--r-s);box-shadow:var(--sh-2);font-size:13px;line-height:1.65;color:var(--tx);overflow-wrap:anywhere;max-height:220px;overflow-y:auto}
+.cand-reason-panel strong{display:block;font-size:11px;font-weight:600;color:var(--orange-soft);margin-bottom:3px}
 .cand-actions{display:flex;align-items:stretch;border-top:1px solid var(--line);padding:4px 8px;gap:6px}
 .place-plan .cand-actions .opinion{margin:0;height:auto;min-height:44px;flex:1;width:auto;background:transparent;color:var(--orange-soft);border-radius:var(--r-s);box-shadow:none;font-size:13px}
 .place-plan .cand-actions .detail{min-width:60px;min-height:44px;font-size:12px;color:var(--tx2)}
