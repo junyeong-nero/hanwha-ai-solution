@@ -107,7 +107,7 @@ const S={
   met:{p1:true,p2:true},                 // 한 번 이상 만난 사람
   feedback:{},                           // 로컬 데모용 만남 평가 (meeting id -> {rating, comment})
   joined:[],                             // 참가한 모임 id
-  rooms:{},                              // id -> {msgs, unread, planned, revealed, photos}
+  rooms:{},                              // id -> {msgs, unread, planned, photos, votes, attended, iAttended}
 };
 const AVATARS=['🌙','🌕','⭐','☄️','🪐','🌌'];
 let REGIONS=['판교','여의도','장교','인재경영원','대전','창원','서울숲'];
@@ -119,7 +119,8 @@ const EMOJIS=['🌙','🏃','🍜','☕','🎲','📷','📚','🥃','🎬','⚽
 const co=id=>COMPANIES.find(c=>c.id===id);
 const myCo=()=>co(S.profile.company);
 const $=id=>document.getElementById(id);
-const esc=s=>s.replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));   // null·숫자도 안전
+const safeUrl=u=>/^https?:\/\//i.test(String(u||''))?String(u):'#';   // 후보지 링크는 http(s)만 (javascript: 차단)
 function nowT(){const d=new Date(),h=d.getHours();return (h<12?'오전 ':'오후 ')+((h%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')}
 function toast(a,b){$('toast').innerHTML='<b>'+a+'</b> · '+b;$('toast').classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
 
