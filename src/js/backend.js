@@ -25,22 +25,44 @@ function showEntry(){
 function hideEntry(){$('entry').classList.remove('on')}
 function entryErr(m){$('e-err').textContent=m||''}
 
+function clearBackendState(){
+  if(typeof stopDueWatch==='function')stopDueWatch();
+  if(typeof unsubscribeRoom==='function')unsubscribeRoom();
+  if(R.saveTimer){clearTimeout(R.saveTimer);R.saveTimer=null}
+  ME=null;
+  MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
+  S.joined=[]; S.rooms={}; S.dirty=false;
+  R.rec=null; R.recLoading=false; R.recDirty=true; R.seen.clear();
+  if(typeof CUR!=='undefined')CUR=null;
+  $('roomview').classList.remove('on');$('album').classList.remove('on');$('satview').classList.remove('on');
+}
+
 async function initBackend(){
   // 로컬 데모 데이터는 비우고 서버 데이터로만 채운다
-  MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
-  S.joined=[]; S.rooms={};
+  clearBackendState();
   $('modehint').textContent='발표용 백엔드 모드 · 데이터는 Supabase에 저장됩니다';
   try{
     await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js');
     sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
     sb.auth.onAuthStateChange((ev,sess)=>{   // 갱신 실패로 로그아웃되면 로그인 화면으로
-      if(ev==='SIGNED_OUT'){ME=null;showEntry()}
+      if(ev==='SIGNED_OUT'){clearBackendState();showEntry()}
       else if(sess&&sess.user)ME=sess.user.id;
     });
     const {data:{session}}=await sb.auth.getSession();
     if(session){ME=session.user.id; if(await loadProfile()){await afterLogin();return}}
   }catch(e){netFail('초기화')}
   showEntry();
+}
+async function logout(){
+  if(!BACKEND||!sb||!ME)return;
+  if(!window.confirm('로그아웃할까요?'))return;
+  try{
+    const result=await sb.auth.signOut();
+    if(result&&result.error)throw result.error;
+  }catch(e){
+    try{await sb.auth.signOut({scope:'local'})}catch(_){ }
+    toast('로그아웃','세션을 정리했어요 · 다시 입장해 주세요');
+  }finally{clearBackendState();showEntry()}
 }
 /* Edge Function 호출 · 오류 코드 추출 */
 async function fnCode(error){

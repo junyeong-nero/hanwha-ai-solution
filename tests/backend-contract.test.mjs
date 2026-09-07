@@ -58,6 +58,27 @@ test('백엔드 모드에서는 계열사가 로그인 정보로 고정된다', 
   assert.match(html, /\$\('f-co'\)\.disabled=!!\(BACKEND&&ME\)/);
 });
 
+test('백엔드 모드에서만 로그아웃 버튼을 보여준다', () => {
+  assert.match(html, /id="logoutBtn"/);
+  assert.match(html, /onclick="logout\(\)"/);
+  assert.match(html, /\$\('logoutBtn'\)\.style\.display=BACKEND&&ME\?'':'none'/);
+});
+
+test('로그아웃은 실패해도 공통 상태를 초기화하고 입장 화면으로 돌아간다', () => {
+  assert.match(html, /async function logout\(\)/);
+  assert.match(html, /sb\.auth\.signOut\(\)/);
+  assert.match(html, /function clearBackendState\(\)/);
+  assert.match(html, /MEETINGS\.length=0/);
+  assert.match(html, /Object\.keys\(PEOPLE\)\.forEach\(k=>delete PEOPLE\[k\]\)/);
+  assert.match(html, /Object\.keys\(S\.met\)\.forEach\(k=>delete S\.met\[k\]\)/);
+  assert.match(html, /S\.joined=\[\]; S\.rooms=\{\}/);
+  assert.match(html, /finally\{clearBackendState\(\);showEntry\(\)\}/);
+});
+
+test('SIGNED_OUT 이벤트도 로그아웃과 같은 초기화 경로를 사용한다', () => {
+  assert.match(html, /if\(ev==='SIGNED_OUT'\)\{clearBackendState\(\);showEntry\(\)\}/);
+});
+
 test('백엔드 모드는 로그인 전에 로컬 데모 홈을 렌더링하지 않는다', () => {
   const startup = html.match(/\/\* ================= 시작 ================= \*\/([\s\S]*?)<\/script>/)?.[1];
   assert.ok(startup, '시작 시퀀스가 있어야 한다');
