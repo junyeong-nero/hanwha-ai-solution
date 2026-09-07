@@ -103,7 +103,8 @@ test('입력 요소는 iOS 확대 방지를 위해 16px 이상이다', () => {
 test('Realtime 채팅 계약: 채널 구독·멤버십·RPC·500자 제한', () => {
   assert.match(html, /\.channel\('room-'/);
   assert.match(html, /postgres_changes/);
-  assert.match(html, /from\('meeting_members'\)/);
+  // 참가자 목록은 RLS 테이블을 직접 읽지 않고 멤버십 RPC를 사용한다.
+  assert.doesNotMatch(html, /from\('meeting_members'\)/);
   assert.match(html, /rpc\('room_members'/);
   assert.match(html, /rpc\('room_summaries'/);
   assert.match(html, /rpc\('my_connections'/);
