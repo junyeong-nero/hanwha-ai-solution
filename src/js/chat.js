@@ -98,6 +98,7 @@ async function openRoom(id){
     try{await loadRoom(id)}catch(e){netFail('채팅방 열기');return}
     subscribeRoom(id);
   }
+  restoreAvailability(id);
   CUR=id; const r=S.rooms[id];
   $('typing').style.display='none';   // 다른 방에서 돌던 입력 중 표시는 넘기지 않는다
   r.unread=0; updateBdg();
@@ -106,7 +107,7 @@ async function openRoom(id){
   $('roomview').classList.add('on');
   startDueWatch();
 }
-function closeRoom(){$('roomview').classList.remove('on');CUR=null;stopDueWatch();$('typing').style.display='none';if(BACKEND)unsubscribeRoom();renderRooms()}
+function closeRoom(){closeAvailability();$('roomview').classList.remove('on');CUR=null;stopDueWatch();$('typing').style.display='none';if(BACKEND)unsubscribeRoom();renderRooms()}
 /* 매칭 카드의 "채팅방 열기" — 채팅 탭으로 옮기면서 그 방을 바로 연다 */
 function openJoined(id){go('chat');openRoom(id)}
 /* + 메뉴 "모임 정보" — 직접 만든 모임과 추천 모임을 구분해 안내한다 */
@@ -150,10 +151,11 @@ function renderMsgs(){
         +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
         +'<div class="row"><i>🍜</i><span>'+esc(p.food)+'</span></div>'
         +cands
+        +'<button class="cta line" onclick="openAvailability(\''+m.planId+'\')">가능 시간 조율</button>'
         +'<div class="vote"><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div>'
         +'<div class="lb"><span>'+(auto?'<b>시간 지나 자동 확정 🌕</b>':done?'<b>전원 확정 🌕</b>':'확정 <b>'+votes+'</b> / '+total+'명')+'</span>'
         +'<span>'+(auto?'약속 시간이 지났어요':done?'약속이 잡혔어요':'모두 누르면 확정돼요')+'</span></div></div>'
-        +'<button '+(done||mine?'disabled':'')+' onclick="confirmPlan('+i+')">'+(auto?'시간이 지나 확정됨':done?'약속 확정됨':mine?'확정했어요 ✓ · 다른 멤버 기다리는 중':'이 약속으로 확정')+'</button>'
+        +'<button '+(done||mine||(p.schedule&&!p.schedule.selected)?'disabled':'')+' onclick="confirmPlan('+i+')">'+(auto?'시간이 지나 확정됨':done?'약속 확정됨':mine?'확정했어요 ✓ · 다른 멤버 기다리는 중':'이 약속으로 확정')+'</button>'
         +'</div></div></div>';
     }
     const p=PEOPLE[m.f]||UNKNOWN;
@@ -210,7 +212,7 @@ async function aiPlan(){
     const t2=setTimeout(()=>{if(CUR===id)$('typing').textContent='AI 응답이 늦어지고 있어요 · 다른 탭을 봐도 도착하면 알려 드려요'},20000);
     const apply=d=>{
       const pl=d.plan||{};
-      applyPlan(r,{id:pl.id,place:pl.place,time_label:pl.time,meet_at:pl.meet_at||null,activity:pl.activity,nearby:pl.nearby||[],candidates:pl.candidates||[],selected_place:pl.selected_place||null,confirmed:false,source:d.fallback?'fallback':'llm',created_at:new Date().toISOString()},d.search);
+      applyPlan(r,{id:pl.id,place:pl.place,time_label:pl.time,meet_at:pl.meet_at||null,activity:pl.activity,nearby:pl.nearby||[],candidates:pl.candidates||[],selected_place:pl.selected_place||null,schedule_host:pl.schedule_host||ME,confirmed:false,source:d.fallback?'fallback':'llm',created_at:new Date().toISOString()},d.search);
       if(d.fallback)toast('기본 제안','AI 응답이 지연되어 기본 약속안을 보여드려요');
       else if(d.search&&d.search.status==='ok')toast('후보지 검증','실제 장소 '+((pl.candidates||[]).length)+'곳을 찾아 지도에 표시했어요');
       else if(d.search&&d.search.status!=='ok')toast('후보지 검색',SEARCH_TOAST[d.search.status]||'후보지를 찾지 못했어요');
@@ -253,6 +255,7 @@ async function aiPlan(){
 /* 확정 = 투표. 채팅방 인원 전원이 눌러야 약속이 잡힌다 */
 async function confirmPlan(i){
   const id=CUR, r=S.rooms[id], msg=r.msgs[i]; if(!msg||!msg.planId)return;
+  if(msg.plan.schedule&&!msg.plan.schedule.selected){toast('시간 조율','방장이 시간을 먼저 선택해 주세요');return}
   const set=r.votes[msg.planId]||(r.votes[msg.planId]=new Set());
   if(set.has(MYID()))return;
   if(BACKEND){
@@ -262,14 +265,17 @@ async function confirmPlan(i){
     toast('확정 투표','채팅방 멤버 모두가 누르면 약속이 잡혀요');
     return;
   }
-  set.add('me'); renderMsgs();
+  set.add('me');checkPlanDone(id,msg);persistAvailability(id); renderMsgs();renderBanner();
   toast('확정 투표','다른 멤버들의 확정을 기다려요');
-  // 로컬 데모: 다른 멤버들이 차례로 확정하는 상황을 시뮬레이션
+  simulatePlanVotes(id,msg);
+}
+/* 새로고침 뒤에도 데모의 진행 중 확정 투표를 이어 간다. */
+function simulatePlanVotes(id,msg){
   const m=MEETINGS.find(x=>x.id===id);
   m.members.forEach((pid,k)=>setTimeout(()=>{
     const rr=S.rooms[id]; if(!rr)return;
     (rr.votes[msg.planId]||(rr.votes[msg.planId]=new Set())).add(pid);
-    const done=checkPlanDone(id,msg);
+    const done=checkPlanDone(id,msg);persistAvailability(id);
     if(CUR===id){renderMsgs();renderBanner()}
     if(done)toast('약속 확정','전원이 확정했어요 · 만난 뒤 각자 만남 완료를 눌러 주세요');
   },1300*(k+1)));

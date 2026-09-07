@@ -153,3 +153,11 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 - `reset-demo`로 발표 데이터를 비우거나, 발표용 프로젝트를 일시 정지(Pause)합니다. `reset-demo`는 프로필·채팅은 지우지만 Auth 계정(`계열사.사번@demo.moonlight.local`)은 남깁니다. 계정까지 지우려면 Dashboard → Authentication → Users에서 삭제합니다. 남아 있어도 다음 로그인 때 자동으로 재사용됩니다.
 - 입장 코드를 만료(`update demo_access_codes set active=false`)시킵니다.
 - 파일럿으로 넘어갈 때는 별도 프로젝트(`moonlight-pilot`)와 별도 OpenRouter 키를 사용하고, 실행 계획 Task 8의 동의·삭제 절차를 먼저 붙입니다.
+
+## 가능 시간 조율 (#33) 배포·검증
+
+1. `0012_plan_availability.sql` 마이그레이션을 먼저 적용합니다.
+2. 방장 ID 응답이 추가된 `suggest-meeting-plan` Edge Function을 배포한 뒤 프런트엔드를 배포합니다.
+3. 서로 다른 사용자로 같은 약속을 열어 가능 시간을 각각 저장하고, 실시간 집계·방장 후보 선택·전원 확정을 확인합니다. 운영 Supabase에서 이 확인은 별도로 필요합니다.
+
+기본 순수 함수 회귀는 `npm test`에 포함됩니다. SQL과 모바일 통합 검증을 재현하려면 임시 개발 패키지(`npm install --no-save --package-lock=false playwright @electric-sql/pglite`)와 Chromium(`npx playwright install chromium`)을 준비합니다. SQL 검증은 `node tests/manual/availability-sql.mjs`, 모바일 검증은 저장소 루트에서 `python3 -m http.server 8033`을 실행한 뒤 `node tests/manual/availability-browser.mjs`입니다. SQL 검증은 최소 Auth·약속 스키마에 실제 마이그레이션을 적용하는 PGlite 테스트이며, 운영 RLS·네트워크 Realtime 검증을 대신하지 않습니다.
