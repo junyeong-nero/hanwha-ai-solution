@@ -117,21 +117,22 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 3. 커밋·푸시하면 GitHub Pages가 자동 재배포됩니다 (1~2분).
 4. 공용 주소 `https://junyeong-nero.github.io/hanwha-ai-solution/src/`로 QR을 만듭니다 (아무 QR 생성기나 가능). 관리자용 주소는 `.../src/?admin=1` 입니다.
 
-## 6. OpenRouter 확인 (발표 전날·당일)
+## 6. OpenRouter 확인 (발표 전날·당일 — 약속 추천 전용)
 
 - https://openrouter.ai/models 에서 `OPENROUTER_MODEL`에 넣은 모델 ID가 아직 유효한지 확인합니다. `openrouter/free`가 불안정하면 가용한 특정 `:free` 모델 ID로 secret을 바꾸고 함수를 재배포합니다.
 - https://openrouter.ai/settings/credits 에서 크레딧과 남은 한도를 확인합니다. 무료 한도만으로는 리허설 + 본방을 버티기 어렵습니다.
 - **실측 (2026-09-03):** 크레딧 없는 계정에서 `google/gemma-4-31b-it:free`는 첫 호출만 성공(18초)하고 연속 호출은 곧바로 `HTTP 429`(분당 한도)로 fallback이 났습니다. `openrouter/free` 라우터는 약속 추천에 24초 만에 성공했습니다. 발표 중 카드마다 20초 안팎이 걸리므로 **크레딧을 충전하고 유료 모델(예: `google/gemini-2.5-flash`)로 바꾸는 것이 가장 확실**합니다. 모델 변경은 `npx supabase secrets set OPENROUTER_MODEL=<모델 ID>` 한 줄이며 재배포는 필요 없습니다.
 - `response_format`이나 system 역할을 지원하지 않는 모델이 400을 내면 함수가 자동으로 호환 모드(둘 다 제거)로 한 번 더 시도합니다. 그래도 실패하면 fallback 추천이 뜹니다.
 - https://openrouter.ai/settings/privacy 에서 프롬프트 로깅이 꺼져 있는지, 가능하면 학습 거부(ZDR) 제공자만 쓰도록 설정합니다.
-- 응답에 `fallback: true`가 자주 나오면 매칭 탭 상단에 "AI 응답이 지연되어 기본 추천" 안내가 뜹니다. 이 상태로 발표하면 "AI 활용" 시연이 무너지므로 반드시 사전에 잡습니다.
+- OpenRouter 는 이제 **약속 추천(`suggest-meeting-plan`)에서만** 씁니다. 모임 추천(`recommend-meetings`)은 규칙 엔진이라 키·크레딧·모델 상태와 무관하게 즉시 응답하고 fallback 도 없습니다.
+- 약속 카드 응답에 `fallback: true`가 자주 나오면 채팅방에 "기본 제안" 배지가 붙습니다. 이 상태로 발표하면 "AI 활용" 시연이 약해지므로 사전에 잡습니다.
 
 ## 7. 발표 전 회귀 체크리스트 (375×812, 실제 아이폰 권장)
 
 1. QR 접속 → 입장 화면에서 잘못된 코드 → 한국어 오류 문구 확인
 2. 올바른 코드 + 계열사 + 사번 + 이름 + 닉네임 → 홈 탭 진입, 새로고침 후에도 세션·프로필 유지
 2-1. **다른 기기**에서 같은 계열사·사번·이름으로 로그인 → 같은 프로필·참가 모임·채팅이 복원되는지, 같은 사번에 **다른 이름**을 넣으면 "사번과 이름이 일치하지 않아요"가 나오는지
-3. 매칭 탭 → LLM 추천 카드에 **추천 이유**가 보이고 fallback 안내가 **없음**
+3. 매칭 탭 → 추천 카드가 **대기 없이 바로** 뜨고 **추천 이유**가 보임 (추천은 규칙 엔진이라 LLM 지연·fallback 안내가 없음)
 4. 모임 `참가` → 채팅 탭에 방 생성, 두 번째 기기로 같은 모임 참가 후 양방향 메시지 수신
 5. `＋` → `AI 추천 약속 잡기` → 카드 도착 (다른 기기에도 Realtime으로 표시) → `이 약속으로 확정`
 6. 상단 배너 `만남 완료 (데모)` → 베일 애니메이션 → 실명·계열사 표시, 사진첩 열림

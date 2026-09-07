@@ -1,17 +1,11 @@
-// recommend-meetings — 익명 프로필과 후보 모임을 OpenRouter LLM 에 보내 순위·이유를 받는다.
+// recommend-meetings — 익명 프로필과 후보 모임을 규칙 엔진으로 채점해 순위·이유를 돌려준다.
+// 외부 LLM 을 호출하지 않으므로 응답이 즉시 나오고, 같은 입력이면 항상 같은 순서가 나온다.
 // 후보는 선호 지역(profiles.regions) 안의 열린 모임으로 서버가 먼저 거른다 (하드 제약).
 // 요청: POST {}  (Authorization: Bearer <세션 JWT>)
 // 응답: 200 { recommendations, candidates, model, fallback, regions } / 401 UNAUTHORIZED·NO_PROFILE
 import { preflight, json, fail, errorResponse } from '../_shared/cors.ts';
 import { requireUser, serviceClient } from '../_shared/supabase.ts';
-import { chatJson, LlmError } from '../_shared/llm.ts';
-import {
-  ageBand,
-  buildRecommendationPrompt,
-  parseRecommendations,
-  deterministicOrder,
-  type Recommendation,
-} from '../_shared/recommendation.ts';
+import { ageBand, rankByRules, RULE_ENGINE_MODEL } from '../_shared/recommendation.ts';
 
 const FN = 'recommend-meetings';
 
@@ -30,21 +24,21 @@ interface Candidate {
   mine: boolean;
   /** 다른 멤버 중 호출자와 같은 성별의 비율 (0~1). 성별을 모르거나 다른 멤버가 없으면 null */
   same_gender_ratio: number | null;
+  /** 다른 멤버 중 호출자와 같은 계열사의 비율 (0~1). 계열사를 모르거나 다른 멤버가 없으면 null */
+  same_company_ratio: number | null;
 }
 
-/** 오류를 ai_recommendation_runs.error_type 용 짧은 분류로 바꾼다 (원문은 남기지 않는다) */
-function classifyError(err: unknown): string {
-  if (err instanceof LlmError) return err.code === 'HTTP' ? `HTTP_${err.status ?? 0}` : err.code;
-  if (err instanceof Error && err.message === 'INVALID_LLM_OUTPUT') return 'INVALID_LLM_OUTPUT';
-  return 'UNKNOWN';
-}
-
-/** 다른 멤버 중 호출자와 같은 성별의 비율. 호출자 성별을 모르거나 다른 멤버가 없으면 null */
-function sameGenderRatio(memberIds: string[], selfId: string, selfGender: string | null, genders: Map<string, string | null>): number | null {
-  if (!selfGender) return null;
+/** 다른 멤버 중 호출자와 같은 값(성별·계열사)을 가진 비율. 기준값이 없거나 다른 멤버가 없으면 null */
+function sameAttributeRatio(
+  memberIds: string[],
+  selfId: string,
+  selfValue: string | null,
+  values: Map<string, string | null>,
+): number | null {
+  if (!selfValue) return null;
   const others = memberIds.filter((id) => id !== selfId);
   if (others.length === 0) return null;
-  const same = others.filter((id) => (genders.get(id) ?? null) === selfGender).length;
+  const same = others.filter((id) => (values.get(id) ?? null) === selfValue).length;
   return Math.round((same / others.length) * 100) / 100;
 }
 
@@ -57,7 +51,7 @@ Deno.serve(async (req) => {
     const { user } = await requireUser(req);
     const svc = serviceClient();
 
-    // 1. 프로필 (LLM 에 필요한 필드만 조회 — real_name · employee_no 는 읽지 않는다)
+    // 1. 프로필 (매칭에 필요한 필드만 조회 — real_name · employee_no 는 읽지 않는다)
     const { data: profile, error: profileError } = await svc
       .from('profiles')
       .select('company_id, region, regions, gender, age, interests, hobbies, group_size_min, group_size_max, matching_preferences')
@@ -73,6 +67,7 @@ Deno.serve(async (req) => {
         ? [String(profile.region)]
         : [];
     const selfGender = typeof profile.gender === 'string' && profile.gender.trim() ? profile.gender.trim() : null;
+    const selfCompany = typeof profile.company_id === 'string' && profile.company_id.trim() ? profile.company_id.trim() : null;
 
     // 2. 열린 모임 (선호 지역 하드 필터) · 멤버 · 내 연결
     let meetingsQuery = svc
@@ -107,18 +102,21 @@ Deno.serve(async (req) => {
       membersByMeeting.set(row.meeting_id, list);
     }
 
-    // 3. 멤버 성별 (같은 성별 비율 계산용 — 성별만 읽는다)
+    // 3. 멤버 성별·계열사 (같은 성별·계열사 비율 계산용 — 이 두 필드만 읽는다)
     const memberIds = [...new Set((members ?? []).map((row: { user_id: string }) => row.user_id))];
     const genders = new Map<string, string | null>();
-    if (selfGender && memberIds.length > 0) {
-      const { data: memberProfiles, error: gendersError } = await svc
+    const companies = new Map<string, string | null>();
+    if ((selfGender || selfCompany) && memberIds.length > 0) {
+      const { data: memberProfiles, error: memberProfilesError } = await svc
         .from('profiles')
-        .select('user_id, gender')
+        .select('user_id, gender, company_id')
         .in('user_id', memberIds);
-      if (gendersError) throw gendersError;
+      if (memberProfilesError) throw memberProfilesError;
       for (const row of memberProfiles ?? []) {
         const g = typeof row.gender === 'string' && row.gender.trim() ? row.gender.trim() : null;
+        const co = typeof row.company_id === 'string' && row.company_id.trim() ? row.company_id.trim() : null;
         genders.set(row.user_id, g);
+        companies.set(row.user_id, co);
       }
     }
 
@@ -140,30 +138,15 @@ Deno.serve(async (req) => {
           known_count: knownCount,
           joined,
           mine: m.created_by === user.id,
-          same_gender_ratio: sameGenderRatio(ids, user.id, selfGender, genders),
+          same_gender_ratio: sameAttributeRatio(ids, user.id, selfGender, genders),
+          same_company_ratio: sameAttributeRatio(ids, user.id, selfCompany, companies),
         };
       })
       .filter((c: Candidate) => c.joined || c.member_count < c.capacity);
 
     const prefs = (profile.matching_preferences ?? {}) as { same_gender?: boolean; scope?: string; direction?: string };
-    const fallbackProfile = {
-      matching_preferences: { direction: prefs.direction, same_gender: prefs.same_gender === true },
-    };
-
-    // 후보 순서를 결정적으로 고정해 LLM 입력과 fallback 이 같은 순서를 보게 한다
-    const baseOrder = deterministicOrder(candidates, fallbackProfile).map((r) => r.meeting_id);
-    candidates.sort((a, b) => baseOrder.indexOf(a.id) - baseOrder.indexOf(b.id));
-
-    const model = Deno.env.get('OPENROUTER_MODEL') ?? 'openrouter/free';
-    const apiKey = Deno.env.get('OPENROUTER_API_KEY') ?? '';
-
-    if (candidates.length === 0) {
-      return json({ recommendations: [], candidates: [], model, fallback: false, regions: regionsUsed });
-    }
-
-    // 5. LLM 호출 — JSON 검증 실패는 1회 재시도, 그래도 실패하면 결정적 정렬로 대체
-    const profileForLLM = {
-      company_id: profile.company_id ?? null,
+    const ruleProfile = {
+      company_id: selfCompany,
       regions: regionsUsed,
       age_band: ageBand(typeof profile.age === 'number' ? profile.age : null),
       gender: selfGender,
@@ -176,44 +159,30 @@ Deno.serve(async (req) => {
         direction: prefs.direction ?? 'wide',
       },
     };
-    const candidateIds = candidates.map((c) => c.id);
 
-    let recommendations: Recommendation[] | null = null;
-    let errorType: string | null = null;
-
-    if (!apiKey) {
-      errorType = 'NO_API_KEY';
-    } else {
-      const prompt = buildRecommendationPrompt(profileForLLM, candidates);
-      for (let attempt = 0; attempt < 2 && !recommendations; attempt++) {
-        try {
-          const raw = await chatJson({ apiKey, model, system: prompt.system, user: prompt.user });
-          recommendations = parseRecommendations(raw, candidateIds);
-        } catch (err) {
-          errorType = classifyError(err);
-          // 전송 오류는 chatJson 안에서 이미 1회 재시도했으므로 파싱 실패만 다시 시도한다
-          if (errorType !== 'INVALID_LLM_OUTPUT') break;
-        }
-      }
+    if (candidates.length === 0) {
+      return json({ recommendations: [], candidates: [], model: RULE_ENGINE_MODEL, fallback: false, regions: regionsUsed });
     }
 
-    const fallback = recommendations === null;
-    const finalRecommendations = recommendations ?? deterministicOrder(candidates, fallbackProfile);
+    // 5. 규칙 엔진 채점 — 순위와 같은 순서로 후보 목록도 정렬해 돌려준다
+    const recommendations = rankByRules(ruleProfile, candidates);
+    const rankById = new Map(recommendations.map((r) => [r.meeting_id, r.rank]));
+    candidates.sort((a, b) => (rankById.get(a.id) ?? Infinity) - (rankById.get(b.id) ?? Infinity));
 
-    // 6. 메타데이터만 기록 (프롬프트·응답 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
+    // 6. 메타데이터만 기록 (프로필 원문은 저장하지 않는다). 기록 실패는 응답을 막지 않는다.
     const { error: logError } = await svc.from('ai_recommendation_runs').insert({
       user_id: user.id,
       function_name: FN,
-      model,
-      meeting_ids: finalRecommendations.map((r) => r.meeting_id),
-      success: !fallback,
-      fallback,
+      model: RULE_ENGINE_MODEL,
+      meeting_ids: recommendations.map((r) => r.meeting_id),
+      success: true,
+      fallback: false,
       latency_ms: Date.now() - started,
-      error_type: fallback ? errorType : null,
+      error_type: null,
     });
     if (logError) console.error(`[${FN}] 실행 기록 저장 실패: ${logError.code ?? 'unknown'}`);
 
-    return json({ recommendations: finalRecommendations, candidates, model, fallback, regions: regionsUsed });
+    return json({ recommendations, candidates, model: RULE_ENGINE_MODEL, fallback: false, regions: regionsUsed });
   } catch (err) {
     return errorResponse(err, FN);
   }

@@ -43,7 +43,7 @@ function showCo(id){
     +'<div><b style="font-size:17px">'+c.name+'</b>'
     +'<div style="font-size:12px;color:'+(lit?'var(--orange-soft)':'var(--tx3)')+'">'+(lit?'커넥션 활성화':'아직 만남이 없는 계열사')+'</div></div></div>'
     +(ppl.length
-      ?'<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px">이곳에서 만난 동료 — '+ppl.map(p=>'<b style="color:var(--tx)">'+p.real+'</b>').join(', ')+'</div>'
+      ?'<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px">이곳에서 만난 동료 — '+ppl.map(p=>'<b style="color:var(--tx)">'+esc(p.real)+'</b>').join(', ')+'</div>'
       :'<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px">매칭 탭에서 이 계열사 동료가 있는 모임에 참가하면 이 행성이 빛나기 시작해요.</div>')
     +(mine
       ?'<button class="cta" onclick="hideCo();openSat()">내 행성 보기 — 위성이 된 동료들</button>'
@@ -57,15 +57,15 @@ function openSat(){
   $('satTitle').textContent='내 행성 · '+myCo().name;
   const mates=Object.keys(S.met).filter(p=>PEOPLE[p].co===S.profile.company);
   let h='<div class="orbit" style="width:190px;height:190px"></div><div class="orbit" style="width:266px;height:266px"></div>'
-       +'<div id="meCore">'+S.profile.av+'<span>나</span></div>';
+       +'<div id="meCore">'+esc(S.profile.av)+'<span>나</span></div>';
   mates.forEach((pid,i)=>{
     const r=i%2?133:95, d=26+i*7, del=-(d*i*.31);
     h+='<div class="holder" style="--d:'+d+'s;--del:'+del+'s">'
-      +'<div class="sat" style="left:'+r+'px;top:0"><div class="av">'+PEOPLE[pid].av+'</div><div class="nm">'+PEOPLE[pid].real+'</div></div></div>';
+      +'<div class="sat" style="left:'+r+'px;top:0"><div class="av">'+esc(PEOPLE[pid].av)+'</div><div class="nm">'+esc(PEOPLE[pid].real)+'</div></div></div>';
   });
   $('mespace').innerHTML=h;
   $('satlist').innerHTML=mates.length
-    ?mates.map(pid=>{const p=PEOPLE[pid];return '<div class="corow"><span style="font-size:20px">'+p.av+'</span><span class="nm">'+p.real+'</span><span class="st lit">연결됨</span></div>'}).join('')
+    ?mates.map(pid=>{const p=PEOPLE[pid];return '<div class="corow"><span style="font-size:20px">'+esc(p.av)+'</span><span class="nm">'+esc(p.real)+'</span><span class="st lit">연결됨</span></div>'}).join('')
     :'<div class="empty" style="padding:22px 0">아직 같은 계열사에서 만난 동료가 없어요</div>';
   $('satview').classList.add('on');
 }

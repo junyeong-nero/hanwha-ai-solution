@@ -29,7 +29,7 @@ input,select{font-family:inherit;font-size:16px} /* 16px 미만이면 iOS가 포
 }
 @media(min-width:431px){ #app{box-shadow:0 0 60px rgba(0,0,0,.7);border-left:1px solid #1b2038;border-right:1px solid #1b2038} }
 #stars{position:absolute;inset:0;pointer-events:none;z-index:0}
-.star{position:absolute;border-radius:50%;background:#fff;opacity:.5;animation:tw 3.4s ease-in-out infinite}
+#stars .star{position:absolute;border-radius:50%;background:#fff;opacity:.5;animation:tw 3.4s ease-in-out infinite}   /* 배경 별밭 전용 — 별점 시트의 .star 와 분리 */
 @keyframes tw{0%,100%{opacity:.15}50%{opacity:.65}}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001s !important;animation-iteration-count:1 !important;transition:none !important}}
 
@@ -197,10 +197,10 @@ nav#nav svg{width:23px;height:23px}
 #rhead span{font-size:11.5px;color:var(--tx3)}
 /* 별점 (0.5 단위): 별마다 왼쪽 반 = .5, 오른쪽 반 = 1 */
 .stars{display:flex;justify-content:center;gap:2px;margin:6px 0 4px}
-.star{position:relative;width:50px;height:50px;font-size:38px;line-height:50px;text-align:center;color:#2A3050;user-select:none}
-.star .fillc{position:absolute;left:0;top:0;height:100%;overflow:hidden;color:var(--orange);width:0;pointer-events:none;white-space:nowrap;transition:width .12s}
-.star button{position:absolute;top:0;width:50%;height:100%;background:none;border:0;padding:0}
-.star button.l{left:0}.star button.r{right:0}
+.stars .star{position:relative;width:50px;height:50px;font-size:38px;line-height:50px;text-align:center;color:#2A3050;user-select:none}
+.stars .star .fillc{position:absolute;left:0;top:0;height:100%;overflow:hidden;color:var(--orange);width:0;pointer-events:none;white-space:nowrap;transition:width .12s}
+.stars .star button{position:absolute;top:0;width:50%;height:100%;background:none;border:0;padding:0}
+.stars .star button.l{left:0}.stars .star button.r{right:0}
 .rateval{text-align:center;font-size:13px;color:var(--tx2);margin-bottom:12px;min-height:20px}
 .rateval b{color:var(--orange-soft);font-size:17px}
 #ratecmt{width:100%;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--tx);outline:none;min-height:46px}

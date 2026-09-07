@@ -58,6 +58,27 @@ test('백엔드 모드에서는 계열사가 로그인 정보로 고정된다', 
   assert.match(html, /\$\('f-co'\)\.disabled=!!\(BACKEND&&ME\)/);
 });
 
+test('백엔드 모드에서만 로그아웃 버튼을 보여준다', () => {
+  assert.match(html, /id="logoutBtn"/);
+  assert.match(html, /onclick="logout\(\)"/);
+  assert.match(html, /\$\('logoutBtn'\)\.style\.display=BACKEND&&ME\?'':'none'/);
+});
+
+test('로그아웃은 실패해도 공통 상태를 초기화하고 입장 화면으로 돌아간다', () => {
+  assert.match(html, /async function logout\(\)/);
+  assert.match(html, /sb\.auth\.signOut\(\)/);
+  assert.match(html, /function clearBackendState\(\)/);
+  assert.match(html, /MEETINGS\.length=0/);
+  assert.match(html, /Object\.keys\(PEOPLE\)\.forEach\(k=>delete PEOPLE\[k\]\)/);
+  assert.match(html, /Object\.keys\(S\.met\)\.forEach\(k=>delete S\.met\[k\]\)/);
+  assert.match(html, /S\.joined=\[\]; S\.rooms=\{\}/);
+  assert.match(html, /finally\{clearBackendState\(\);showEntry\(\)\}/);
+});
+
+test('SIGNED_OUT 이벤트도 로그아웃과 같은 초기화 경로를 사용한다', () => {
+  assert.match(html, /if\(ev==='SIGNED_OUT'\)\{clearBackendState\(\);showEntry\(\)\}/);
+});
+
 test('백엔드 모드는 로그인 전에 로컬 데모 홈을 렌더링하지 않는다', () => {
   const startup = html.match(/\/\* ================= 시작 ================= \*\/([\s\S]*?)<\/script>/)?.[1];
   assert.ok(startup, '시작 시퀀스가 있어야 한다');
@@ -143,7 +164,7 @@ test('만남 완료는 개인별 체크인이고 실명은 서로 완료한 사�
 
 test('만남 평가: 별 0.5 단위 시트가 만남 완료 후 열리고 meeting_feedback에 저장된다', () => {
   assert.match(html, /function openRating\(id\)/);
-  assert.match(html, /id="stars"/);
+  assert.match(html, /id="ratestars"/);
   assert.match(html, /setRate\('\+\(n-\.5\)\+'\)/);
   assert.match(html, /from\('meeting_feedback'\)\.upsert\(\{meeting_id:id,user_id:ME,rating:RT\.val,comment:comment\|\|null\}/);
   assert.match(html, /openRating\(id\)\},900\)/);
@@ -250,7 +271,8 @@ test('프론트엔드에는 LLM 프롬프트나 OpenRouter 호출이 없다', ()
 /* ===== 메이저 이슈 회귀 방지 (#1 ~ #4) — 정규식 대신 문자열 포함 검사 ===== */
 
 test('#1 문서 안에 중복 id 가 없다 (별점 시트 id 는 ratestars)', () => {
-  const ids = html.split(' id="').slice(1).map((s) => s.split('"')[0]);
+  const markup = html.split('<script>')[0];   // 마크업만 검사 (JS 문자열 안의 id 는 제외)
+  const ids = markup.split(' id="').slice(1).map((s) => s.split('"')[0]);
   const dup = ids.filter((id, i) => ids.indexOf(id) !== i);
   assert.deepEqual(dup, [], '중복 id: ' + dup.join(', '));
   assert.ok(html.includes('<div class="stars" id="ratestars"></div>'));
@@ -258,19 +280,19 @@ test('#1 문서 안에 중복 id 가 없다 (별점 시트 id 는 ratestars)', (
 });
 
 test('#2 시스템 메시지도 이스케이프해서 렌더링한다', () => {
-  assert.ok(html.includes("if(m.f==='sys')return '<div class=\"msg sys\"><div class=\"bub\">'+esc(String(m.x||''))+'</div></div>';"));
+  assert.match(html, /if\(m\.f==='sys'\)return[^\n]*esc\(m\.x\)/);
   assert.ok(!html.includes("<div class=\"bub\">'+m.x+'</div>"));
 });
 
 test('#3 매칭 카드의 참여 인원은 참가 중이면 나를 포함해 채팅 목록과 같은 수를 보여준다', () => {
-  assert.ok(html.includes('shown=others+(joined?1:0)'));
+  assert.ok(html.includes('shown=joined?roomTotal(m.id):others'));
   assert.ok(html.includes("'+shown+'명 참여 중 / 정원 '"));
   assert.ok(html.includes("아는 얼굴 <b>'+kn+'명</b> / '+others+'명"));
 });
 
 test('#4 채팅 목록 배지는 내 체크인(iAttended) 기준이고 모임 상태는 completed 로 분리한다', () => {
-  assert.ok(html.includes("r.completed=x.status==='completed'"));
-  assert.ok(html.includes('r.iAttended=!!x.attended'));
+  assert.ok(html.includes('if(x.attended!=null)r.iAttended=!!x.attended'), 'attended 가 없으면 기존 값 유지');
+  assert.ok(!/\brevealed\b|\.completed\b/.test(html), 'revealed/completed 중복 플래그 제거');
   assert.ok(html.includes("(r.iAttended?'<span class=\"full\">🌕</span>':'')"));
   assert.ok(!html.includes("r.revealed=x.status==='completed'"));
 });
@@ -285,4 +307,39 @@ test('#11 참가 거절(정원·마감)은 네트워크 오류와 다르게 안�
 test('#11 확정된 약속이 없으면 만남 완료를 막고 이유를 안내한다', () => {
   assert.ok(html.includes("e.code==='PLAN_NOT_CONFIRMED'"));
   assert.ok(html.includes('확정된 약속이 있어야 만남 완료를 누를 수 있어요'));
+});
+
+/* ===== PR #9 리뷰 반영 (후속) ===== */
+
+test('별점 시트와 배경 별밭의 .star 스타일이 분리돼 있다', () => {
+  assert.ok(html.includes('#stars .star{'));
+  assert.ok(html.includes('.stars .star{'));
+  assert.ok(!/\n\.star\{/.test(html), '스코프 없는 .star 규칙이 없어야 한다');
+});
+
+test('사용자·LLM 유래 문자열은 모두 esc 를 거친다 (emoji·avatar·실명·태그·후보지 링크)', () => {
+  assert.ok(html.includes("const esc=s=>String(s??'')"), 'esc 는 null-safe');
+  assert.ok(html.split("esc(m.em||'🌙')").length >= 3, '모임 emoji 2곳');
+  assert.ok(html.includes("esc(p.av||'🌙')"), '메시지 아바타');
+  assert.ok(html.includes("esc(x.av||'🌙')"), '멤버 시트 아바타');
+  assert.ok(html.includes('esc(PEOPLE[pid].real)'));
+  assert.ok(html.includes("'+esc(p.l)+'"), '사진첩 라벨');
+  assert.ok(html.includes("esc(safeUrl(c.url))"), '후보지 링크는 safeUrl');
+  assert.ok(!html.includes("+p.av+'"), '이스케이프 없는 아바타 삽입 없음');
+  assert.ok(!html.includes("+m.em+"), '이스케이프 없는 emoji 삽입 없음');
+});
+
+test('다른 기기에서 한 내 체크인도 Realtime 으로 반영된다', () => {
+  assert.ok(html.includes('if(p.new.user_id===ME){ r.iAttended=true;'));
+});
+
+test('로컬 데모: 직접 만든 모임에서도 AI 약속·답장이 죽지 않는다', () => {
+  assert.ok(html.includes('const base=PLANS[id]||{place:'));
+  assert.ok(html.includes('if(!m.members.length)return;'));
+});
+
+test('프로필 저장은 공백을 제거하고 길이를 맞추며, 제약 위반은 안내한다', () => {
+  assert.ok(html.includes("S.profile.nick=e.target.value.trim().slice(0,8)||'달토끼'"));
+  assert.ok(html.includes("nickname:String(P.nick||'').trim().slice(0,8)||'달토끼'"));
+  assert.ok(html.includes("error.code==='23514'"));
 });

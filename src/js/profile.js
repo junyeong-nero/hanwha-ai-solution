@@ -32,6 +32,7 @@ function renderProfile(){
   $('pfav').textContent=P.av;
   if(document.activeElement!==$('nick'))$('nick').value=P.nick;
   $('pfident').textContent=P.realName?P.realName+' · '+(co(P.company)||{}).name+' (로그인 정보)':'';
+  $('logoutBtn').style.display=BACKEND&&ME?'':'none';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
   $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
   $('f-region').innerHTML=REGIONS.map(r=>chipHtml('region',r,P.regions.includes(r))).join('')
@@ -54,7 +55,7 @@ function renderProfile(){
   $('f-dir').innerHTML=[['deep','깊은 유대 — 만난 사람과 또'],['wide','넓은 인맥 — 새로운 만남']].map(([v,l])=>
     '<button class="'+(P.dir===v?'on':'')+'" onclick="setP(\'dir\',\''+v+'\')">'+l+'</button>').join('');
 }
-$('nick').addEventListener('input',e=>{S.profile.nick=e.target.value||'달토끼';profileChanged()});
+$('nick').addEventListener('input',e=>{S.profile.nick=e.target.value.trim().slice(0,8)||'달토끼';profileChanged()});
 
 /* 칩 렌더링: 직접 추가한 항목은 × 삭제 버튼이 붙는다 */
 function chipHtml(kind,v,on){

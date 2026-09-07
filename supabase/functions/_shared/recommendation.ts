@@ -1,5 +1,7 @@
-// LLM 매칭 프롬프트 생성 · 응답 파서 · 결정적 fallback 정렬 (순수 모듈 — Deno · Node 모두에서 동작)
-import { extractJsonObject, cleanString, cleanStringArray } from './json.ts';
+// 모임 추천 규칙 엔진 — 프로필과 후보 모임을 가중치 점수로 매겨 순위·이유·주의점을 만든다.
+// 외부 LLM 을 호출하지 않으므로 응답이 즉시 나오고, 같은 입력이면 항상 같은 결과가 나온다.
+// (순수 모듈 — Deno · Node 모두에서 동작)
+import { cleanString, cleanStringArray } from './json.ts';
 
 export interface Recommendation {
   meeting_id: string;
@@ -8,15 +10,23 @@ export interface Recommendation {
   cautions: string[];
 }
 
+/** 순위와 함께 점수를 돌려주는 형태 (정렬 근거 확인용) */
+export interface ScoredRecommendation extends Recommendation {
+  /** 0~1 가중 평균 점수. 이미 참가 중인 모임은 1 을 빼서 뒤로 민다 */
+  score: number;
+}
+
 export interface MatchingPreferences {
   /** true 면 같은 성별 비율이 높은 모임을 우선한다 */
   same_gender: boolean;
+  /** 'mine' 이면 같은 계열사 비율이 높은 모임을 우선한다 */
   scope: string;
+  /** 'deep' 이면 아는 얼굴이 많은 모임, 'wide' 면 새로운 얼굴이 많은 모임을 우선한다 */
   direction: string;
 }
 
-/** LLM 에 보내는 익명 프로필. 실명 · 사번 · 사용자 ID 는 절대 포함하지 않는다. */
-export interface ProfileForLLM {
+/** 규칙 엔진에 넘기는 익명 프로필. 실명 · 사번 · 사용자 ID 는 쓰지 않는다. */
+export interface RuleProfile {
   company_id: string | null;
   /** 선호 지역 목록 — 서버가 이 목록 안의 모임만 후보로 넘긴다 */
   regions: string[];
@@ -28,8 +38,8 @@ export interface ProfileForLLM {
   matching_preferences: MatchingPreferences;
 }
 
-/** LLM 에 보내는 후보 모임 요약 */
-export interface CandidateForLLM {
+/** 규칙 엔진에 넘기는 후보 모임 요약 */
+export interface RuleCandidate {
   id: string;
   title: string;
   region: string;
@@ -39,13 +49,32 @@ export interface CandidateForLLM {
   member_count: number;
   known_count: number;
   joined: boolean;
-  /** 다른 멤버 중 호출자와 같은 성별의 비율 (0~1). 성별을 모르거나 멤버가 없으면 null */
+  /** 다른 멤버 중 호출자와 같은 성별의 비율 (0~1). 성별을 모르거나 다른 멤버가 없으면 null */
   same_gender_ratio: number | null;
+  /** 다른 멤버 중 호출자와 같은 계열사의 비율 (0~1). 계열사를 모르거나 다른 멤버가 없으면 null */
+  same_company_ratio: number | null;
 }
 
-export const FALLBACK_REASON = '기본 추천 — 선호 지역과 아는 얼굴 비율 기준으로 정렬했어요';
-export const FALLBACK_REASON_SAME_GENDER = '기본 추천 — 같은 성별 비율과 아는 얼굴 비율 기준으로 정렬했어요';
-const MAX_REASON_LEN = 160;
+/** 규칙 엔진 버전 — ai_recommendation_runs.model 에 남긴다 */
+export const RULE_ENGINE_MODEL = 'rule-based-v1';
+
+/** 어느 항목도 근거가 되지 못했을 때 쓰는 이유 */
+export const DEFAULT_REASON = '선호 지역의 열린 모임 중 조건이 가장 가까워요';
+
+/** 항목별 가중치. 적용되지 않는 항목은 빼고 나머지를 다시 정규화한다. */
+const WEIGHTS = {
+  interest: 0.34,
+  direction: 0.22,
+  size: 0.16,
+  gender: 0.14,
+  company: 0.1,
+  vacancy: 0.04,
+};
+
+/** 이 점수 이상인 항목만 추천 이유 문장으로 쓴다 */
+const REASON_THRESHOLD = 0.6;
+const MAX_REASON_LEN = 60;
+const MAX_CAUTIONS = 3;
 
 /** 나이를 연령대 문자열로 바꾼다. 나이가 없으면 '비공개'. */
 export function ageBand(age: number | null | undefined): string {
@@ -74,7 +103,7 @@ function toRatio(value: unknown): number | null {
 }
 
 /** 프로필에서 허용된 필드만 뽑는다 (화이트리스트). */
-function sanitizeProfile(input: unknown): ProfileForLLM {
+export function sanitizeProfile(input: unknown): RuleProfile {
   const p = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
   const prefs = (p.matching_preferences && typeof p.matching_preferences === 'object'
     ? p.matching_preferences
@@ -89,6 +118,7 @@ function sanitizeProfile(input: unknown): ProfileForLLM {
   } else {
     size = [toInt(p.group_size_min, 4), toInt(p.group_size_max, 6)];
   }
+  if (size[1] < size[0]) size = [size[1], size[0]];
 
   // regions 가 없으면 단일 region 으로 대체한다
   let regions = cleanStringArray(p.regions, 30, 10);
@@ -114,7 +144,7 @@ function sanitizeProfile(input: unknown): ProfileForLLM {
 }
 
 /** 후보에서 허용된 필드만 뽑는다. */
-function sanitizeCandidate(input: unknown): CandidateForLLM & { known_member_ratio: number } {
+export function sanitizeCandidate(input: unknown): RuleCandidate {
   const c = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
   const memberCount = Math.max(0, toInt(c.member_count, 0));
   const knownCount = Math.max(0, Math.min(memberCount, toInt(c.known_count, 0)));
@@ -124,153 +154,230 @@ function sanitizeCandidate(input: unknown): CandidateForLLM & { known_member_rat
     region: cleanString(c.region, 30),
     when_label: cleanString(c.when_label, 30),
     tags: stringList(c.tags, 6),
-    capacity: toInt(c.capacity, 0),
+    capacity: Math.max(0, toInt(c.capacity, 0)),
     member_count: memberCount,
     known_count: knownCount,
-    known_member_ratio: memberCount > 0 ? Math.round((knownCount / memberCount) * 100) / 100 : 0,
     joined: c.joined === true,
     same_gender_ratio: toRatio(c.same_gender_ratio),
+    same_company_ratio: toRatio(c.same_company_ratio),
   };
 }
 
-/** 비율을 프롬프트용 백분율 문자열로 바꾼다. 모르면 '정보 없음'. */
-function ratioLabel(ratio: number | null): string {
-  return ratio === null ? '정보 없음' : `${Math.round(ratio * 100)}%`;
+/** 비교용으로 낱말을 다듬는다: 소문자 · 공백/기호 제거 */
+function normalizeWord(word: string): string {
+  return word.toLowerCase().replace(/[\s#·・,/]+/g, '');
 }
 
-const SYSTEM_PROMPT = `당신은 한화그룹 계열사 임직원 소모임 앱 '달빛한화'의 매칭 도우미예요.
-사용자 프로필(익명 처리됨)과 후보 모임 목록을 JSON 으로 받고, 사용자에게 잘 맞는 순서로 후보 모임 전체의 순위를 매겨요.
+/** 두 낱말이 같거나 한쪽이 다른 쪽을 품으면 겹치는 것으로 본다 (두 글자 이상일 때만) */
+function wordsMatch(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length < 2 || b.length < 2) return false;
+  return a.includes(b) || b.includes(a);
+}
 
-규칙:
-1. meeting_id 에는 반드시 candidates 배열에 있는 id 만 그대로 쓰세요. 없는 id 를 만들거나 바꾸지 마세요.
-2. 주어진 모든 후보에 rank(1부터 시작하는 정수, 중복 없음)를 부여하세요. 후보를 빠뜨리지 마세요.
-3. reason 은 사용자에게 보여줄 한국어 한 문장(60자 이내, "~해요"체)으로, 왜 이 모임이 맞는지 구체적으로 적으세요.
-4. cautions 는 걸리는 점(정원 임박, 이미 참가 중, 성별 구성 등)을 짧은 한국어 문구 배열로 적고, 없으면 빈 배열로 두세요.
-5. 후보는 모두 사용자의 선호 지역 목록(profile.regions) 안의 모임이에요. 지역은 이미 맞으니 지역 불일치를 이유로 감점하지 마세요.
-6. 판단 기준: interests·hobbies 와 모임 tags 의 겹침, 희망 인원(group_size)과 현재 인원(member_count·capacity),
-   matching_preferences.direction(wide = 새로운 사람 위주라 known_member_ratio 가 낮은 모임 선호, deep = 아는 얼굴 위주라 높은 모임 선호),
-   matching_preferences.scope(mine = 같은 계열사 위주, all = 계열사 무관).
-7. matching_preferences.same_gender 가 true 면 "같은 성별 우선" 이에요. same_gender_ratio(다른 멤버 중 사용자와 같은 성별의 비율, 백분율 또는 '정보 없음')가 높은 모임을 앞에 두세요.
-   false 면 same_gender_ratio 는 참고만 하고 순위에 크게 반영하지 마세요.
-8. joined 가 true 인 모임은 이미 참가 중이므로 순위를 뒤로 미루되 목록에서 빼지는 마세요.
-9. 다른 설명이나 마크다운 없이 아래 형태의 JSON 객체 하나만 출력하세요.
-{"recommendations":[{"meeting_id":"candidates 의 id","rank":1,"reason":"한 문장 이유","cautions":[]}]}`;
+/** 아는 얼굴 비율 (0~1) */
+function knownRatio(c: RuleCandidate): number {
+  return c.member_count > 0 ? c.known_count / c.member_count : 0;
+}
+
+/** 나를 포함한 예상 인원 */
+function projectedSize(c: RuleCandidate): number {
+  return c.member_count + (c.joined ? 0 : 1);
+}
+
+interface Factor {
+  /** 0~1 점수 */
+  score: number;
+  weight: number;
+  /** 이 항목이 추천 이유가 될 때 쓸 문장 */
+  reason: string;
+}
+
+interface Scored {
+  candidate: RuleCandidate;
+  score: number;
+  reason: string;
+  cautions: string[];
+}
+
+/** 관심사·취미와 모임 태그(+제목)의 겹침을 점수와 겹친 낱말로 돌려준다 */
+function interestMatch(profile: RuleProfile, c: RuleCandidate): { score: number; matched: string[] } {
+  const keywords = [...profile.interests, ...profile.hobbies];
+  if (keywords.length === 0) return { score: 0.5, matched: [] };
+
+  const haystack = [...c.tags, c.title].map(normalizeWord).filter(Boolean);
+  const matched: string[] = [];
+  for (const keyword of keywords) {
+    const norm = normalizeWord(keyword);
+    if (haystack.some((h) => wordsMatch(norm, h)) && !matched.includes(keyword)) matched.push(keyword);
+  }
+  // 두세 개만 겹쳐도 만점 — 관심사를 적게 적은 사용자가 불리해지지 않게 한다
+  const target = Math.min(keywords.length, 3);
+  return { score: Math.min(1, matched.length / target), matched };
+}
+
+/** 예상 인원이 희망 범위에 얼마나 가까운지 (범위 안이면 1, 4명 이상 벗어나면 0) */
+function sizeScore(profile: RuleProfile, c: RuleCandidate): number {
+  const [min, max] = profile.group_size;
+  const size = projectedSize(c);
+  const distance = size < min ? min - size : size > max ? size - max : 0;
+  return Math.max(0, 1 - distance / 4);
+}
+
+/** 남은 자리 비율 — 자리가 넉넉한 모임을 조금 우대한다 */
+function vacancyScore(c: RuleCandidate): number {
+  if (c.capacity <= 0) return 0;
+  return Math.max(0, Math.min(1, (c.capacity - c.member_count) / c.capacity));
+}
+
+function percent(ratio: number): number {
+  return Math.round(ratio * 100);
+}
+
+/** 후보 하나의 항목별 점수를 만든다. 적용되지 않는 항목은 넣지 않는다. */
+function factorsFor(profile: RuleProfile, c: RuleCandidate, matched: string[], interestScore: number): Factor[] {
+  const prefs = profile.matching_preferences;
+  const deep = prefs.direction === 'deep';
+  const factors: Factor[] = [];
+
+  factors.push({
+    score: interestScore,
+    weight: WEIGHTS.interest,
+    reason: matched.length
+      ? `관심사 ${matched.slice(0, 2).join('·')}가 겹쳐요`
+      : `${c.region || '선호 지역'} 모임 중 태그가 가장 가까워요`,
+  });
+
+  const known = knownRatio(c);
+  factors.push({
+    score: deep ? known : 1 - known,
+    weight: WEIGHTS.direction,
+    reason: deep
+      ? `아는 얼굴 ${c.known_count}명이 있어 편하게 시작할 수 있어요`
+      : c.known_count === 0
+        ? '모두 처음 만나는 사람들이라 새 인연에 좋아요'
+        : '새로운 얼굴이 대부분이라 넓게 만나기 좋아요',
+  });
+
+  const [min, max] = profile.group_size;
+  factors.push({
+    score: sizeScore(profile, c),
+    weight: WEIGHTS.size,
+    reason: `희망 인원 ${min}~${max}명에 맞는 규모예요`,
+  });
+
+  if (prefs.same_gender && c.same_gender_ratio !== null) {
+    factors.push({
+      score: c.same_gender_ratio,
+      weight: WEIGHTS.gender,
+      reason: `같은 성별 멤버가 ${percent(c.same_gender_ratio)}%라 편해요`,
+    });
+  }
+
+  if (prefs.scope === 'mine' && c.same_company_ratio !== null) {
+    factors.push({
+      score: c.same_company_ratio,
+      weight: WEIGHTS.company,
+      reason: `같은 계열사 멤버가 ${percent(c.same_company_ratio)}%예요`,
+    });
+  }
+
+  factors.push({
+    score: vacancyScore(c),
+    weight: WEIGHTS.vacancy,
+    reason: '자리가 넉넉해 바로 참가할 수 있어요',
+  });
+
+  return factors;
+}
+
+/** 점수가 높은 항목 최대 2개를 골라 한 문장으로 잇는다 (60자 이내) */
+function buildReason(factors: Factor[]): string {
+  const strong = factors
+    .filter((f) => f.score >= REASON_THRESHOLD && f.reason)
+    .sort((a, b) => b.score * b.weight - a.score * a.weight);
+  if (strong.length === 0) return DEFAULT_REASON;
+
+  const head = strong[0].reason;
+  for (const next of strong.slice(1)) {
+    // 두 번째 근거는 60자를 넘지 않을 때만 덧붙인다
+    const joined = `${head.replace(/(예요|이에요|해요|좋아요)$/, '고')}, ${next.reason}`;
+    if (joined.length <= MAX_REASON_LEN) return joined;
+  }
+  return head.length > MAX_REASON_LEN ? head.slice(0, MAX_REASON_LEN) : head;
+}
+
+/** 사용자에게 미리 알려 줄 걸리는 점들 */
+function buildCautions(profile: RuleProfile, c: RuleCandidate, matchedCount: number): string[] {
+  const prefs = profile.matching_preferences;
+  const [min, max] = profile.group_size;
+  const cautions: string[] = [];
+
+  if (c.joined) cautions.push('이미 참가 중이에요');
+  const left = c.capacity - c.member_count;
+  if (!c.joined && c.capacity > 0 && left <= 1) cautions.push('정원이 거의 찼어요');
+
+  const size = projectedSize(c);
+  if (size < min) cautions.push(`희망 인원(${min}~${max}명)보다 작은 모임이에요`);
+  else if (size > max) cautions.push(`희망 인원(${min}~${max}명)보다 큰 모임이에요`);
+
+  if (matchedCount === 0 && profile.interests.length + profile.hobbies.length > 0) {
+    cautions.push('관심사와 겹치는 태그가 없어요');
+  }
+  if (prefs.same_gender && c.same_gender_ratio !== null && c.same_gender_ratio < 0.34) {
+    cautions.push(`같은 성별 멤버가 ${percent(c.same_gender_ratio)}%로 적어요`);
+  }
+  if (prefs.scope === 'mine' && c.same_company_ratio !== null && c.same_company_ratio < 0.34) {
+    cautions.push('다른 계열사 멤버가 대부분이에요');
+  }
+
+  return cautions.slice(0, MAX_CAUTIONS);
+}
+
+/** 후보 하나를 채점한다 */
+function scoreCandidate(profile: RuleProfile, c: RuleCandidate): Scored {
+  const { score: interestScore, matched } = interestMatch(profile, c);
+  const factors = factorsFor(profile, c, matched, interestScore);
+  const totalWeight = factors.reduce((sum, f) => sum + f.weight, 0);
+  const weighted = factors.reduce((sum, f) => sum + f.score * f.weight, 0);
+  const base = totalWeight > 0 ? weighted / totalWeight : 0;
+  // 이미 참가한 모임은 목록에서 빼지 않고 맨 뒤로만 민다
+  const score = Math.round((c.joined ? base - 1 : base) * 10000) / 10000;
+
+  return {
+    candidate: c,
+    score,
+    reason: buildReason(factors),
+    cautions: buildCautions(profile, c, matched.length),
+  };
+}
 
 /**
- * 매칭 프롬프트를 만든다. 입력 객체에 실명·사번 등이 섞여 있어도
- * 화이트리스트 필드만 프롬프트에 들어간다.
+ * 규칙 기반 추천. 지역은 서버가 이미 걸렀으므로 점수에 넣지 않는다.
+ * 정렬: 점수 내림차순 → direction 기준 아는 얼굴 비율 → id (같은 입력이면 항상 같은 순서)
  */
-export function buildRecommendationPrompt(profile: unknown, candidates: unknown[]): { system: string; user: string } {
+export function rankByRules(profile: unknown, candidates: unknown[]): ScoredRecommendation[] {
   const safeProfile = sanitizeProfile(profile);
-  const safeCandidates = (Array.isArray(candidates) ? candidates : [])
+  const deep = safeProfile.matching_preferences.direction === 'deep';
+  const scored = (Array.isArray(candidates) ? candidates : [])
     .map(sanitizeCandidate)
     .filter((c) => c.id)
-    .map((c) => ({ ...c, same_gender_ratio: ratioLabel(c.same_gender_ratio) }));
-  const user = JSON.stringify({
-    profile: safeProfile,
-    preferred_regions: safeProfile.regions,
-    same_gender_first: safeProfile.matching_preferences.same_gender,
-    note: safeProfile.regions.length > 0
-      ? `후보 모임은 모두 선호 지역(${safeProfile.regions.join(', ')}) 안에 있어요.`
-      : '선호 지역이 비어 있어 모든 지역의 모임이 후보예요.',
-    candidates: safeCandidates,
-    candidate_ids: safeCandidates.map((c) => c.id),
-  });
-  return { system: SYSTEM_PROMPT, user };
-}
+    .map((c) => scoreCandidate(safeProfile, c));
 
-/**
- * LLM 응답을 검증한다.
- * - 첫 번째 JSON 객체만 사용 (코드 펜스 허용)
- * - 후보에 없는 id · 빈 이유 · 160자 초과 이유는 버림
- * - 같은 id 는 가장 좋은 순위만 남김
- * - rank 오름차순 정렬 후 1..n 으로 다시 번호 매김
- * - 남는 추천이 없으면 Error('INVALID_LLM_OUTPUT')
- */
-export function parseRecommendations(raw: string, candidateIds: string[]): Recommendation[] {
-  const parsed = extractJsonObject(raw);
-  let list: unknown[] | null = null;
-  if (Array.isArray(parsed)) list = parsed;
-  else if (parsed && typeof parsed === 'object') {
-    const recs = (parsed as { recommendations?: unknown }).recommendations;
-    if (Array.isArray(recs)) list = recs;
-  }
-  if (!list) throw new Error('INVALID_LLM_OUTPUT');
-
-  const allowed = new Set(candidateIds);
-  const best = new Map<string, Recommendation>();
-
-  list.forEach((item, index) => {
-    if (!item || typeof item !== 'object') return;
-    const rec = item as Record<string, unknown>;
-    const id = String(rec.meeting_id ?? rec.id ?? '').trim();
-    if (!allowed.has(id)) return;
-
-    const reason = typeof rec.reason === 'string' ? rec.reason.replace(/\s+/g, ' ').trim() : '';
-    // 비어 있거나, 160자를 넘거나, 글자 없이 기호만 있는 이유("...")는 버린다
-    if (!reason || reason.length > MAX_REASON_LEN || !/[가-힣A-Za-z0-9]/.test(reason)) return;
-
-    const rankNum = Number(rec.rank);
-    // rank 가 없거나 이상하면 순서를 유지하되 정상 순위 뒤로 보낸다
-    const rank = Number.isFinite(rankNum) && rankNum > 0 ? rankNum : 1000 + index;
-    const cautions = cleanStringArray(rec.cautions, MAX_REASON_LEN, 5);
-
-    const prev = best.get(id);
-    if (!prev || rank < prev.rank) best.set(id, { meeting_id: id, rank, reason, cautions });
-  });
-
-  const sorted = [...best.values()].sort(
-    (a, b) => a.rank - b.rank || (a.meeting_id < b.meeting_id ? -1 : a.meeting_id > b.meeting_id ? 1 : 0),
-  );
-  if (sorted.length === 0) throw new Error('INVALID_LLM_OUTPUT');
-  return sorted.map((r, i) => ({ ...r, rank: i + 1 }));
-}
-
-export interface FallbackCandidate {
-  id: string;
-  member_count: number;
-  known_count: number;
-  same_gender_ratio?: number | null;
-}
-
-export interface FallbackProfile {
-  matching_preferences: { direction?: string; same_gender?: boolean };
-}
-
-/**
- * LLM 이 실패했을 때 쓰는 결정적 정렬. 지역은 서버가 이미 걸러 두었으므로 정렬 기준이 아니다.
- * 1) same_gender 가 true 일 때만: 같은 성별 비율 내림차순 (null 은 맨 뒤)
- * 2) 아는 얼굴 비율 (deep 이면 내림차순, 아니면 오름차순)
- * 3) id
- */
-export function deterministicOrder(candidates: FallbackCandidate[], profile: FallbackProfile): Recommendation[] {
-  const deep = profile?.matching_preferences?.direction === 'deep';
-  const sameGender = profile?.matching_preferences?.same_gender === true;
-  const knownRatio = (c: FallbackCandidate) => (c.member_count > 0 ? c.known_count / c.member_count : 0);
-  const genderRatio = (c: FallbackCandidate) =>
-    typeof c.same_gender_ratio === 'number' && Number.isFinite(c.same_gender_ratio) ? c.same_gender_ratio : null;
-
-  const sorted = [...candidates].sort((a, b) => {
-    if (sameGender) {
-      const ga = genderRatio(a);
-      const gb = genderRatio(b);
-      if (ga !== gb) {
-        if (ga === null) return 1;
-        if (gb === null) return -1;
-        return gb - ga;
-      }
-    }
-    const ka = knownRatio(a);
-    const kb = knownRatio(b);
+  scored.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    const ka = knownRatio(a.candidate);
+    const kb = knownRatio(b.candidate);
     if (ka !== kb) return deep ? kb - ka : ka - kb;
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    return a.candidate.id < b.candidate.id ? -1 : a.candidate.id > b.candidate.id ? 1 : 0;
   });
 
-  const reason = sameGender ? FALLBACK_REASON_SAME_GENDER : FALLBACK_REASON;
-  return sorted.map((c, i) => ({
-    meeting_id: c.id,
+  return scored.map((s, i) => ({
+    meeting_id: s.candidate.id,
     rank: i + 1,
-    reason,
-    cautions: [],
+    reason: s.reason,
+    cautions: s.cautions,
+    score: s.score,
   }));
 }

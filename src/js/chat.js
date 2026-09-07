@@ -13,9 +13,9 @@ function renderRooms(){
     const last=r.msgs.length?r.msgs[r.msgs.length-1]:{x:r.last||'대화를 시작해 보세요',t:r.lastT||''};
     const lastTxt=last.f==='ai'?'🌙 AI가 약속을 제안했어요':(last.x||'');
     return '<button class="room" onclick="openRoom(\''+id+'\')">'
-      +'<span class="av">'+m.em+(r.iAttended?'<span class="full">🌕</span>':'')+'</span>'
-      +'<span class="bd"><span class="r1"><b>'+esc(m.name)+'<small>'+(memberTotal(m)+1)+'</small></b><time>'+(last.t||'')+'</time></span>'
-      +'<span class="r2"><p>'+esc(String(lastTxt)).slice(0,44)+'</p>'+(r.unread?'<span class="ub">'+r.unread+'</span>':'')+'</span></span></button>';
+      +'<span class="av">'+esc(m.em||'🌙')+(r.iAttended?'<span class="full">🌕</span>':'')+'</span>'
+      +'<span class="bd"><span class="r1"><b>'+esc(m.name)+'<small>'+roomTotal(id)+'</small></b><time>'+(last.t||'')+'</time></span>'
+      +'<span class="r2"><p>'+esc(String(lastTxt||'').slice(0,44))+'</p>'+(r.unread?'<span class="ub">'+r.unread+'</span>':'')+'</span></span></button>';
   }).join('');
 }
 
@@ -50,7 +50,7 @@ async function openMembers(){
       return {id:pid,av:p.av,name:known?p.real:p.nick,sub:known?(c?c.name:''):'익명 · 만남 완료 후 실명이 보여요',known};}));
   $('memlist').innerHTML=rows.map(x=>{
     const att=r.attended.has(x.id), voted=!!(votes&&votes.has(x.id));
-    return '<div class="memrow"><div class="mav">'+x.av+'</div><div class="nm"><b>'+esc(x.name)+(x.me?' <small style="color:var(--orange)">ME</small>':'')+'</b><small>'+esc(x.sub)+'</small></div>'
+    return '<div class="memrow"><div class="mav">'+esc(x.av||'🌙')+'</div><div class="nm"><b>'+esc(x.name)+(x.me?' <small style="color:var(--orange)">ME</small>':'')+'</b><small>'+esc(x.sub)+'</small></div>'
       +'<div class="bd">'+(ai?'<span class="mbadge'+(voted?' on':'')+'">'+(voted?'확정 ✓':'미확정')+'</span>':'')
       +'<span class="mbadge'+(att?' full':'')+'">'+(att?'만남 완료':'만남 전')+'</span></div></div>';
   }).join('');
@@ -114,13 +114,13 @@ function renderBanner(){
 function renderMsgs(){
   const r=S.rooms[CUR];
   $('msgs').innerHTML=r.msgs.map((m,i)=>{
-    if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+esc(String(m.x||''))+'</div></div>';   // 닉네임·LLM 텍스트가 섞이므로 반드시 이스케이프
+    if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+esc(m.x)+'</div></div>';   // 닉네임·LLM 텍스트가 섞이므로 반드시 이스케이프
     if(m.f==='me')return '<div class="msg me"><div><div class="bub">'+esc(m.x)+'</div></div></div>';
     if(m.f==='ai'){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
       const unanimous=votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
       const done=r.plannedId===m.planId||unanimous||auto, pct=auto?100:Math.min(100,Math.round(votes/total*100));
-      const cands=(p.cands||[]).map(c=>'<div class="cand"><a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener">'+esc(c.name||'')+'</a>'
+      const cands=(p.cands||[]).map(c=>'<div class="cand"><a href="'+esc(safeUrl(c.url))+'" target="_blank" rel="noopener">'+esc(c.name||'')+'</a>'
         +(c.address?'<small>'+esc(c.address)+'</small>':'')+(c.why?'<em>'+esc(c.why)+'</em>':'')+'</div>').join('');
       return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
         +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
@@ -136,7 +136,7 @@ function renderMsgs(){
         +'</div></div></div>';
     }
     const p=PEOPLE[m.f]||UNKNOWN;
-    return '<div class="msg"><div class="mav">'+p.av+'</div><div><div class="who">'+label(m.f,r)+'</div><div class="bub">'+esc(m.x)+'</div></div></div>';
+    return '<div class="msg"><div class="mav">'+esc(p.av||'🌙')+'</div><div><div class="who">'+label(m.f,r)+'</div><div class="bub">'+esc(m.x)+'</div></div></div>';
   }).join('');
   $('msgs').scrollTop=$('msgs').scrollHeight;
 }
@@ -153,15 +153,17 @@ async function sendMsg(){
   r.msgs.push({f:'me',x:v,t:nowT()});
   $('cin').value=''; renderMsgs();
   const m=MEETINGS.find(x=>x.id===CUR);
+  if(!m.members.length)return;   // 아직 멤버가 없는 방(직접 만든 모임)은 답장 시뮬레이션 없음
   const pid=m.members[Math.floor(Math.random()*m.members.length)];
-  showTyping(PEOPLE[pid], r, ()=>{
+  showTyping(pid, r, ()=>{
     r.msgs.push({f:pid,x:REPLIES[Math.floor(Math.random()*REPLIES.length)],t:nowT()});
     if(CUR)renderMsgs();
   });
 }
-function showTyping(p,room,cb){
+function showTyping(pid,room,cb){
+  const p=PEOPLE[pid]||UNKNOWN;
   $('typing').style.display='block';
-  $('typing').textContent=(S.met[Object.keys(PEOPLE).find(k=>PEOPLE[k]===p)]||room.revealed?p.real:p.nick)+' 님이 입력 중…';
+  $('typing').textContent=(S.met[pid]&&p.real?p.real:p.nick)+' 님이 입력 중…';   // 실명은 서로 만남 완료한 사람만
   setTimeout(()=>{$('typing').style.display='none';cb()},1100+Math.random()*900);
 }
 
@@ -192,7 +194,8 @@ async function aiPlan(){
   setTimeout(()=>{
     $('typing').style.display='none';
     r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
-    const base=PLANS[id]||{};
+    const mm=MEETINGS.find(x=>x.id===id)||{region:'',when:'',tags:[]};
+    const base=PLANS[id]||{place:(mm.region||'근처')+' 만남의 장소',when:mm.when||'시간 미정',act:((mm.tags||[])[0]||'모임')+' 함께하기',food:'근처 카페 한 곳'};   // 직접 만든 모임용 기본 약속
     const msg={f:'ai',plan:Object.assign({},base,{cands:PLAN_CANDS[id]||[],meetAt:new Date(Date.now()+(base.inH||0)*3600000).toISOString()}),planId:'local-'+id,t:nowT()};
     r.msgs.push(msg);
     checkPlanDone(id,msg);   // 이미 지난 약속이면 투표 없이 바로 확정된다
@@ -253,7 +256,7 @@ async function doReveal(){
   $('veil').classList.add('on');
   setTimeout(async()=>{
     $('veil').classList.remove('on');
-    r.attended.add(MYID()); r.iAttended=true; r.revealed=true;
+    r.attended.add(MYID()); r.iAttended=true;
     if(!r.photos.length)r.photos=placeholderPhotos(m);
     if(BACKEND){
       await Promise.all([loadConnections(),loadRooms()]);
@@ -287,7 +290,7 @@ function openAlbum(){
   if(!r.iAttended)return;
   if(!r.photos.length)r.photos=placeholderPhotos(m);
   $('albTitle').textContent=m.name+' 사진첩';
-  $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'">'+p.l+'</div>').join('')
+  $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'">'+esc(p.l)+'</div>').join('')
     +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3)">＋ 사진 추가</button>';
   $('album').classList.add('on');
 }
