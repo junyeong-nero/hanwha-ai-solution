@@ -1,5 +1,5 @@
 /* ================= 시작 ================= */
 bindChipEvents();
 if(BACKEND)initBackend();
-else{renderHome();renderProfile();updateBdg();}
+else{restoreAvailabilityRooms();renderHome();renderProfile();updateBdg();}
 if(!BACKEND)openPollLink();

@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
         candidates: finalPlan.candidates,
         source: fallback ? 'fallback' : 'llm',
       })
-      .select('id, place, time_label, meet_at, activity, nearby, candidates, selected_place')
+      .select('id, place, time_label, meet_at, activity, nearby, candidates, selected_place, schedule_host')
       .single();
     if (insertError || !inserted) throw insertError ?? new Error('약속 저장 실패');
 
@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
         nearby: Array.isArray(inserted.nearby) ? inserted.nearby : [],
         candidates: Array.isArray(inserted.candidates) ? inserted.candidates : [],
         selected_place: inserted.selected_place ?? null,
+        schedule_host: inserted.schedule_host,
       },
       fallback,
       search_used: search.provider,

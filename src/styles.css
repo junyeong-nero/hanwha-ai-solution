@@ -664,3 +664,15 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @media(min-width:600px){.pollgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 .plan [hidden]{display:none}
+
+/* 가능 시간 조율: 표 안은 선택, 표 밖은 스크롤 */
+.av-config{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+#availabilitybody p{font-size:13px;color:var(--tx2);line-height:1.6;margin:12px 0}
+#availabilitybody input,#availabilitybody select{display:block;width:100%;min-width:0;font-size:16px;min-height:44px;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:var(--r-s);padding:6px}
+#availabilitybody summary{min-height:44px;padding:12px 0}
+.av-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;touch-action:none;user-select:none;margin:12px 0}
+.av-slot{min-height:54px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--card);padding:4px;font-size:11px;color:var(--tx)}
+.av-slot span,.av-slot b{display:block}.av-slot.some{background:var(--card3)}.av-slot.best{background:var(--orange-a18);color:var(--orange-soft)}.av-slot.all{background:var(--card3);color:var(--ok);border-color:var(--ok)}
+.av-slot[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--orange)}
+.av-slot:focus-visible{outline:2px solid var(--tx);outline-offset:1px}
+#avcandidates .cta{margin:8px 0}#avstatus{color:var(--orange-soft);font-size:13px;min-height:24px}

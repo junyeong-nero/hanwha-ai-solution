@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
 // 외부 Supabase 없이 실제 PostgreSQL에서 새 마이그레이션과 RPC 권한을 실행한다.
-const migration=readFileSync(new URL('../supabase/migrations/0012_meeting_responses.sql',import.meta.url),'utf8');
+const migration=readFileSync(new URL('../supabase/migrations/0014_meeting_responses.sql',import.meta.url),'utf8');
 const uid=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const host=uid(1),member=uid(2),outsider=uid(3),meeting=uid(10),plan=uid(20);
 async function fixture(){
@@ -16,7 +16,8 @@ async function fixture(){
     create table meetings(id uuid primary key,created_by uuid,title text);
     create table profiles(user_id uuid primary key,nickname text);
     create table meeting_members(meeting_id uuid,user_id uuid,joined_at timestamptz default now()-interval '1 day',primary key(meeting_id,user_id));
-    create table meeting_plans(id uuid primary key,meeting_id uuid,created_at timestamptz default now(),
+    create table meeting_plan_votes(plan_id uuid,user_id uuid);
+    create table meeting_plans(id uuid primary key,meeting_id uuid,created_by uuid,created_at timestamptz default now(),
       confirmed boolean default false,confirmed_at timestamptz,confirm_reason text,place text,time_label text,activity text,
       meet_at timestamptz,selected_place jsonb,candidates jsonb,
       constraint meeting_plans_confirm_reason_check check(confirm_reason in ('vote','due')));
@@ -30,6 +31,7 @@ async function fixture(){
     insert into meeting_plans(id,meeting_id,place,time_label,activity,candidates)
       values('${plan}','${meeting}','카페 A','미정','대화','[{"name":"카페 A"},{"name":"카페 B"}]');
   `);
+  await db.exec(readFileSync(new URL('../supabase/migrations/0013_plan_availability.sql',import.meta.url),'utf8'));
   await db.exec(migration);
   const as=async(id,sql,params=[])=>{
     await db.exec('reset role');
@@ -71,6 +73,9 @@ test('인증·참여 권한, 응답 복원·수정, 후보 검증, 방장 확정
     await db.exec(`reset role;update meeting_plans set confirmed=true,confirm_reason='due' where id='${plan}';`);
     assert.equal((await db.query('select confirmed from meeting_plans')).rows[0].confirmed,false);
     await assert.rejects(db.exec("update meeting_plans set place='다른 곳'"),/의견 비교/);
+    await assert.rejects(db.exec("update meeting_plans set meet_at=now()+interval '5 days'"),/의견 비교/);
+    const date=new Date(slots[0]).toISOString().slice(0,10);
+    await assert.rejects(as(host,'select update_plan_schedule($1,$2,$3)',[plan,'configure',JSON.stringify({start:date,end:date,from:1080,to:1260})]),/의견 비교/);
     await as(host,'select finalize_meeting_poll($1,1,$2)',[q,slots[1]]);
     await assert.rejects(as(host,'select finalize_meeting_poll($1,0,$2)',[q,slots[0]]),/이미 확정/);
     await assert.rejects(as(member,'select submit_meeting_response($1,0,$2,\'\')',[q,slots]),/마감/);

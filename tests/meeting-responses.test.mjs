@@ -33,3 +33,8 @@ test('후보와 자유 의견은 HTML을 실행하지 않고 텍스트로 렌더
   const html=app.el('pollview').innerHTML;
   assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>bad'));
 });
+
+ test('의견 수집 중에는 기존 가능 시간 입력도 잠긴다',()=>{
+  const app=loadApp({files:['config.js','chat.js','availability.js']});
+  assert.equal(app.evaluate("availabilityLocked({planId:'p',plan:{collecting:true}},{votes:{}})"),true);
+});

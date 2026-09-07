@@ -3,6 +3,10 @@
    서버 데이터를 PEOPLE / MEETINGS / S 와 같은 모양으로 채워 넣어 렌더 함수는 두 모드가 공유한다. */
 let sb=null;      // supabase-js 클라이언트
 let ME=null;      // 현재 사용자 id (auth.uid)
+let INBOX=null;   // 방을 닫아도 유지하는 메시지 알림 채널
+let roomsRequest=0;
+let backendEpoch=0;
+const roomRequests=new Map();
 let CH=null;      // 열려 있는 채팅방의 Realtime 채널
 const R={rec:null,recLoading:false,recDirty:true,saveTimer:null,seen:new Set(),warmed:false};
 const ENTRY_MSG={
@@ -34,12 +38,14 @@ function entryErr(m){$('e-err').textContent=m||''}
 function clearBackendState(){
   if(typeof stopDueWatch==='function')stopDueWatch();
   if(typeof unsubscribeRoom==='function')unsubscribeRoom();
+  unsubscribeInbox(); backendEpoch++; roomsRequest++;
   if(R.saveTimer){clearTimeout(R.saveTimer);R.saveTimer=null}
   if(typeof resetPoll==='function')resetPoll();
   ME=null;
   MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
-  S.joined=[]; S.rooms={}; S.dirty=false;
+  S.joined=[]; S.rooms={}; S.dirty=false; if(typeof updateBdg==='function')updateBdg();
   if(typeof resetHomeOrbit==='function')resetHomeOrbit();   // 홈 은하계도 사용자별로 초기화
+  if(typeof closeAvailability==='function')closeAvailability();
   if(typeof resetPlanMaps==='function')resetPlanMaps();     // 후보 장소 선택·지도도 사용자별로 초기화
   R.rec=null; R.recLoading=false; R.recDirty=true; R.seen.clear();
   if(typeof CUR!=='undefined')CUR=null;
@@ -53,6 +59,7 @@ async function initBackend(){
   try{
     await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js');
     sb=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+    document.addEventListener('visibilitychange',syncVisibleRoom);
     sb.auth.onAuthStateChange((ev,sess)=>{   // 갱신 실패로 로그아웃되면 로그인 화면으로
       if(ev==='SIGNED_OUT'){clearBackendState();showEntry()}
       else if(sess&&sess.user)ME=sess.user.id;
@@ -145,6 +152,7 @@ async function loadProfile(){
   return true;
 }
 async function afterLogin(){
+  subscribeInbox();
   await Promise.all([loadConnections(),loadRooms()]);
   R.recDirty=true;
   renderHome();renderProfile();updateBdg();go('home');
@@ -165,16 +173,63 @@ function ensureMeeting(id,patch){
 function ensureRoom(id){return S.rooms[id]||(S.rooms[id]={msgs:[],unread:0,planned:null,photos:[],votes:{},attended:new Set(),iAttended:false})}   // 방 객체는 여기서만 만든다
 /* 채팅 목록 (room_summaries RPC) */
 async function loadRooms(){
-  const {data,error}=await sb.rpc('room_summaries'); if(error){netFail('채팅 목록');return}
+  const request=++roomsRequest, epoch=backendEpoch;
+  const {data,error}=await sb.rpc('room_summaries');
+  if(request!==roomsRequest||epoch!==backendEpoch)return;
+  if(error){netFail('채팅 목록');return}
   S.joined=(data||[]).map(x=>x.meeting_id);
+  Object.keys(S.rooms).forEach(id=>{if(!S.joined.includes(id))delete S.rooms[id]});
   (data||[]).forEach(x=>{
     const m=ensureMeeting(x.meeting_id,{em:x.emoji||'🌙',name:x.title,memberCount:Math.max(0,(x.member_count||1)-1)});
     const r=ensureRoom(x.meeting_id);
     // 내 체크인 여부는 room_summaries.attended 로 받는다 (#4). 컬럼이 없으면(마이그레이션 미적용) 기존 값을 유지한다
     if(x.attended!=null)r.iAttended=!!x.attended;
+    r.unread=Math.max(0,Number(x.unread_count)||0);
     r.last=x.last_body; r.lastT=x.last_at?fmtT(x.last_at):'';
     if(r.iAttended&&!r.photos.length)r.photos=placeholderPhotos(m);
   });
+  updateBdg();renderRooms();
+}
+/* RLS가 허용한 모든 참가 방의 메시지를 받는다. 서버 집계로 중복 이벤트도 중복 계산하지 않는다. */
+function subscribeInbox(){
+  if(INBOX||!sb||!ME)return;
+  const epoch=backendEpoch;
+  INBOX=sb.channel('inbox-'+ME)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async p=>{
+      if(epoch!==backendEpoch)return;
+      try{
+        if(p.new?.meeting_id===CUR)await syncVisibleRoom();
+        else await loadRooms();
+      }catch(e){netFail('채팅 목록')}
+    })
+    .subscribe(async status=>{
+      if(status!=='SUBSCRIBED'||epoch!==backendEpoch)return;
+      // 최초 구독과 재연결 사이에 놓친 메시지도 서버에서 복원한다.
+      await syncVisibleRoom();
+    });
+}
+async function syncVisibleRoom(){
+  if(!ME)return;
+  const id=CUR, epoch=backendEpoch;
+  try{
+    await loadRooms();
+    if(epoch!==backendEpoch)return;
+    if(id&&S.rooms[id]&&document.visibilityState!=='hidden'){
+      if(await loadRoom(id)===false)return;
+      if(epoch===backendEpoch&&CUR===id){renderMsgs();await markRoomRead(id)}
+    }
+  }catch(e){netFail('채팅 동기화')}
+}
+function unsubscribeInbox(){if(INBOX&&sb){sb.removeChannel(INBOX);INBOX=null}}
+async function markRoomRead(id){
+  const r=S.rooms[id], epoch=backendEpoch;
+  if(!r||!r.readMessageId||document.visibilityState==='hidden')return;
+  try{
+    const {error}=await sb.rpc('mark_room_read',{p_meeting_id:id,p_message_id:r.readMessageId});
+    if(epoch!==backendEpoch)return;
+    if(error)throw error;
+    await loadRooms();
+  }catch(e){netFail('읽음 저장')}
 }
 /* AI 매칭 (recommend-meetings Edge Function) */
 async function loadRecommendations(){
@@ -224,13 +279,15 @@ function pushMsg(r,x){
 function applyPlan(r,pl,search){
   if(!pl||!pl.id)return;
   const plan={place:pl.place||'',when:pl.time_label||'',meetAt:pl.meet_at||null,act:pl.activity||'',food:(pl.nearby||[]).join(' · '),
-    cands:Array.isArray(pl.candidates)?pl.candidates:[],selected:pl.selected_place||null,collecting:!!pl.collecting,pollId:pl.poll_id||null,confirmReason:pl.confirm_reason||null};
+    schedule:pl.schedule||null,scheduleHost:pl.schedule_host||null,cands:Array.isArray(pl.candidates)?pl.candidates:[],selected:pl.selected_place||null,collecting:!!pl.collecting,pollId:pl.poll_id||null,confirmReason:pl.confirm_reason||null};
   let msg=r.msgs.find(m=>m.f==='ai'&&m.planId===pl.id);
   if(!msg){
     if(!r.msgs.some(m=>m.f==='ai'))r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     msg={f:'ai',plan,planId:pl.id,t:fmtT(pl.created_at)||nowT()}; r.msgs.push(msg);
   }
+  if((msg.plan?.schedule?.revision||0)>(plan.schedule?.revision||0))return;
   msg.plan=plan; msg.source=pl.source;
+  if(typeof AV!=='undefined'&&AV&&AV.planId===pl.id){AV.msg=msg;if(!AV.dirty&&!AV.busy){AV.revision=plan.schedule?.revision||0;AV.draft=new Set(plan.schedule?.responses?.[MYID()]||[]);renderAvailability()}}
   if(search)msg.search=search;   // 검색 상태는 추천 응답에서만 오고, Realtime 갱신 때는 이전 값을 유지한다
   // 다른 멤버가 고른 장소를 내 화면의 선택 상태에도 맞춘다 (Realtime 양방향 동기화)
   if(plan.selected){
@@ -247,7 +304,10 @@ function applyPlan(r,pl,search){
   }
 }
 async function loadRoom(id){
+  const epoch=backendEpoch, request=(roomRequests.get(id)||0)+1;
+  roomRequests.set(id,request);
   try{ await sb.rpc('settle_due_plans',{p_meeting_id:id}) }catch(e){}   // 시간이 지난 약속을 먼저 확정한다
+  if(epoch!==backendEpoch)return false;
   const [mem,msgs,plans,votes,att,fb]=await Promise.all([
     sb.rpc('room_members',{p_meeting_id:id}),
     sb.from('messages').select('id,sender_id,body,created_at').eq('meeting_id',id).order('created_at',{ascending:false}).limit(50),
@@ -256,6 +316,7 @@ async function loadRoom(id){
     sb.from('meeting_attendance').select('user_id').eq('meeting_id',id),
     sb.from('meeting_feedback').select('rating').eq('meeting_id',id).eq('user_id',ME).maybeSingle(),
   ]);
+  if(epoch!==backendEpoch||roomRequests.get(id)!==request)return false;
   if(mem.error||msgs.error||plans.error||votes.error||att.error)throw new Error('load');
   const m=ensureMeeting(id,{}), r=ensureRoom(id);
   m.members=[]; (mem.data||[]).forEach(p=>{if(p.user_id===ME)return;m.members.push(p.user_id);upsertMember(p)});
@@ -268,16 +329,12 @@ async function loadRoom(id){
   R.seen.clear();
   r.msgs=[{f:'sys',x:r.iAttended?'🌕 만남을 완료한 모임이에요. 함께 완료한 동료는 실명으로 보여요':'모임이 열렸어요. 만나기 전까지는 서로 익명이에요 🌙'}];
   (msgs.data||[]).slice().reverse().forEach(x=>pushMsg(r,x));
+  r.readMessageId=msgs.data?.[0]?.id||null;
   const pl=(plans.data||[])[0]; if(pl){applyPlan(r,pl); const am=r.msgs.find(x=>x.planId===pl.id); if(am)checkPlanDone(id,am);}
 }
 function subscribeRoom(id){
   unsubscribeRoom();
   CH=sb.channel('room-'+id)
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'meeting_id=eq.'+id},async p=>{
-      const r=S.rooms[id]; if(!r||!p.new)return;
-      if(p.new.sender_id!==ME&&!PEOPLE[p.new.sender_id])await refreshMembers(id);   // 새로 들어온 멤버
-      if(pushMsg(r,p.new)&&CUR===id)renderMsgs();
-    })
     .on('postgres_changes',{event:'*',schema:'public',table:'meeting_plans',filter:'meeting_id=eq.'+id},p=>{
       const r=S.rooms[id]; if(!r||!p.new)return;
       applyPlan(r,p.new); if(CUR===id){renderBanner();renderMsgs()}
@@ -286,6 +343,7 @@ function subscribeRoom(id){
       const r=S.rooms[id]; if(!r||!p.new)return;
       (r.votes[p.new.plan_id]||(r.votes[p.new.plan_id]=new Set())).add(p.new.user_id);
       const msg=r.msgs.find(x=>x.planId===p.new.plan_id); if(msg)checkPlanDone(id,msg);
+      if(typeof AV!=='undefined'&&AV&&AV.room===id)renderAvailability();
       if(CUR===id){renderMsgs();renderBanner()}
     })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'meeting_attendance',filter:'meeting_id=eq.'+id},async p=>{
@@ -299,7 +357,7 @@ function subscribeRoom(id){
       }
       if(CUR===id){renderMsgs();renderBanner();renderMeta(id)}
     })
-    .subscribe();
+    .subscribe(status=>{if(status==='SUBSCRIBED'&&CUR===id)syncVisibleRoom()});
 }
 function unsubscribeRoom(){ if(CH&&sb){sb.removeChannel(CH);CH=null} }
 /* 발표 데이터 초기화 (관리 토큰 필요 · ?admin=1 일 때만 버튼 노출) */

@@ -135,7 +135,8 @@ begin
     if old.confirmed and (new.place is distinct from old.place or new.meet_at is distinct from old.meet_at
       or new.selected_place is distinct from old.selected_place) then raise exception '확정된 약속은 변경할 수 없어요'; end if;
     if not old.confirmed and new.confirmed and new.confirm_reason is distinct from 'host' then return null; end if;
-    if not new.confirmed and (new.place is distinct from old.place or new.selected_place is distinct from old.selected_place) then
+    if new.schedule is distinct from old.schedule then raise exception '의견 비교 화면에서 일정을 조율해 주세요'; end if;
+    if not new.confirmed and (new.meet_at is distinct from old.meet_at or new.place is distinct from old.place or new.selected_place is distinct from old.selected_place) then
       raise exception '의견 비교 화면에서 장소와 시간을 함께 확정해 주세요';
     end if;
     if new.candidates is distinct from old.candidates or not new.collecting then raise exception '의견 수집 후보는 변경할 수 없어요'; end if;
