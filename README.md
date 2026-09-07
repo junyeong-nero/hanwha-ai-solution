@@ -21,6 +21,7 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 ### 매칭 — AI 모임 추천
 
 - 프로필의 계열사, 선호 지역, 나이, 관심사, 취미, 모임 규모와 매칭 성향을 추천에 반영합니다.
+- 순위는 **규칙 기반 점수 엔진**이 매깁니다. 관심사 겹침·아는 얼굴 비율·희망 인원·같은 성별/계열사 비율·남은 자리를 가중 합산하며, LLM 대기 없이 즉시 응답하고 같은 입력이면 항상 같은 순서가 나옵니다.
 - 모임 카드의 한화 주황색 띠로 이미 만난 사람이 포함된 비율을 보여줍니다.
 - `참가`를 누르면 해당 모임의 익명 채팅방이 생성됩니다.
 
@@ -51,7 +52,7 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 
 - `src/`는 마크업(`index.html`)·스타일(`styles.css`)·화면별 스크립트(`js/`)로 나뉘어 있고, 빌드 도구 없이 브라우저가 그대로 읽습니다. 스크립트는 ES 모듈이 아닌 일반 `<script>`라 전역 스코프를 공유하며 로드 순서(`config` → `app` → 화면별 → `backend` → `boot`)에 의존합니다.
 - **로컬 데모 모드(기본):** `src/js/config.js` 상단 `CONFIG`가 비어 있으면 외부 라이브러리·네트워크 요청 없이 브라우저에서 바로 실행됩니다. 데모 데이터는 `COMPANIES`, `PEOPLE`, `MEETINGS`, `PLANS` 상수에, 사용자 상태는 전역 `S` 객체에만 저장되며 새로고침하면 초기화됩니다.
-- **백엔드 모드:** `CONFIG`에 Supabase URL과 anon 키를 채우면 supabase-js(CDN)를 불러와 사번 기반 데모 로그인(계열사·사번·이름으로 어느 기기에서든 같은 프로필·채팅 복원)·실시간 채팅을 사용하고, Supabase Edge Function이 OpenRouter LLM을 호출해 모임 추천과 약속 제안을 만듭니다. 설계는 [백엔드 설계 문서](docs/superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md), 배포 절차는 [deployment.md](docs/deployment.md)를 참고하세요.
+- **백엔드 모드:** `CONFIG`에 Supabase URL과 anon 키를 채우면 supabase-js(CDN)를 불러와 사번 기반 데모 로그인(계열사·사번·이름으로 어느 기기에서든 같은 프로필·채팅 복원)·실시간 채팅을 사용하고, Supabase Edge Function이 모임 추천(규칙 엔진, 즉시 응답)과 약속 제안(OpenRouter LLM)을 만듭니다. 설계는 [백엔드 설계 문서](docs/superpowers/specs/2026-09-02-supabase-openrouter-backend-design.md), 배포 절차는 [deployment.md](docs/deployment.md)를 참고하세요.
 - 백엔드 코드는 `supabase/` (마이그레이션·시드·Edge Functions)에 있고, 테스트는 Node.js 24 이상에서 `npm test`로 실행합니다. `npm test`가 지원 버전을 먼저 확인하고, 미달하면 원인을 안내합니다.
 
 ## 실행 방법
@@ -96,7 +97,7 @@ AI가 프로필 설정에 맞는 소모임을 추천하고, 익명 채팅에서 
 
 | 항목 | 배점 | 이 저장소에서 대응하는 것 |
 | --- | ---: | --- |
-| 적합한 AI 툴 선택·활용 | 25 | LLM 매칭·약속 추천 Edge Function, 프롬프트·검증·fallback 설계 |
+| 적합한 AI 툴 선택·활용 | 25 | 규칙 기반 매칭 엔진 + LLM 약속 추천 Edge Function, 프롬프트·검증·fallback 설계 |
 | 가공된 산출물 퀄리티 | 25 | 동작하는 프로토타입(Pages), 백엔드, 테스트 |
 | 논리적 원인 분석 | 15 | [introduction.md](docs/introduction.md) |
 | 데이터 근거 해결책 | 15 | 잡플래닛 조사·일터우정 연구 인용 |

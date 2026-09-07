@@ -9,11 +9,9 @@ import { corsHeaders, json, preflight, fail } from '../supabase/functions/_share
 import { chatJson, LlmError } from '../supabase/functions/_shared/llm.ts';
 import {
   ageBand,
-  buildRecommendationPrompt,
-  parseRecommendations,
-  deterministicOrder,
-  FALLBACK_REASON,
-  FALLBACK_REASON_SAME_GENDER,
+  sanitizeProfile,
+  rankByRules,
+  RULE_ENGINE_MODEL,
 } from '../supabase/functions/_shared/recommendation.ts';
 import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan } from '../supabase/functions/_shared/chat.ts';
 import { parseMeetAt, acceptMeetAt, nowHint, MAX_HORIZON_DAYS } from '../supabase/functions/_shared/plantime.ts';
@@ -27,6 +25,7 @@ const migration0007 = fs.readFileSync(new URL('../supabase/migrations/0007_plan_
 const migration0006Path = new URL('../supabase/migrations/0006_seed_companies.sql', import.meta.url);
 const migration0006 = fs.existsSync(migration0006Path) ? fs.readFileSync(migration0006Path, 'utf8') : '';
 const seed = fs.readFileSync(new URL('../supabase/seed.sql', import.meta.url), 'utf8');
+const recommendFn = fs.readFileSync(new URL('../supabase/functions/recommend-meetings/index.ts', import.meta.url), 'utf8');
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -233,13 +232,14 @@ test('preflight와 json 응답은 CORS 헤더를 포함한다', async () => {
   assert.deepEqual(await err.json(), { error_code: 'FORBIDDEN', message: '권한이 없어요' });
 });
 
-/* ================= recommendation.ts ================= */
+/* ================= recommendation.ts — 규칙 엔진 ================= */
 
-// 서버가 선호 지역으로 이미 거른 후보라는 전제. same_gender_ratio 는 다른 멤버 중 같은 성별 비율(모르면 null).
+// 서버가 선호 지역으로 이미 거른 후보라는 전제.
+// same_gender_ratio · same_company_ratio 는 다른 멤버 중 같은 성별 · 같은 계열사 비율(모르면 null).
 const CANDIDATES = [
-  { id: '00000000-0000-4000-8000-000000000001', title: '러닝', emoji: '🏃', region: '판교', when_label: '평일 저녁', capacity: 6, tags: ['러닝'], member_count: 3, known_count: 0, joined: false, same_gender_ratio: 0.5 },
-  { id: '00000000-0000-4000-8000-000000000002', title: '위스키', emoji: '🥃', region: '판교', when_label: '금요일 저녁', capacity: 5, tags: ['위스키'], member_count: 4, known_count: 2, joined: false, same_gender_ratio: null },
-  { id: '00000000-0000-4000-8000-000000000003', title: '엑셀', emoji: '📊', region: '여의도', when_label: '수요일 점심', capacity: 6, tags: ['자동화'], member_count: 4, known_count: 4, joined: true, same_gender_ratio: 1 },
+  { id: '00000000-0000-4000-8000-000000000001', title: '러닝', emoji: '🏃', region: '판교', when_label: '평일 저녁', capacity: 6, tags: ['러닝'], member_count: 3, known_count: 0, joined: false, same_gender_ratio: 0.5, same_company_ratio: 0.33 },
+  { id: '00000000-0000-4000-8000-000000000002', title: '위스키', emoji: '🥃', region: '판교', when_label: '금요일 저녁', capacity: 5, tags: ['위스키'], member_count: 4, known_count: 2, joined: false, same_gender_ratio: null, same_company_ratio: 1 },
+  { id: '00000000-0000-4000-8000-000000000003', title: '엑셀', emoji: '📊', region: '여의도', when_label: '수요일 점심', capacity: 6, tags: ['자동화'], member_count: 4, known_count: 4, joined: true, same_gender_ratio: 1, same_company_ratio: 0 },
 ];
 const CANDIDATE_IDS = CANDIDATES.map((c) => c.id);
 
@@ -249,148 +249,154 @@ const PROFILE = {
   matching_preferences: { same_gender: false, scope: 'all', direction: 'wide' },
 };
 
+/** 성별·계열사 비율만 다른 최소 후보 — 해당 항목의 효과만 떼어 보기 위한 픽스처 */
+const pairOnly = (extra) => [
+  { id: 'a', title: '모임A', region: '판교', tags: ['독서'], capacity: 4, member_count: 2, known_count: 0, joined: false, ...extra.a },
+  { id: 'b', title: '모임B', region: '판교', tags: ['독서'], capacity: 4, member_count: 2, known_count: 0, joined: false, ...extra.b },
+];
+
 test('ageBand: 나이를 연령대 문자열로 바꾼다', () => {
   assert.equal(ageBand(27), '20대 후반');
   assert.equal(ageBand(31), '30대 초반');
   assert.equal(ageBand(45), '40대 중반');
   assert.equal(ageBand(null), '비공개');
+  assert.equal(ageBand(undefined), '비공개');
+  assert.equal(ageBand(15), '20대 미만');
+  assert.equal(ageBand(63), '60대 이상');
 });
 
-test('buildRecommendationPrompt: 실명·사번이 섞여 들어와도 프롬프트에 남지 않는다', () => {
-  const dirtyProfile = {
-    ...PROFILE,
-    real_name: '홍길동', employee_no: 'EMP-991', user_id: '11111111-2222-4333-8444-555555555555',
-  };
-  const { system, user } = buildRecommendationPrompt(dirtyProfile, CANDIDATES);
-  const all = system + '\n' + user;
-  for (const banned of ['real_name', 'employee_no', '홍길동', 'EMP-991', '11111111-2222-4333-8444-555555555555']) {
-    assert.ok(!all.includes(banned), `프롬프트에 ${banned}이(가) 포함되었습니다`);
+test('sanitizeProfile: 실명·사번 등 허용되지 않은 필드는 남지 않는다', () => {
+  const dirty = { ...PROFILE, real_name: '김한화', employee_no: '20250001', user_id: 'uuid-1', email: 'a@b.com' };
+  const safe = sanitizeProfile(dirty);
+  assert.deepEqual(Object.keys(safe).sort(), [
+    'age_band', 'company_id', 'gender', 'group_size', 'hobbies', 'interests', 'matching_preferences', 'regions',
+  ]);
+  const dump = JSON.stringify(safe);
+  assert.doesNotMatch(dump, /김한화|20250001|uuid-1|a@b\.com/);
+});
+
+test('sanitizeProfile: regions 가 없으면 단일 region 으로 대체하고 뒤집힌 인원 범위를 바로잡는다', () => {
+  const legacy = { region: '판교', group_size_min: 8, group_size_max: 3 };
+  const safe = sanitizeProfile(legacy);
+  assert.deepEqual(safe.regions, ['판교']);
+  assert.deepEqual(safe.group_size, [3, 8]);
+  assert.deepEqual(safe.matching_preferences, { same_gender: false, scope: 'all', direction: 'wide' });
+});
+
+test('rankByRules: 모든 후보에 1..n 중복 없는 순위를 매기고 이유는 60자 이내', () => {
+  const out = rankByRules(PROFILE, CANDIDATES);
+  assert.deepEqual(out.map((r) => r.rank), [1, 2, 3]);
+  assert.deepEqual([...new Set(out.map((r) => r.meeting_id))].sort(), [...CANDIDATE_IDS].sort());
+  for (const r of out) {
+    assert.ok(r.reason.length > 0 && r.reason.length <= 60, `이유 길이: ${r.reason}`);
+    assert.match(r.reason, /[가-힣]/);
+    assert.ok(Array.isArray(r.cautions) && r.cautions.length <= 3);
   }
-  assert.ok(user.includes('판교') && user.includes('러닝'));
-  assert.match(system, /JSON/);
-  for (const id of CANDIDATE_IDS) assert.ok(user.includes(id));
 });
 
-test('buildRecommendationPrompt: 선호 지역 목록·같은 성별 우선·같은 성별 비율을 프롬프트에 넣는다', () => {
-  const { system, user } = buildRecommendationPrompt(
-    { ...PROFILE, matching_preferences: { same_gender: true, scope: 'mine', direction: 'deep' } },
+test('rankByRules: 같은 입력이면 항상 같은 순서 (결정적)', () => {
+  const a = rankByRules(PROFILE, CANDIDATES);
+  const b = rankByRules(PROFILE, [...CANDIDATES].reverse());
+  assert.deepEqual(a.map((r) => r.meeting_id), b.map((r) => r.meeting_id));
+  assert.deepEqual(a.map((r) => r.score), b.map((r) => r.score));
+});
+
+test('rankByRules: 이미 참가한 모임은 목록에 남기되 맨 뒤로 민다', () => {
+  const out = rankByRules(PROFILE, CANDIDATES);
+  const last = out[out.length - 1];
+  assert.equal(last.meeting_id, CANDIDATE_IDS[2]);
+  assert.ok(last.score < 0, '참가 중인 모임은 점수에서 1 을 뺀다');
+  assert.ok(last.cautions.includes('이미 참가 중이에요'));
+});
+
+test('rankByRules: direction 에 따라 아는 얼굴 비율 순서가 뒤집힌다', () => {
+  const wide = rankByRules(PROFILE, CANDIDATES);
+  assert.deepEqual(wide.map((r) => r.meeting_id), [CANDIDATE_IDS[0], CANDIDATE_IDS[1], CANDIDATE_IDS[2]]);
+
+  const deep = rankByRules(
+    { ...PROFILE, matching_preferences: { ...PROFILE.matching_preferences, direction: 'deep' } },
     CANDIDATES,
   );
-  assert.ok(system.includes('선호 지역') && system.includes('같은 성별'), '시스템 지시에 선호 지역·같은 성별 언급이 없습니다');
-  const parsed = JSON.parse(user);
-  assert.deepEqual(parsed.profile.regions, ['판교', '여의도']);
-  assert.deepEqual(parsed.preferred_regions, ['판교', '여의도']);
-  assert.equal(parsed.profile.gender, '여');
-  assert.equal(parsed.profile.matching_preferences.same_gender, true);
-  assert.equal(parsed.same_gender_first, true);
-  assert.ok(user.includes('선호 지역') && user.includes('여의도'));
-  // 후보의 same_gender_ratio 는 백분율 또는 '정보 없음'
-  const byId = Object.fromEntries(parsed.candidates.map((c) => [c.id, c.same_gender_ratio]));
-  assert.equal(byId[CANDIDATE_IDS[0]], '50%');
-  assert.equal(byId[CANDIDATE_IDS[1]], '정보 없음');
-  assert.equal(byId[CANDIDATE_IDS[2]], '100%');
+  assert.deepEqual(deep.map((r) => r.meeting_id), [CANDIDATE_IDS[1], CANDIDATE_IDS[0], CANDIDATE_IDS[2]]);
 });
 
-test('buildRecommendationPrompt: regions 가 없으면 단일 region 으로 대체하고 balance 는 넣지 않는다', () => {
-  const legacy = { ...PROFILE, regions: undefined, region: '장교', matching_preferences: { balance: true, scope: 'all', direction: 'wide' } };
-  const { user } = buildRecommendationPrompt(legacy, CANDIDATES);
-  const parsed = JSON.parse(user);
-  assert.deepEqual(parsed.profile.regions, ['장교']);
-  assert.equal(parsed.profile.matching_preferences.same_gender, false);
-  assert.equal('balance' in parsed.profile.matching_preferences, false);
+test('rankByRules: 관심사가 겹치면 이유에 겹친 낱말을 적고, 안 겹치면 주의점에 알린다', () => {
+  const profile = { ...PROFILE, interests: ['러닝', '트레일러닝'], hobbies: [] };
+  const out = rankByRules(profile, CANDIDATES);
+  const running = out.find((r) => r.meeting_id === CANDIDATE_IDS[0]);
+  assert.match(running.reason, /^관심사 러닝/);
+  assert.equal(running.rank, 1);
+
+  const excel = out.find((r) => r.meeting_id === CANDIDATE_IDS[2]);
+  assert.ok(excel.cautions.includes('관심사와 겹치는 태그가 없어요'));
 });
 
-test('parseRecommendations: 후보에 없는 id는 버린다', () => {
-  const raw = JSON.stringify({ recommendations: [
-    { meeting_id: 'meeting_999', rank: 1, reason: '없는 모임' },
-    { meeting_id: CANDIDATE_IDS[0], rank: 2, reason: '러닝 관심사가 겹쳐요' },
-  ] });
-  const out = parseRecommendations(raw, CANDIDATE_IDS);
-  assert.deepEqual(out.map((r) => r.meeting_id), [CANDIDATE_IDS[0]]);
-  assert.equal(out[0].rank, 1);
-});
-
-test('parseRecommendations: 중복 id는 최상위 순위만 남기고 순위를 다시 매긴다', () => {
-  const raw = JSON.stringify({ recommendations: [
-    { meeting_id: CANDIDATE_IDS[1], rank: 5, reason: '아는 얼굴이 있어요', cautions: ['정원 임박'] },
-    { meeting_id: CANDIDATE_IDS[0], rank: 2, reason: '퇴근 동선이 겹쳐요' },
-    { meeting_id: CANDIDATE_IDS[1], rank: 1, reason: '취미 위스키가 겹쳐요' },
-    { meeting_id: CANDIDATE_IDS[2], rank: 3, reason: '' },
-  ] });
-  const out = parseRecommendations(raw, CANDIDATE_IDS);
-  assert.deepEqual(out.map((r) => [r.meeting_id, r.rank]), [[CANDIDATE_IDS[1], 1], [CANDIDATE_IDS[0], 2]]);
-  assert.equal(out[0].reason, '취미 위스키가 겹쳐요');
-  assert.deepEqual(out[0].cautions, []);
-  assert.deepEqual(out[1].cautions, []);
-});
-
-test('parseRecommendations: 160자를 넘거나 기호뿐인 이유는 버린다', () => {
-  const raw = JSON.stringify({ recommendations: [
-    { meeting_id: CANDIDATE_IDS[0], rank: 1, reason: '가'.repeat(161) },
-    { meeting_id: CANDIDATE_IDS[1], rank: 2, reason: '가'.repeat(160) },
-    { meeting_id: CANDIDATE_IDS[2], rank: 3, reason: '...' },
-  ] });
-  const out = parseRecommendations(raw, CANDIDATE_IDS);
-  assert.deepEqual(out.map((r) => r.meeting_id), [CANDIDATE_IDS[1]]);
-});
-
-test('parseRecommendations: 코드 펜스로 감싼 JSON도 읽는다', () => {
-  const raw = '```json\n' + JSON.stringify({ recommendations: [
-    { meeting_id: CANDIDATE_IDS[2], rank: 1, reason: '자동화 관심사가 겹쳐요', cautions: ['이미 참가 중이에요'] },
-  ] }) + '\n```';
-  const out = parseRecommendations(raw, CANDIDATE_IDS);
-  assert.equal(out.length, 1);
-  assert.equal(out[0].reason, '자동화 관심사가 겹쳐요');
-  assert.deepEqual(out[0].cautions, ['이미 참가 중이에요']);
-});
-
-test('parseRecommendations: 잘못된 출력은 INVALID_LLM_OUTPUT', () => {
-  assert.throws(() => parseRecommendations('죄송합니다, 추천할 수 없어요', CANDIDATE_IDS), /INVALID_LLM_OUTPUT/);
-  assert.throws(() => parseRecommendations('{"recommendations": []}', CANDIDATE_IDS), /INVALID_LLM_OUTPUT/);
-  assert.throws(() => parseRecommendations('{"recommendations": [{"meeting_id": "x", "rank": 1, "reason": "y"}]}', CANDIDATE_IDS), /INVALID_LLM_OUTPUT/);
-});
-
-test('deterministicOrder: 지역은 정렬에 쓰지 않고 direction에 따라 아는 얼굴 비율로 정렬한다', () => {
-  const profile = { regions: ['판교'], matching_preferences: { same_gender: false, scope: 'all', direction: 'wide' } };
-  const wide = deterministicOrder(CANDIDATES, profile);
-  assert.deepEqual(wide.map((r) => r.meeting_id), [CANDIDATE_IDS[0], CANDIDATE_IDS[1], CANDIDATE_IDS[2]]);
-  assert.deepEqual(wide.map((r) => r.rank), [1, 2, 3]);
-  assert.equal(wide[0].reason, FALLBACK_REASON);
-  assert.deepEqual(wide[0].cautions, []);
-
-  // deep 이면 아는 얼굴 비율 내림차순 — 여의도 모임(3)도 선호 지역과 무관하게 맨 앞
-  const deep = deterministicOrder(CANDIDATES, { ...profile, matching_preferences: { direction: 'deep' } });
-  assert.deepEqual(deep.map((r) => r.meeting_id), [CANDIDATE_IDS[2], CANDIDATE_IDS[1], CANDIDATE_IDS[0]]);
-});
-
-test('deterministicOrder: same_gender=true 면 같은 성별 비율 내림차순, null 은 맨 뒤', () => {
-  const profile = { matching_preferences: { same_gender: true, scope: 'all', direction: 'wide' } };
-  const out = deterministicOrder(CANDIDATES, profile);
-  assert.deepEqual(out.map((r) => r.meeting_id), [CANDIDATE_IDS[2], CANDIDATE_IDS[0], CANDIDATE_IDS[1]]);
-  assert.equal(out[0].reason, FALLBACK_REASON_SAME_GENDER);
-
-  // 같은 비율끼리는 아는 얼굴 비율(direction)로 가른다
-  const tied = [
-    { id: 'b', member_count: 2, known_count: 2, same_gender_ratio: 1 },
-    { id: 'a', member_count: 2, known_count: 0, same_gender_ratio: 1 },
-    { id: 'c', member_count: 2, known_count: 1, same_gender_ratio: null },
+test('rankByRules: 태그는 공백·기호를 무시하고 부분 일치도 겹침으로 본다', () => {
+  const profile = { ...PROFILE, interests: ['등산'], hobbies: [] };
+  const candidates = [
+    { id: 'x', title: '주말 산행', region: '판교', tags: ['#주말 등산'], capacity: 6, member_count: 3, known_count: 0, joined: false },
+    { id: 'y', title: '보드게임', region: '판교', tags: ['보드게임'], capacity: 6, member_count: 3, known_count: 0, joined: false },
   ];
-  const wide = deterministicOrder(tied, profile);
-  assert.deepEqual(wide.map((r) => r.meeting_id), ['a', 'b', 'c']);
-  const deep = deterministicOrder(tied, { matching_preferences: { same_gender: true, direction: 'deep' } });
-  assert.deepEqual(deep.map((r) => r.meeting_id), ['b', 'a', 'c']);
+  const out = rankByRules(profile, candidates);
+  assert.equal(out[0].meeting_id, 'x');
+  assert.match(out[0].reason, /관심사 등산/);
 });
 
-test('deterministicOrder: same_gender=false 면 같은 성별 비율을 무시한다', () => {
-  const list = [
-    { id: 'x', member_count: 4, known_count: 4, same_gender_ratio: 0 },
-    { id: 'y', member_count: 4, known_count: 0, same_gender_ratio: 1 },
+test('rankByRules: same_gender=true 일 때만 같은 성별 비율이 순위에 반영된다', () => {
+  const candidates = pairOnly({
+    a: { same_gender_ratio: 0, same_company_ratio: null },
+    b: { same_gender_ratio: 1, same_company_ratio: null },
+  });
+  const off = rankByRules(PROFILE, candidates);
+  assert.deepEqual(off.map((r) => r.meeting_id), ['a', 'b'], '꺼져 있으면 id 순 (동점)');
+
+  const on = rankByRules(
+    { ...PROFILE, matching_preferences: { ...PROFILE.matching_preferences, same_gender: true } },
+    candidates,
+  );
+  assert.deepEqual(on.map((r) => r.meeting_id), ['b', 'a']);
+  assert.ok(on[1].cautions.some((c) => c.includes('같은 성별')));
+});
+
+test('rankByRules: scope=mine 일 때만 같은 계열사 비율이 순위에 반영된다', () => {
+  const candidates = pairOnly({
+    a: { same_gender_ratio: null, same_company_ratio: 0 },
+    b: { same_gender_ratio: null, same_company_ratio: 1 },
+  });
+  const all = rankByRules(PROFILE, candidates);
+  assert.deepEqual(all.map((r) => r.meeting_id), ['a', 'b'], 'scope=all 이면 id 순 (동점)');
+
+  const mine = rankByRules(
+    { ...PROFILE, matching_preferences: { ...PROFILE.matching_preferences, scope: 'mine' } },
+    candidates,
+  );
+  assert.deepEqual(mine.map((r) => r.meeting_id), ['b', 'a']);
+  assert.ok(mine[1].cautions.includes('다른 계열사 멤버가 대부분이에요'));
+});
+
+test('rankByRules: 희망 인원 밖·정원 임박은 주의점으로 알린다', () => {
+  const candidates = [
+    { id: 'small', title: '소모임', region: '판교', tags: ['러닝'], capacity: 6, member_count: 0, known_count: 0, joined: false },
+    { id: 'full', title: '러닝', region: '판교', tags: ['러닝'], capacity: 5, member_count: 4, known_count: 0, joined: false },
   ];
-  const wide = deterministicOrder(list, { matching_preferences: { same_gender: false, direction: 'wide' } });
-  assert.deepEqual(wide.map((r) => r.meeting_id), ['y', 'x']);
-  assert.equal(wide[0].reason, FALLBACK_REASON);
-  const deep = deterministicOrder(list, { matching_preferences: { direction: 'deep' } });
-  assert.deepEqual(deep.map((r) => r.meeting_id), ['x', 'y']);
+  const out = rankByRules({ ...PROFILE, group_size: [6, 8] }, candidates);
+  const small = out.find((r) => r.meeting_id === 'small');
+  const full = out.find((r) => r.meeting_id === 'full');
+  assert.ok(small.cautions.some((c) => c.includes('희망 인원(6~8명)보다 작은')));
+  assert.ok(full.cautions.includes('정원이 거의 찼어요'));
+});
+
+test('rankByRules: 후보가 없거나 id 가 없는 항목은 걸러진다', () => {
+  assert.deepEqual(rankByRules(PROFILE, []), []);
+  assert.deepEqual(rankByRules(PROFILE, null), []);
+  assert.deepEqual(rankByRules(PROFILE, [{ title: 'id 없음' }, null]), []);
+});
+
+test('recommend-meetings: 추천 경로에서 LLM 을 호출하지 않는다', () => {
+  assert.equal(RULE_ENGINE_MODEL, 'rule-based-v1');
+  assert.doesNotMatch(recommendFn, /chatJson|OPENROUTER|llm\.ts/);
+  assert.match(recommendFn, /rankByRules/);
+  assert.match(recommendFn, /model: RULE_ENGINE_MODEL/);
 });
 
 /* ================= chat.ts ================= */
