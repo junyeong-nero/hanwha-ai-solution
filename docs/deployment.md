@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File scripts\deploy-supabase.ps1 -ProjectRef
 
 - Supabase 계정 (무료 플랜으로 충분)
 - 사용자 소유 OpenAI API 키와 `gpt-5.4-mini` 호출이 가능한 API 프로젝트
-- Supabase CLI: `npm i -g supabase` (또는 `npx supabase`)
+- Supabase CLI: `npx --yes supabase` 사용
 - 이 저장소의 `main` 브랜치가 GitHub Pages로 배포 중: `https://junyeong-nero.github.io/hanwha-ai-solution/src/`
 
 ## 1. Supabase 프로젝트 만들기 (발표용)
@@ -32,7 +32,7 @@ powershell -ExecutionPolicy Bypass -File scripts\deploy-supabase.ps1 -ProjectRef
 1. https://supabase.com/dashboard → **New project** → 이름 `moonlight-demo`, 리전 `Northeast Asia (Seoul)`.
 2. 생성 후 **Project Settings → API**에서 두 값을 메모합니다.
    - `Project URL` → `SUPABASE_URL`
-   - `anon` / `publishable` key → `SUPABASE_ANON_KEY`
+   - `publishable` key (`sb_publishable_...`) 또는 레거시 `anon` 키 → `SUPABASE_ANON_KEY`
    - `service_role` / `secret` key → `SUPABASE_SECRET_KEY` (**브라우저에 절대 넣지 않음**)
 3. **Authentication → Providers → Email**이 켜져 있는지 확인합니다(기본값 켜짐). 계정은 `demo-login` 함수가 서버에서 만들고 바로 확인 처리하므로 확인 메일 설정은 상관없습니다. 익명 로그인은 쓰지 않으니 꺼 두어도 됩니다.
 4. (선택) Authentication → Rate Limits에서 로그인(token) 한도를 발표 인원(예: 시간당 300)에 맞게 조정합니다.
@@ -51,7 +51,7 @@ npx supabase db push
 
 **의견 제출 기능(#32)은 프런트엔드 반영 전에 `0014_meeting_responses.sql`까지 적용해야 합니다.** 새 Edge Function이나 비밀 키는 필요하지 않습니다. 기존 `meeting_plans`와 `messages`의 Realtime publication을 그대로 사용합니다. 의견 테이블은 직접 접근을 막고 인증된 RPC로만 조회·저장합니다. 배포 확인 시 방장·참여자 두 계정으로 링크 재접속, 응답 수정, 방장 확정과 다른 기기 채팅의 즉시 반영을 확인하세요.
 
-`db push`는 `supabase/migrations/` 의 마이그레이션을 순서대로 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
+`db push`는 `supabase/migrations/` 의 마이그레이션을 0015까지 순서대로 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
 
 > **선택 — 지난 약속 자동 확정 주기 실행**
 > 약속 시간이 지난 카드는 멤버가 채팅방을 열 때 `settle_due_plans` 가 확정합니다. 아무도 방을 열지 않아도 정리되게 하려면
@@ -171,3 +171,18 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 ### UX 후속 마이그레이션 (0015)
 
 모임 나가기·확정 투표 취소·멤버 관심사는 `0015_leave_unvote_member_interests.sql` 적용이 필요합니다. 기존 `0012_room_unread.sql`과 번호가 겹치지 않도록 0015로 정리했습니다. 프론트엔드 머지와 별도로 `npx supabase db push`로 적용합니다.
+
+### 다른 Supabase 프로젝트로 새로 설정하기
+
+기존 데이터 이전 없이 시작할 때는 새 프로젝트를 만든 계정으로 `npx --yes supabase login`한 뒤 다음 명령을 실행합니다. DB 비밀번호만으로는 함수 배포·비밀값 등록 권한을 대신할 수 없습니다.
+
+```bash
+npx --yes supabase link --project-ref <새-project-ref>
+npx --yes supabase db push --dry-run --include-seed
+npx --yes supabase db push --include-seed
+npx --yes supabase functions deploy --project-ref <새-project-ref> --use-api
+```
+
+함수 호출 전에 새 프로젝트의 Secrets에 OpenRouter 키·모델과 별도로 생성한 `DEMO_LOGIN_SECRET`·`DEMO_RESET_TOKEN`을 등록합니다. 카카오 REST 키를 사용한다면 함께 등록합니다. 시드의 공개 개발용 입장 코드는 비활성화하고 새 입장 코드를 만듭니다. `src/js/config.js`의 URL과 공개 키를 함께 바꾼 뒤 실제 로그인·추천·채팅을 확인하고 push합니다. `.env`만 바꿔서는 정적 앱의 연결이 변경되지 않습니다.
+
+현재 연결 대상은 `vcmlqiovovflrkkjbzlt`입니다. 기존 프로젝트의 계정·대화는 자동 복사하지 않습니다. 새 프로젝트 테스트는 `?demo=1`이 없는 URL로 진행해야 합니다.
