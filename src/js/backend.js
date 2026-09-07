@@ -32,7 +32,7 @@ function clearBackendState(){
   ME=null;
   MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
   S.joined=[]; S.rooms={}; S.dirty=false;
-  if(typeof resetHomeGraph==='function')resetHomeGraph();   // 홈 그래프도 사용자별로 초기화
+  if(typeof resetHomeOrbit==='function')resetHomeOrbit();   // 홈 은하계도 사용자별로 초기화
   if(typeof resetPlanMaps==='function')resetPlanMaps();     // 후보 장소 선택·지도도 사용자별로 초기화
   R.rec=null; R.recLoading=false; R.recDirty=true; R.seen.clear();
   if(typeof CUR!=='undefined')CUR=null;
