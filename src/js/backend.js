@@ -214,7 +214,7 @@ async function syncVisibleRoom(){
     if(epoch!==backendEpoch)return;
     if(id&&S.rooms[id]&&document.visibilityState!=='hidden'){
       if(await loadRoom(id)===false)return;
-      if(epoch===backendEpoch&&CUR===id){renderMsgs();await markRoomRead(id)}
+      if(epoch===backendEpoch&&CUR===id){renderMeta(id);renderMsgs();await markRoomRead(id)}
     }
   }catch(e){netFail('채팅 동기화')}
 }

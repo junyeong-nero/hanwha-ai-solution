@@ -114,3 +114,49 @@ test('더 이상 참가하지 않는 방은 합계에서 제거한다',async()=>
   assert.equal(a.el('chatbdg').textContent,0);
   assert.equal(a.evaluate("S.rooms['room-a']"),undefined);
 });
+
+test('독립된 두 세션에서 참가·탈퇴 알림과 메시지·재연결이 실제 멤버 헤더를 갱신한다',async()=>{
+  const sessions=[app(),app()];
+  for(const [i,a] of sessions.entries()){
+    a.evaluate(`
+      ME='user-${i}';CUR='room-a';summary=rows(0);
+      let members=[{user_id:'user-0',nickname:'첫 멤버'}];
+      const originalRpc=sb.rpc;
+      sb.rpc=(name,args)=>name==='room_members'?Promise.resolve({data:members}):originalRpc(name,args);
+      sb.from=()=>{
+        const query={select(){return this},eq(){return this},order(){return this},limit(){return this},maybeSingle(){return this},
+          then(resolve){return Promise.resolve({data:[]}).then(resolve)}};
+        return query;
+      };
+      renderMsgs=()=>{};
+      subscribeInbox();subscribeRoom(CUR);
+    `);
+  }
+  const [a,b]=sessions;
+  await a.evaluate('syncVisibleRoom()');
+  assert.equal(a.el('rmeta').textContent,'멤버 1 · 익명 0명');
+  const notify=session=>session.evaluate(`channels[0].handlers[0].callback({new:{meeting_id:'room-a',sender_id:null}})`);
+  for(const session of sessions){
+    session.evaluate(`members.push({user_id:'user-1',nickname:'새 멤버'});summary[0].member_count=2`);
+    await notify(session);
+    assert.equal(session.el('rmeta').textContent,'멤버 2 · 익명 1명');
+    assert.equal(session.el('memCount').textContent,2);
+  }
+  a.evaluate(`members.pop();summary[0].member_count=1`);
+  await notify(a);
+  assert.equal(a.el('rmeta').textContent,'멤버 1 · 익명 0명');
+  assert.equal(a.el('memCount').textContent,1);
+  // 오프라인 중 놓친 재참가는 방 채널의 재구독으로 복원한다.
+  a.evaluate(`members.push({user_id:'user-1',nickname:'새 멤버'});summary[0].member_count=2`);
+  await a.evaluate(`channels[1].status('SUBSCRIBED')`);
+  // 방 채널 콜백은 동기화 Promise를 반환하지 않으므로 완료 시점까지 기다린다.
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(a.el('rmeta').textContent,'멤버 2 · 익명 1명');
+  assert.equal(a.el('memCount').textContent,2);
+  a.evaluate(`members.pop();summary[0].member_count=1;document.visibilityState='hidden'`);
+  await notify(a);
+  assert.equal(a.el('memCount').textContent,2,'숨겨진 화면은 복귀 시 갱신');
+  await a.evaluate(`document.visibilityState='visible';syncVisibleRoom()`);
+  assert.equal(a.el('memCount').textContent,1);
+  assert.equal(b.el('memCount').textContent,2,'세션 상태는 서로 독립적');
+});
