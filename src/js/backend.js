@@ -139,7 +139,7 @@ async function loadProfile(){
   if(error||!data)return false;
   const P=S.profile, mp=data.matching_preferences||{};
   P.nick=data.nickname; P.realName=data.real_name; P.av=data.avatar||P.av; P.company=data.company_id||P.company;
-  P.regions=(data.regions&&data.regions.length)?data.regions:(data.region?[data.region]:['판교']);
+  P.regions=(data.regions&&data.regions.length)?data.regions:(data.region?[data.region]:['인재경영원']);
   P.age=data.age||P.age; P.gender=data.gender; P.mbti=data.mbti||P.mbti;
   P.interests=data.interests||[]; P.hobbies=data.hobbies||[]; P.sizeMin=data.group_size_min||4; P.sizeMax=data.group_size_max||6;
   P.sameGender=!!mp.same_gender; P.scope=mp.scope||'all'; P.dir=mp.direction||'wide';

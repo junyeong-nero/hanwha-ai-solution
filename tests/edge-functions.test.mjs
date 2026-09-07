@@ -77,13 +77,11 @@ test('계획에 명시된 RLS 정책 이름을 그대로 쓴다', () => {
   }
 });
 
-test('시드는 기존 핵심 계열사와 안정적인 UUID의 모임 7개를 넣는다', () => {
+test('시드는 기존 핵심 계열사와 인재경영원 모임 하나만 넣는다', () => {
   for (const id of ['aero', 'sol', 'life', 'inv', 'sys', 'ocean', 'hotel', 'gal']) {
     assert.ok(seed.includes(`('${id}',`), `계열사 ${id} 시드가 없습니다`);
   }
-  for (let n = 1; n <= 7; n++) {
-    assert.ok(seed.includes(`00000000-0000-4000-8000-00000000000${n}`), `모임 ${n} 시드가 없습니다`);
-  }
+  assert.deepEqual(seed.match(/00000000-0000-4000-8000-00000000000\d/g), ['00000000-0000-4000-8000-000000000007']);
   assert.ok(seed.includes('on conflict'), '시드는 재실행 가능해야 합니다');
   assert.doesNotMatch(seed, /sk-or-v1-[A-Za-z0-9]/);
 });
