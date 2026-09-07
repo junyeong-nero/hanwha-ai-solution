@@ -34,7 +34,7 @@ const stubElement = (width) => {
  * @param {string[]} options.files  src/js 안에서 로드 순서대로 실행할 파일
  * @param {number} options.width    #space 의 clientWidth (기본 375×812 화면의 320px)
  */
-export function loadApp({ files = ['config.js', 'home.js'], width = 320 } = {}) {
+export function loadApp({ files = ['config.js', 'home.js'], width = 320, globals = {} } = {}) {
   const els = new Map();
   const focused = [];
   const document = {
@@ -52,7 +52,7 @@ export function loadApp({ files = ['config.js', 'home.js'], width = 320 } = {}) 
       return [];
     },
   };
-  const context = vm.createContext({ document, window: {}, console });
+  const context = vm.createContext({ document, window: {}, console, ...globals });
   for (const file of files) {
     vm.runInContext(fs.readFileSync(new URL(file, srcDir), 'utf8'), context, { filename: file });
   }

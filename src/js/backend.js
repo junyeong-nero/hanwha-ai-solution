@@ -285,7 +285,9 @@ function applyPlan(r,pl,search){
     if(!r.msgs.some(m=>m.f==='ai'))r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     msg={f:'ai',plan,planId:pl.id,t:fmtT(pl.created_at)||nowT()}; r.msgs.push(msg);
   }
-  if((msg.plan?.schedule?.revision||0)>(plan.schedule?.revision||0))return;
+  // 늦게 도착한 추천·조회 응답이 수집 또는 확정 상태를 되돌리지 않는다.
+  if((msg.plan?.collecting&&!plan.collecting)||(r.plannedId===pl.id&&!pl.confirmed&&!planDue(plan)))return;
+  if(!plan.collecting&&(msg.plan?.schedule?.revision||0)>(plan.schedule?.revision||0))return;
   msg.plan=plan; msg.source=pl.source;
   if(typeof AV!=='undefined'&&AV&&AV.planId===pl.id){AV.msg=msg;if(!AV.dirty&&!AV.busy){AV.revision=plan.schedule?.revision||0;AV.draft=new Set(plan.schedule?.responses?.[MYID()]||[]);renderAvailability()}}
   if(search)msg.search=search;   // 검색 상태는 추천 응답에서만 오고, Realtime 갱신 때는 이전 값을 유지한다
@@ -294,10 +296,10 @@ function applyPlan(r,pl,search){
     const i=plan.cands.findIndex(c=>c&&((plan.selected.id&&c.id===plan.selected.id)||c.name===plan.selected.name));
     if(i>=0)PLACE_SEL[pl.id]=i;
   }
-  // 서버가 전원 투표(vote) 또는 약속 시간 경과(due) 로 confirmed 를 켠다.
+  // 서버가 전원 투표(vote), 약속 시간 경과(due), 방장 확정(host)을 기록한다.
   // 서버 정리가 아직 안 돌았어도 meet_at 이 지났으면 화면에서는 먼저 확정으로 본다.
   const due=planDue(plan);
-  if((pl.confirmed||due)&&r.plannedId!==pl.id){
+  if(pl.confirmed||due){
     r.planned=plan; r.plannedId=pl.id;
     const reason=(pl.confirm_reason==='due'||(!pl.confirmed&&due))?'due':pl.confirm_reason||'vote';
     if(!(BACKEND&&reason==='host')&&!r.msgs.some(m=>m.confirmOf===pl.id))r.msgs.push({f:'sys',confirmOf:pl.id,x:planDoneMsg(reason,plan)});

@@ -1,5 +1,5 @@
 /* 의견 제출 링크와 방장 비교 화면. 공유 링크는 인증을 대신하지 않는다. */
-let POLL=null, POLL_DRAFT=null, POLL_BUSY=false, POLL_ORIGIN=null, POLL_LOAD_ID=null, POLL_VERSION=0;
+let POLL=null, POLL_DRAFT=null, POLL_BUSY=false, POLL_ORIGIN=null, POLL_LOAD_ID=null, POLL_VERSION=0, POLL_CHANNEL=null, POLL_CHANNEL_ID=null, POLL_DASHBOARD=false;
 function pollTime(value){return new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
 function pollSlots(start){
   const slots=[];
@@ -18,10 +18,46 @@ function pollShell(title,html){
   $('pollview').innerHTML='<div class="top"><h2>'+esc(title)+'</h2><button class="ib" aria-label="의견 화면 닫기" onclick="closePoll()">'+ico('x')+'</button></div><div class="pollbody">'+html+'</div>';
 }
 function closePoll(){
-  POLL_VERSION++;$('pollview').hidden=true; POLL=null;POLL_DRAFT=null;
+  POLL_VERSION++;stopPollSync();$('pollview').hidden=true; POLL=null;POLL_DRAFT=null;
   const url=new URL(location.href);url.searchParams.delete('poll');history.replaceState(null,'',url);
 }
-function resetPoll(){POLL_VERSION++;if($('pollview'))$('pollview').hidden=true;POLL=null;POLL_DRAFT=null;POLL_BUSY=false}
+function resetPoll(){POLL_VERSION++;stopPollSync();if($('pollview'))$('pollview').hidden=true;POLL=null;POLL_DRAFT=null;POLL_BUSY=false}
+/* 공유 링크로 직접 들어온 경우에도 채팅방 구독과 독립적으로 확정을 받는다. */
+function stopPollSync(){
+  if(POLL_CHANNEL&&sb)sb.removeChannel(POLL_CHANNEL);
+  POLL_CHANNEL=null;POLL_CHANNEL_ID=null;
+}
+function syncPollPlan(plan){
+  const q=POLL;if(!q||plan?.id!==q.plan_id||!plan.confirmed||q.confirmed)return;
+  q.confirmed=true;q.plan=plan;
+  const r=S.rooms[q.meeting_id];
+  if(r){applyPlan(r,plan);if(CUR===q.meeting_id){renderMsgs();renderBanner()}}
+  if(POLL_DASHBOARD)renderPollDashboard();else renderPoll();
+}
+function startPollSync(q){
+  if(!BACKEND||POLL_CHANNEL_ID===q.id)return;
+  stopPollSync();POLL_CHANNEL_ID=q.id;
+  POLL_CHANNEL=sb.channel('poll-'+q.id)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'meeting_plans',filter:'id=eq.'+q.plan_id},p=>syncPollPlan(p.new))
+    .subscribe(async status=>{
+      if(status!=='SUBSCRIBED')return;
+      try{const fresh=await pollRpc('get_meeting_poll',{p_poll_id:q.id});if(POLL?.id===q.id)syncPollPlan(fresh.plan)}catch(e){if(POLL?.id===q.id)pollError(e)}
+    });
+}
+/* 의견 수집이 일반 일정 저장보다 나중 단계이므로 시작 시 마지막에 복원한다. */
+function restorePollRoom(q){
+  if(!q?.meeting||q.meeting.id!==q.meeting_id||!q.plan?.id||!q.plan.collecting)return;
+  ensureMeeting(q.meeting_id,q.meeting);
+  if(!S.joined.includes(q.meeting_id))S.joined.push(q.meeting_id);
+  applyPlan(ensureRoom(q.meeting_id),q.plan);
+}
+function restorePollRooms(){
+  if(BACKEND)return;
+  try{for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);if(!key.startsWith('moonlight-poll-'))continue;
+    try{restorePollRoom(JSON.parse(localStorage.getItem(key)))}catch(e){}
+  }}catch(e){}
+}
 async function pollRpc(name,args){const {data,error}=await sb.rpc(name,args);if(error)throw new Error(error.message);return data}
 function pollError(e){toast('의견 조율',e.message||'연결을 확인하고 다시 시도해 주세요')}
 async function openPollLink(){
@@ -37,7 +73,7 @@ async function loadPoll(id){
     else{q=JSON.parse(localStorage.getItem('moonlight-poll-'+id)||'null');if(!q)throw new Error('이 브라우저에 저장된 데모 링크가 아니에요');}
     if(version!==POLL_VERSION)return;
     if(!q)throw new Error('의견 링크를 찾을 수 없어요');
-    POLL=q;POLL_DRAFT=null;
+    POLL=q;POLL_DRAFT=null;startPollSync(q);
     if(!BACKEND){
       if(!S.joined.includes(q.meeting_id))S.joined.push(q.meeting_id);
       if(q.meeting)ensureMeeting(q.meeting_id,q.meeting);
@@ -76,7 +112,7 @@ async function createPoll(){
       qid=crypto.randomUUID();
       const q={id:qid,meeting_id:id,plan_id:msg.planId,title:m.name,activity:msg.plan.act,meeting:m,deadline,slots,candidates:msg.plan.cands,host:true,confirmed:false,
         members:[{id:MYID(),name:S.profile.nick},...m.members.map(id=>({id,name:PEOPLE[id]?.nick||'익명'}))],responses:[],
-        plan:{id:msg.planId,place:msg.plan.place,time_label:msg.plan.when,activity:msg.plan.act,candidates:msg.plan.cands,collecting:true,poll_id:qid}};
+        plan:{id:msg.planId,place:msg.plan.place,time_label:msg.plan.when,meet_at:msg.plan.meetAt,activity:msg.plan.act,nearby:[msg.plan.food].filter(Boolean),candidates:msg.plan.cands,selected_place:msg.plan.selected,schedule:msg.plan.schedule,schedule_host:msg.plan.scheduleHost,collecting:true,poll_id:qid}};
       localStorage.setItem('moonlight-poll-'+qid,JSON.stringify(q));
     }
     if(version!==POLL_VERSION)return;
@@ -86,7 +122,7 @@ async function createPoll(){
   }catch(e){pollError(e)}finally{POLL_BUSY=false}
 }
 function renderPoll(review=false){
-  const q=POLL;if(!q)return;
+  const q=POLL;if(!q)return;POLL_DASHBOARD=false;
   const mine=q.responses.find(r=>r.user_id===MYID());
   if(!POLL_DRAFT)POLL_DRAFT={candidate:mine?.candidate??null,slots:[...(mine?.slots||[])],comment:mine?.comment||''};
   const d=POLL_DRAFT, closed=pollClosed(q);
@@ -95,7 +131,7 @@ function renderPoll(review=false){
     +pollResult(q)
     +(!BACKEND?'<p>로컬 데모: 이 브라우저에만 의견이 저장됩니다.</p>':'');
   if(review){
-    pollShell('제출 전 확인',top+'<div class="card"><b>'+esc(q.candidates[d.candidate].name)+'</b><p>'+d.slots.map(pollTime).map(esc).join(' · ')+'</p><p>'+esc(d.comment||'기타 의견 없음')+'</p></div>'
+    pollShell('제출 전 확인',top+'<div class="card"><b>'+esc(q.candidates[d.candidate].name)+'</b><p>'+(d.slots.map(pollTime).map(esc).join(' · ')||'가능한 시간 없음')+'</p><p>'+esc(d.comment||'기타 의견 없음')+'</p></div>'
       +'<button class="cta line" onclick="renderPoll()">수정하기</button><button class="cta" onclick="submitPoll()">이 내용으로 제출</button>');return;
   }
   const candidates=q.candidates.map((c,i)=>'<label class="pollchoice"><input type="radio" name="pollCandidate" value="'+i+'" '+(d.candidate===i?'checked ':'')+(closed?'disabled ':'')+'onchange="POLL_DRAFT.candidate='+i+'"><span><b>'+esc(c.name)+'</b><small>'+esc(c.address||c.addr||'')+'</small></span></label>').join('');
@@ -125,9 +161,10 @@ async function submitPoll(){
     await loadPoll(q.id);toast('제출 완료','의견이 저장되었어요');
   }catch(e){pollError(e)}finally{POLL_BUSY=false}
 }
-function pollResult(q){return q.confirmed?'<div class="card"><b>최종 약속 · '+esc(q.plan.place)+'</b><p>'+esc(q.plan.time_label)+'</p></div>':''}
+function pollResult(q){return q.confirmed?'<div class="card"><b>최종 약속 · '+esc(q.plan.place)+'</b><p>'+esc(q.plan.time_label)+'</p><button class="cta" onclick="openPollRoom()">채팅방에서 약속 보기</button></div>':''}
+function openPollRoom(){const id=POLL?.meeting_id;if(!id)return;closePoll();openJoined(id)}
 function renderPollDashboard(){
-  const q=POLL;if(!q?.host)return;
+  const q=POLL;if(!q?.host)return;POLL_DASHBOARD=true;
   const stats=pollStats(q), n=q.members.length;
   pollShell('응답 비교 · 최종 확정','<p>'+esc(q.title)+' · 마감 '+esc(pollTime(q.deadline))+'</p><p>응답 완료 '+stats.responses.length+'/'+n+'명</p>'+pollResult(q)
     +'<p>응답 완료: '+esc(q.members.filter(m=>stats.responses.some(r=>r.user_id===m.id)).map(m=>m.name).join(', ')||'없음')+'</p>'

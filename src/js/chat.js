@@ -153,6 +153,7 @@ function renderMsgs(){
         +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
         +'<div class="row"><i>🍜</i><span>'+esc(p.food)+'</span></div>'
         +cands
+        +(!p.collecting&&!done?'<button class="cta line" onclick="openRoomPoll()">장소·시간 의견 모으기</button>':'')
         +'<button '+(p.collecting?'hidden ':'')+'class="cta line" onclick="openAvailability(\''+m.planId+'\')">가능 시간 조율</button>'
         +(p.collecting?'<button onclick="loadPoll(\''+p.pollId+'\')">'+(done?'확정 결과 · 내 의견 보기':'의견 제출 · 방장 비교 화면')+'</button>':'')
         +'<div class="vote"'+(p.collecting?' hidden':'')+'><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div>'
@@ -242,8 +243,10 @@ async function aiPlan(){
     finally{clearTimeout(t1);clearTimeout(t2);if(CUR===id||timedOut)$('typing').style.display='none'}
     return;
   }
+  r.planPending=true;
   setTimeout(()=>{
-    $('typing').style.display='none';
+    r.planPending=false;
+    if(CUR===id)$('typing').style.display='none';
     r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     const mm=MEETINGS.find(x=>x.id===id)||{region:'',when:'',tags:[]};
     const base=PLANS[id]||{place:(mm.region||'근처')+' 만남의 장소',when:mm.when||'시간 미정',act:((mm.tags||[])[0]||'모임')+' 함께하기',food:'근처 카페 한 곳'};   // 직접 만든 모임용 기본 약속
