@@ -200,14 +200,15 @@ async function aiPlan(){
   hidePlus();
   const id=CUR, r=S.rooms[id];
   if(r.msgs.some(m=>m.f==='ai')){toast('AI 약속','이미 이 방에 추천 약속이 있어요');return}
+  if(r.planPending){toast('AI 약속','제안을 만드는 중이에요 · 도착하면 알려 드릴게요');return}   // 기다리는 동안 중복 요청 금지
   $('typing').style.display='block';$('typing').textContent='MoonLight AI가 대화를 읽고 있어요…';
   if(BACKEND){
-    // 무료 모델은 20~30초 걸릴 수 있다 — 단계별로 기다림을 설명하고, 방을 떠나 있어도 도착을 알린다
+    // 무료 모델은 20~30초, 재시도가 겹치면 그 이상 걸릴 수 있다 — 단계별로 기다림을 설명하고,
+    // 45초가 넘으면 화면을 풀어 준다. 요청은 계속 살아 있어서 늦게 도착해도 방에 넣고 알린다.
     const mm=MEETINGS.find(x=>x.id===id)||{name:'모임'};
     const t1=setTimeout(()=>{if(CUR===id)$('typing').textContent='실제 장소를 검색해 후보를 고르는 중이에요 · 조금만요'},8000);
     const t2=setTimeout(()=>{if(CUR===id)$('typing').textContent='AI 응답이 늦어지고 있어요 · 다른 탭을 봐도 도착하면 알려 드려요'},20000);
-    try{
-      const d=await callFn('suggest-meeting-plan',{meeting_id:id});
+    const apply=d=>{
       const pl=d.plan||{};
       applyPlan(r,{id:pl.id,place:pl.place,time_label:pl.time,meet_at:pl.meet_at||null,activity:pl.activity,nearby:pl.nearby||[],candidates:pl.candidates||[],selected_place:pl.selected_place||null,confirmed:false,source:d.fallback?'fallback':'llm',created_at:new Date().toISOString()},d.search);
       if(d.fallback)toast('기본 제안','AI 응답이 지연되어 기본 약속안을 보여드려요');
@@ -215,8 +216,24 @@ async function aiPlan(){
       else if(d.search&&d.search.status!=='ok')toast('후보지 검색',SEARCH_TOAST[d.search.status]||'후보지를 찾지 못했어요');
       if(CUR===id){renderMsgs();renderBanner()}
       else toast('약속 제안 도착','<b>'+esc(mm.name)+'</b> 방에 AI 추천 약속이 올라왔어요');
-    }catch(e){ if(e.code!=='UNAUTHORIZED')toast('AI 약속','약속 제안에 실패했어요 · 다시 시도해 주세요') }
-    finally{clearTimeout(t1);clearTimeout(t2);if(CUR===id)$('typing').style.display='none'}
+    };
+    r.planPending=true;
+    const req=callFn('suggest-meeting-plan',{meeting_id:id});
+    let timedOut=false;
+    try{
+      const d=await Promise.race([req,new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error('TIMEOUT'),{code:'TIMEOUT'})),45000))]);
+      r.planPending=false; apply(d);
+    }catch(e){
+      if(e.code==='TIMEOUT'){
+        timedOut=true;
+        toast('AI 약속','응답이 너무 늦어요 · 계속 기다렸다가 도착하면 알려 드릴게요');
+        req.then(d=>{r.planPending=false;apply(d)}).catch(()=>{r.planPending=false;toast('AI 약속','약속 제안에 실패했어요 · 잠시 후 다시 시도해 주세요')});   // 늦게라도 오면 방에 넣는다
+      }else{
+        r.planPending=false;
+        if(e.code!=='UNAUTHORIZED')toast('AI 약속','약속 제안에 실패했어요 · 다시 시도해 주세요');
+      }
+    }
+    finally{clearTimeout(t1);clearTimeout(t2);if(CUR===id||timedOut)$('typing').style.display='none'}
     return;
   }
   setTimeout(()=>{

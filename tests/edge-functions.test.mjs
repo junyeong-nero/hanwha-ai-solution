@@ -11,6 +11,7 @@ import {
   ageBand,
   sanitizeProfile,
   rankByRules,
+  toConjunctive,
   RULE_ENGINE_MODEL,
 } from '../supabase/functions/_shared/recommendation.ts';
 import { anonymizeMessages, buildPlanPrompt, parsePlan, fallbackPlan, verifyPlan } from '../supabase/functions/_shared/chat.ts';
@@ -282,6 +283,16 @@ test('sanitizeProfile: regions 가 없으면 단일 region 으로 대체하고 �
   assert.deepEqual(safe.regions, ['판교']);
   assert.deepEqual(safe.group_size, [3, 8]);
   assert.deepEqual(safe.matching_preferences, { same_gender: false, scope: 'all', direction: 'wide' });
+});
+
+test('toConjunctive: 두 근거를 이을 때 앞 문장 어미가 연결형으로 바뀐다', () => {
+  assert.equal(toConjunctive('모두 처음 만나는 사람들이라 새 인연에 좋아요'), '모두 처음 만나는 사람들이라 새 인연에 좋고');
+  assert.equal(toConjunctive('희망 인원 4~6명에 맞는 규모예요'), '희망 인원 4~6명에 맞는 규모이고');
+  assert.equal(toConjunctive('관심사 러닝·사진가 겹쳐요'), '관심사 러닝·사진가 겹치고');
+  assert.equal(toConjunctive('같은 성별 멤버가 80%라 편해요'), '같은 성별 멤버가 80%라 편하고');
+  assert.equal(toConjunctive('자리가 넉넉해 바로 참가할 수 있어요'), '자리가 넉넉해 바로 참가할 수 있고');
+  assert.equal(toConjunctive('어미 없음'), '어미 없음');
+  for (const r of rankByRules(PROFILE, CANDIDATES)) assert.doesNotMatch(r.reason, /에 고,|요, /, `어색한 연결: ${r.reason}`);
 });
 
 test('rankByRules: 모든 후보에 1..n 중복 없는 순위를 매기고 이유는 60자 이내', () => {

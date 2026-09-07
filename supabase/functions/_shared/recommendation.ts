@@ -292,6 +292,22 @@ function factorsFor(profile: RuleProfile, c: RuleCandidate, matched: string[], i
   return factors;
 }
 
+/** 문장 끝을 연결형으로 바꾼다 — "새 인연에 좋아요" → "새 인연에 좋고", "규모예요" → "규모이고" */
+const CONJUNCTIVE: Array<[RegExp, string]> = [
+  [/겹쳐요$/, '겹치고'],
+  [/가까워요$/, '가깝고'],
+  [/좋아요$/, '좋고'],
+  [/편해요$/, '편하고'],
+  [/있어요$/, '있고'],
+  [/이에요$/, '이고'],
+  [/예요$/, '이고'],
+  [/해요$/, '하고'],
+];
+export function toConjunctive(sentence: string): string {
+  for (const [re, to] of CONJUNCTIVE) if (re.test(sentence)) return sentence.replace(re, to);
+  return sentence;
+}
+
 /** 점수가 높은 항목 최대 2개를 골라 한 문장으로 잇는다 (60자 이내) */
 function buildReason(factors: Factor[]): string {
   const strong = factors
@@ -302,7 +318,7 @@ function buildReason(factors: Factor[]): string {
   const head = strong[0].reason;
   for (const next of strong.slice(1)) {
     // 두 번째 근거는 60자를 넘지 않을 때만 덧붙인다
-    const joined = `${head.replace(/(예요|이에요|해요|좋아요)$/, '고')}, ${next.reason}`;
+    const joined = `${toConjunctive(head)}, ${next.reason}`;
     if (joined.length <= MAX_REASON_LEN) return joined;
   }
   return head.length > MAX_REASON_LEN ? head.slice(0, MAX_REASON_LEN) : head;
