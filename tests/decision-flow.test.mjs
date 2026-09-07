@@ -78,3 +78,27 @@ test('장소 이름·추천 이유·실패 문구는 실행되지 않는 텍스�
   assert.match(html,/&lt;script&gt;/);assert.match(html,/&lt;img/);assert.match(html,/&lt;svg/);
   assert.doesNotMatch(html,/<script>|<img src=x|<svg onload|javascript:/);
 });
+
+test('데모 연속 재추천은 직전 후보와 겹치지 않고 이전 카드를 접어 보존한다',async()=>{
+  const app=fixture();
+  await app.evaluate('aiPlan()');await app.evaluate('aiPlan()');
+  const cards=JSON.parse(app.evaluate("JSON.stringify(S.rooms.m1.msgs.filter(m=>m.f==='ai'))"));
+  assert.equal(cards.length,2);
+  assert.ok(cards[1].plan.cands.every(c=>!cards[0].plan.cands.some(p=>p.name===c.name)));
+  assert.match(app.el('msgs').innerHTML,/이전 장소 후보 보기/);
+});
+
+test('서버의 새 후보 없음 응답은 기존 카드와 초안을 유지하고 안내한다',async()=>{
+  const app=fixture(true);
+  app.evaluate("globalThis.notices=[];toast=(...args)=>notices.push(args);callFn=async()=>({plan:{id:'old',candidates:[{id:'1',name:'기존 카페'}]}})");
+  await app.evaluate('aiPlan()');
+  app.el('cin').value='기존 의견 초안';
+  const before=app.evaluate('JSON.stringify(S.rooms.m1.msgs)');
+  app.evaluate("callFn=async()=>({plan:null,search:{status:'no_new'}})");
+  await app.evaluate('aiPlan()');
+  assert.equal(app.evaluate('JSON.stringify(S.rooms.m1.msgs)'),before);
+  assert.equal(app.el('cin').value,'기존 의견 초안');
+  assert.equal(app.evaluate('S.rooms.m1.planError'),'');
+  assert.equal(app.evaluate('S.rooms.m1.planPending'),false);
+  assert.equal(app.evaluate('notices.at(-1)[0]'),'새로운 후보가 없어요');
+});

@@ -11,7 +11,7 @@ import { OPENAI_MODEL, tokenUsage } from '../_shared/openai.ts';
 import { suggestWithAI } from '../_shared/ai-plan.ts';
 import { anonymizeMessages } from '../_shared/chat.ts';
 import { inferPlaceIntent } from '../_shared/place-intent.ts';
-import { searchPlaces } from '../_shared/search.ts';
+import { searchPlaces, placeKey, toPlace } from '../_shared/search.ts';
 
 import { consumeAIBudget } from '../_shared/ai-limit.ts';
 
@@ -80,11 +80,27 @@ Deno.serve(async (req) => {
     const model = OPENAI_MODEL;
     const apiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
 
+    // 호출자가 볼 수 있는 직전 추천만 사용한다 (참가 이전 대화의 후보는 제외).
+    const { data: previous, error: previousError } = await svc
+      .from('meeting_plans')
+      .select('candidates')
+      .eq('meeting_id', meetingId)
+      .eq('recommendation_only', true)
+      .or(`context_since.gte.${membership.joined_at},and(context_since.is.null,created_at.gte.${membership.joined_at})`)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (previousError) throw previousError;
+    const excludeKeys = (Array.isArray(previous?.candidates) ? previous.candidates : [])
+      .flatMap((candidate: unknown) => { const place = toPlace(candidate); return place ? [placeKey(place)] : []; });
+
     // 3. 대화 의도 → 실제 장소 검색 → 검증된 후보 추천 순서로 진행한다.
     const intent = await inferPlaceIntent({ meeting: meetingForPrompt, lines, apiKey });
     const search = await searchPlaces({
       region: intent.region,
       keywords: intent.keywords,
+      excludeKeys,
       kakaoKey: Deno.env.get('KAKAO_REST_KEY') ?? undefined,
     });
     const places = search.places;
