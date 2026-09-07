@@ -153,3 +153,9 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 - `reset-demo`로 발표 데이터를 비우거나, 발표용 프로젝트를 일시 정지(Pause)합니다. `reset-demo`는 프로필·채팅은 지우지만 Auth 계정(`계열사.사번@demo.moonlight.local`)은 남깁니다. 계정까지 지우려면 Dashboard → Authentication → Users에서 삭제합니다. 남아 있어도 다음 로그인 때 자동으로 재사용됩니다.
 - 입장 코드를 만료(`update demo_access_codes set active=false`)시킵니다.
 - 파일럿으로 넘어갈 때는 별도 프로젝트(`moonlight-pilot`)와 별도 OpenRouter 키를 사용하고, 실행 계획 Task 8의 동의·삭제 절차를 먼저 붙입니다.
+
+### 안 읽은 메시지 배지 (#12)
+
+프런트엔드 배포 전에 `0012_room_unread.sql` 마이그레이션을 적용합니다. `meeting_members.last_read_at`, `mark_room_read` RPC와 `room_summaries.unread_count`가 함께 필요합니다. 기존 회원은 참가 이후 받은 메시지부터 안 읽은 것으로 집계됩니다.
+
+두 계정으로 같은 모임에 참가한 뒤, 한 계정은 방을 닫고 다른 계정에서 메시지를 보내 목록 미리보기·방 배지·하단 합계가 갱신되는지 확인합니다. 방을 열면 읽음이 저장되고, 새로고침해도 유지되어야 합니다. 앱을 숨긴 채 받은 메시지와 재연결 중 받은 메시지도 확인합니다.
