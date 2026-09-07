@@ -18,6 +18,7 @@ function tglRegion(r){
 }
 function renderSaveBtn(){
   const b=$('saveBtn'); b.disabled=!S.dirty; b.classList.toggle('dirty',S.dirty);
+  const bar=b.parentElement; if(bar)bar.classList.toggle('on',S.dirty);   // 변경 사항이 있을 때만 저장 바가 떠 있다
   b.textContent=S.dirty?'저장 · 변경 사항 있음':'저장됨';
 }
 async function saveProfileNow(){
@@ -31,8 +32,12 @@ function renderProfile(){
   const P=S.profile;
   $('pfav').textContent=P.av;
   if(document.activeElement!==$('nick'))$('nick').value=P.nick;
-  $('pfident').textContent=P.realName?P.realName+' · '+(co(P.company)||{}).name+' (로그인 정보)':'';
+  const pc=co(P.company);
+  $('pfident').innerHTML=(pc?'<span class="badge or">'+esc(pc.name)+'</span>':'')
+    +(P.realName?'<span class="badge">'+esc(P.realName)+' · 로그인 정보</span>':'<span class="badge">로컬 데모 계정</span>');
+  $('homeAv').textContent=P.av;
   $('logoutBtn').style.display=BACKEND&&ME?'':'none';
+  $('logoutIb').style.display=BACKEND&&ME?'':'none';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
   $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
   $('f-region').innerHTML=REGIONS.map(r=>chipHtml('region',r,P.regions.includes(r))).join('')
@@ -77,6 +82,8 @@ function bindChipEvents(){
   document.addEventListener('click',e=>{
     const remove=e.target.closest('[data-chip-remove]');
     if(remove){ removeItem(remove.dataset.kind,remove.dataset.v); return; }
+    const mf=e.target.closest('[data-mf-region]');
+    if(mf){ setFilter('region',mf.dataset.mfRegion); return; }
     const profileChip=e.target.closest('[data-kind][data-v]');
     if(profileChip){
       const {kind,v}=profileChip.dataset;

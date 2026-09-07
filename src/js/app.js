@@ -9,6 +9,7 @@ function go(t){
   if(CUR)closeRoom();
   $('album').classList.remove('on'); $('satview').classList.remove('on');
   S.tab=t;
+  $('fab').classList.toggle('on',t==='match');   // 모임 만들기 플로팅 버튼은 매칭 탭에서만
   document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   if(t==='home'){renderHome(); if(BACKEND&&ME)loadConnections().then(renderHome);}

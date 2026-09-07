@@ -4,18 +4,21 @@ function updateBdg(){
   $('chatbdg').style.display=n?'flex':'none';$('chatbdg').textContent=n;
 }
 function renderRooms(){
-  if(!S.joined.length){
-    $('roomlist').innerHTML='<div class="empty"><i>🌘</i>아직 참여한 모임이 없어요.<br>매칭 탭에서 마음에 드는 모임에 참가해 보세요.</div>';return;
+  const n=S.joined.length; $('roomcount').textContent=n?n+'개':'';
+  if(!n){
+    $('roomlist').innerHTML='<div class="empty"><i>🌘</i><b>아직 참여한 모임이 없어요</b>매칭 탭에서 마음에 드는 모임에 참가하면<br>여기서 익명으로 대화가 시작돼요.'
+      +'<button class="cta sm" onclick="go(\'match\')">모임 둘러보기</button></div>';return;
   }
   $('roomlist').innerHTML=S.joined.map(id=>{
     const m=MEETINGS.find(x=>x.id===id), r=S.rooms[id];
     if(!m||!r)return '';
     const last=r.msgs.length?r.msgs[r.msgs.length-1]:{x:r.last||'대화를 시작해 보세요',t:r.lastT||''};
-    const lastTxt=last.f==='ai'?'🌙 AI가 약속을 제안했어요':(last.x||'');
+    const isAi=last.f==='ai', lastTxt=isAi?'MoonLight AI가 약속을 제안했어요':(last.x||'');
+    const right=r.unread?'<span class="ub">'+r.unread+'</span>':r.planned?'<span class="pl">'+ico('cal')+' 약속 확정</span>':'';
     return '<button class="room" onclick="openRoom(\''+id+'\')">'
       +'<span class="av">'+esc(m.em||'🌙')+(r.iAttended?'<span class="full">🌕</span>':'')+'</span>'
       +'<span class="bd"><span class="r1"><b>'+esc(m.name)+'<small>'+roomTotal(id)+'</small></b><time>'+(last.t||'')+'</time></span>'
-      +'<span class="r2"><p>'+esc(String(lastTxt||'').slice(0,44))+'</p>'+(r.unread?'<span class="ub">'+r.unread+'</span>':'')+'</span></span></button>';
+      +'<span class="r2"><p'+(isAi?' class="ai"':'')+'>'+(isAi?'🌙 ':'')+esc(String(lastTxt||'').slice(0,44))+'</p>'+right+'</span></span></button>';
   }).join('');
 }
 
@@ -108,14 +111,19 @@ function renderBanner(){
   const total=roomTotal(CUR), n=r.attended.size;
   let h='';
   if(r.iAttended) h='🌕 만남 완료 '+n+'/'+total+(n>=total?' · 모두 완료! 베일이 벗겨졌어요':' · 함께 완료한 동료부터 실명으로 보여요');
-  else if(r.planned) h='📅 '+esc(r.planned.when)+' · '+esc(r.planned.place)+'<button onclick="doReveal()">만남 완료</button>';
+  else if(r.planned) h=ico('cal')+'<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.planned.when)+' · '+esc(r.planned.place)+'</span><button onclick="doReveal()">만남 완료</button>';
   $('rbanner').innerHTML=h; $('rbanner').classList.toggle('on',!!h);
 }
 function renderMsgs(){
-  const r=S.rooms[CUR];
-  $('msgs').innerHTML=r.msgs.map((m,i)=>{
+  const r=S.rooms[CUR], ms=r.msgs;
+  const who=m=>(m.f==='sys'||m.f==='ai')?null:m.f;   // 묶음 기준 발신자 (시스템·AI 카드는 묶지 않는다)
+  $('msgs').innerHTML=ms.map((m,i)=>{
+    const prev=ms[i-1], next=ms[i+1];
+    const cont=!!(prev&&who(m)&&who(prev)===who(m));   // 같은 사람의 연속 메시지 — 아바타·이름을 생략한다
+    const tail=!(next&&who(m)&&who(next)===who(m));    // 묶음의 마지막에만 시간을 붙인다
+    const tm=tail&&m.t?'<time>'+esc(m.t)+'</time>':'';
     if(m.f==='sys')return '<div class="msg sys"><div class="bub">'+esc(m.x)+'</div></div>';   // 닉네임·LLM 텍스트가 섞이므로 반드시 이스케이프
-    if(m.f==='me')return '<div class="msg me"><div><div class="bub">'+esc(m.x)+'</div></div></div>';
+    if(m.f==='me')return '<div class="msg me'+(cont?' cont':'')+'"><div><div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
     if(m.f==='ai'){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
       const unanimous=votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
@@ -126,8 +134,8 @@ function renderMsgs(){
         ? '<div class="cands"><b>후보지 · 실제 장소 검색 결과 '+p.cands.length+'곳</b>'
           +planMapHtml(m.planId,p.cands)+candListHtml(m.planId,p.cands,done)+note+'</div>'
         : (note?'<div class="cands">'+note+'</div>':'');
-      return '<div class="msg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
-        +'<div class="bub plan"><h4>🌙 AI 추천 약속</h4>'
+      return '<div class="msg aimsg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
+        +'<div class="bub plan"><h4>'+ico('spark')+'AI 추천 약속</h4>'
         +'<div class="row"><i>📍</i><span><b>'+esc(p.place)+'</b></span></div>'
         +'<div class="row"><i>🕖</i><span>'+esc(p.when)+'</span></div>'
         +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
@@ -140,7 +148,7 @@ function renderMsgs(){
         +'</div></div></div>';
     }
     const p=PEOPLE[m.f]||UNKNOWN;
-    return '<div class="msg"><div class="mav">'+esc(p.av||'🌙')+'</div><div><div class="who">'+label(m.f,r)+'</div><div class="bub">'+esc(m.x)+'</div></div></div>';
+    return '<div class="msg'+(cont?' cont':'')+'"><div class="mav">'+esc(p.av||'🌙')+'</div><div>'+(cont?'':'<div class="who">'+label(m.f,r)+'</div>')+'<div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
   }).join('');
   mountPlanMaps();   // 새로 그려진 지도 컨테이너에 카카오맵을 붙인다 (placeholder 모드에서는 아무 일도 하지 않는다)
   $('msgs').scrollTop=$('msgs').scrollHeight;
@@ -300,7 +308,7 @@ function openAlbum(){
   if(!r.photos.length)r.photos=placeholderPhotos(m);
   $('albTitle').textContent=m.name+' 사진첩';
   $('pgrid').innerHTML=r.photos.map(p=>'<div class="photo" style="background:'+p.g+'">'+esc(p.l)+'</div>').join('')
-    +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3)">＋ 사진 추가</button>';
+    +'<button class="photo" style="background:var(--card);border:1.5px dashed var(--line);align-items:center;justify-content:center;color:var(--tx3);box-shadow:none">＋ 사진 추가</button>';
   $('album').classList.add('on');
 }
 function closeAlbum(){$('album').classList.remove('on')}

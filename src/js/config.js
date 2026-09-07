@@ -8,7 +8,9 @@
    장소 검색에 쓰는 REST 키는 서버 전용이라 여기 넣지 않는다 — Edge Function 비밀값(KAKAO_REST_KEY)에만 둔다.
    비어 있으면 지도는 좌표 기반 placeholder 로 대체되고 후보 비교·선택은 그대로 동작한다. */
 const CONFIG={SUPABASE_URL:'https://nxqukthjluwoaqehpxtl.supabase.co',SUPABASE_ANON_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cXVrdGhqbHV3b2FxZWhweHRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MjM3MjEsImV4cCI6MjEwMzk5OTcyMX0.2SZc2BZSGmN9VpM66MZs2UwkKmGzEHeGQLfQ3K7fmCg',KAKAO_JS_KEY:'',DEMO_MODE:true};
-const BACKEND=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_ANON_KEY);
+/* ?demo=1 로 열면 백엔드 설정이 있어도 로컬 데모 모드로 돈다 — 발표장 네트워크 장애 대비 · 디자인 확인용 */
+const LOCAL_DEMO=typeof location!=='undefined'&&/[?&]demo=1(&|$)/.test(location.search);
+const BACKEND=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_ANON_KEY)&&!LOCAL_DEMO;
 
 /* ================= 데이터 (로컬 데모 모드 · 백엔드 모드에서는 서버 데이터로 대체됨) ================= */
 const COMPANIES=[
@@ -142,6 +144,20 @@ const myCo=()=>co(S.profile.company);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));   // null·숫자도 안전
 const safeUrl=u=>/^https?:\/\//i.test(String(u||''))?String(u):'#';   // 후보지 링크는 http(s)만 (javascript: 차단)
+/* 인라인 SVG 아이콘 — 정보용 이모지 대신 쓰는 UI 아이콘 (currentColor 를 따라간다) */
+const ICON={
+  pin:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  users:'<circle cx="9" cy="8" r="3.4"/><path d="M2.8 19c.7-3.2 3.2-4.9 6.2-4.9s5.5 1.7 6.2 4.9"/><circle cx="17" cy="9" r="2.6"/><path d="M16.2 14.3c2.6.2 4.5 1.7 5.1 4.7"/>',
+  chev:'<path d="M9 6l6 6-6 6"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  moon:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
+  cal:'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+};
+const ico=(n,cls)=>'<span class="ic'+(cls?' '+cls:'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICON[n]||'')+'</svg></span>';
 function nowT(){const d=new Date(),h=d.getHours();return (h<12?'오전 ':'오후 ')+((h%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')}
-function toast(a,b){$('toast').innerHTML='<b>'+a+'</b> · '+b;$('toast').classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
+function toast(a,b){$('toast').innerHTML='<div><b>'+a+'</b> · '+b+'</div>';$('toast').classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
 

@@ -94,13 +94,15 @@ function renderHome(){
     '<div class="card"><b>'+act.size+'<small style="font-size:12px;color:var(--tx3)"> / '+COMPANIES.length+'</small></b><span>빛나는 행성</span></div>'
    +'<div class="card"><b>'+met+'명</b><span>연결된 동료</span></div>'
    +'<div class="card"><b>'+S.joined.length+'개</b><span>참여 중인 모임</span></div>';
+  $('cocount').textContent=act.size+' / '+COMPANIES.length+'곳 활성';
+  $('homeAv').textContent=S.profile.av;
   $('colist').innerHTML=COMPANIES.map(c=>{
     const lit=act.has(c.id);
     const n=Object.keys(S.met).filter(p=>PEOPLE[p]&&PEOPLE[p].co===c.id).length;
     return '<button class="corow" style="width:100%;text-align:left" onclick="showCo(&quot;'+c.id+'&quot;)" data-co="'+c.id+'">'
       +'<span class="pd" style="background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 8px '+c.c:'none')+'"></span>'
       +'<span class="nm">'+esc(c.name)+(c.id===S.profile.company?' <small style="color:var(--orange);font-size:10.5px">MY</small>':'')+'</span>'
-      +'<span class="st '+(lit?'lit':'')+'">'+(lit?'커넥션 활성 · '+n+'명':'미개척')+'</span></button>';
+      +'<span class="st '+(lit?'lit':'')+'">'+(lit?'커넥션 활성 · '+n+'명':'미개척')+'</span>'+ico('chev','chev')+'</button>';
   }).join('');
 }
 
@@ -118,13 +120,14 @@ function showCo(id){
   const ppl=Object.keys(S.met).filter(p=>PEOPLE[p]&&PEOPLE[p].co===id).map(p=>PEOPLE[p]);
   const mine=id===S.profile.company;
   $('cosheet').innerHTML='<div class="grip"></div>'
-    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
-    +'<span style="width:26px;height:26px;border-radius:50%;background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 14px '+c.c:'none')+'"></span>'
-    +'<div><b style="font-size:17px">'+esc(c.name)+'</b>'
-    +'<div style="font-size:12px;color:'+(lit?'var(--orange-soft)':'var(--tx3)')+'">'+(lit?'커넥션 활성화':'아직 만남이 없는 계열사')+'</div></div></div>'
+    +'<div class="sh"><div style="display:flex;align-items:center;gap:12px;min-width:0">'
+    +'<span style="width:30px;height:30px;border-radius:50%;flex-shrink:0;background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 16px '+c.c:'none')+'"></span>'
+    +'<div style="min-width:0"><b style="font-size:18px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(c.name)+'</b>'
+    +'<div style="font-size:12px;font-weight:600;color:'+(lit?'var(--orange-soft)':'var(--tx3)')+'">'+(lit?'커넥션 활성화 · 아는 사람 '+ppl.length+'명':'아직 만남이 없는 계열사')+'</div></div></div>'
+    +'<button class="ib" onclick="hideCo()" aria-label="닫기">'+ico('x')+'</button></div>'
     +(ppl.length
-      ?'<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px">이곳에서 만난 동료 — '+ppl.map(p=>'<b style="color:var(--tx)">'+esc(p.real)+'</b>').join(', ')+'</div>'
-      :'<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:14px">매칭 탭에서 이 계열사 동료가 있는 모임에 참가하면 이 행성이 은하계에 합류하고 빛나기 시작해요.</div>')
+      ?'<div style="font-size:13.5px;color:var(--tx2);line-height:1.6;margin:10px 0 16px">이곳에서 만난 동료 — '+ppl.map(p=>'<b style="color:var(--tx)">'+esc(p.real)+'</b>').join(', ')+'</div>'
+      :'<div style="font-size:13.5px;color:var(--tx2);line-height:1.6;margin:10px 0 16px">매칭 탭에서 이 계열사 동료가 있는 모임에 참가하면 이 행성이 은하계에 합류하고 빛나기 시작해요.</div>')
     +(mine
       ?'<button class="cta" onclick="hideCo();openSat()">내 행성 보기 — 위성이 된 동료들</button>'
       :'<button class="cta line" onclick="hideCo();go(\'match\')">매칭 탭에서 모임 찾기</button>');
@@ -146,7 +149,7 @@ function openSat(){
   $('mespace').innerHTML=h;
   $('satlist').innerHTML=mates.length
     ?mates.map(pid=>{const p=PEOPLE[pid];return '<div class="corow"><span style="font-size:20px">'+esc(p.av)+'</span><span class="nm">'+esc(p.real)+'</span><span class="st lit">연결됨</span></div>'}).join('')
-    :'<div class="empty" style="padding:22px 0">아직 같은 계열사에서 만난 동료가 없어요</div>';
+    :'<div class="empty" style="padding:18px 0"><i>🛰️</i><b>아직 위성이 없어요</b>같은 계열사 동료와 만남을 완료하면<br>여기서 곁을 돌기 시작해요</div>';
   $('satview').classList.add('on');
 }
 function closeSat(){$('satview').classList.remove('on')}

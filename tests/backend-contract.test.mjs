@@ -298,8 +298,8 @@ test('#2 시스템 메시지도 이스케이프해서 렌더링한다', () => {
 
 test('#3 매칭 카드의 참여 인원은 참가 중이면 나를 포함해 채팅 목록과 같은 수를 보여준다', () => {
   assert.ok(html.includes('shown=joined?roomTotal(m.id):others'));
-  assert.ok(html.includes("'+shown+'명 참여 중 / 정원 '"));
-  assert.ok(html.includes("아는 얼굴 <b>'+kn+'명</b> / '+others+'명"));
+  assert.ok(html.includes("+shown+'/'+m.cap+'명"));
+  assert.ok(html.includes("아는 얼굴 <b>'+kn+'명</b> · 처음 보는 '+(others-kn)+'명"));
 });
 
 test('#4 채팅 목록 배지는 내 체크인(iAttended) 기준이고 모임 상태는 completed 로 분리한다', () => {

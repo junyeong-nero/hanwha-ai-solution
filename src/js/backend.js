@@ -171,7 +171,9 @@ async function loadRecommendations(){
   if(R.rec&&!R.recDirty){renderMatchCards(R.rec.list,R.rec.note);return}
   R.recLoading=true;
   $('matchnote').innerHTML='';
-  $('meets').innerHTML='<div class="empty"><i>🌙</i>MoonLight AI가 프로필을 읽고<br>어울리는 모임을 고르는 중이에요…</div>';
+  // 스켈레톤 카드 — 응답을 기다리는 동안 레이아웃이 튀지 않게 한다
+  $('meets').innerHTML='<p class="hint" style="margin:2px 0 12px;color:var(--orange-soft);font-weight:700">🌙 MoonLight AI가 프로필을 읽고 어울리는 모임을 고르는 중…</p>'
+    +[1,2].map(()=>'<div class="card skcard"><div class="r"><div class="sk" style="width:52px;height:52px;border-radius:16px"></div><div style="flex:1"><div class="sk" style="height:16px;width:70%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:45%"></div></div></div><div class="sk" style="height:58px;border-radius:14px;margin-bottom:12px"></div><div class="sk" style="height:48px;border-radius:16px"></div></div>').join('');
   try{
     const d=await callFn('recommend-meetings',{});
     const byId={};
@@ -191,7 +193,7 @@ async function loadRecommendations(){
     R.rec={list,note,model:d.model}; R.recDirty=false;
     renderMatchCards(list,note);
   }catch(e){
-    $('meets').innerHTML='<div class="empty"><i>☁️</i>추천을 불러오지 못했어요.<br><button class="cta line" style="margin-top:14px" onclick="R.recDirty=true;loadRecommendations()">다시 시도</button></div>';
+    $('meets').innerHTML='<div class="empty"><i>☁️</i><b>추천을 불러오지 못했어요</b>연결을 확인하고 다시 시도해 주세요.<button class="cta line sm" onclick="R.recDirty=true;loadRecommendations()">다시 시도</button></div>';
   }finally{R.recLoading=false}
 }
 /* 채팅방 로드 · Realtime */
