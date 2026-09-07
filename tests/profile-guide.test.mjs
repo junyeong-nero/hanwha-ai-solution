@@ -8,8 +8,10 @@ function setup({dirty=true,save=async()=>true}={}){
   const elements=new Map();
   const visits=[];
   let snapshots=0;
+  const storage=new Map();
   const context=vm.createContext({
-    S:{dirty},R:{recDirty:false},BACKEND:true,
+    S:{dirty},R:{recDirty:false},BACKEND:true,ME:'account-a',
+    localStorage:{getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)},
     $:id=>{
       if(!elements.has(id))elements.set(id,{addEventListener(){},classList:{toggle(){}},disabled:false});
       return elements.get(id);
@@ -17,11 +19,13 @@ function setup({dirty=true,save=async()=>true}={}){
     saveProfile:save,snapProfile(){snapshots++},toast(){},go:tab=>visits.push(tab),
   });
   vm.runInContext(source,context);
-  return {context,visits,elements,snapshots:()=>snapshots,run:()=>vm.runInContext('saveProfileAndBrowse()',context)};
+  vm.runInContext('renderProfileIntro()',context);
+  return {context,visits,elements,storage,snapshots:()=>snapshots,run:()=>vm.runInContext('saveProfileAndBrowse()',context)};
 }
 test('저장 성공 후에만 이동하고 저장된 프로필을 갱신한다',async()=>{
   const app=setup();await app.run();
   assert.deepEqual(app.visits,['match']);assert.equal(app.context.S.dirty,false);assert.equal(app.snapshots(),1);
+  assert.equal(app.elements.get('profileIntro').hidden,true);
 });
 test('변경이 없으면 저장 요청 없이 모임을 둘러본다',async()=>{
   const app=setup({dirty:false,save:()=>assert.fail('불필요한 저장')});await app.run();
@@ -32,6 +36,7 @@ test('저장 거절과 통신 예외 모두 변경 내용을 남기고 재시도
     const app=setup({save});await app.run();
     assert.deepEqual(app.visits,[]);assert.equal(app.context.S.dirty,true);
     assert.equal(app.elements.get('profileNext').disabled,false);assert.equal(app.snapshots(),0);
+    assert.equal(app.elements.get('profileIntro').hidden,false);assert.equal(app.storage.size,0);
   }
 });
 test('이동 버튼을 연속 눌러도 저장은 한 번만 요청한다',async()=>{
@@ -39,4 +44,18 @@ test('이동 버튼을 연속 눌러도 저장은 한 번만 요청한다',async
   const app=setup({save:()=>{calls++;return new Promise(resolve=>{finish=resolve})}});
   const pending=app.run();await app.run();assert.equal(calls,1);
   finish(true);await pending;assert.deepEqual(app.visits,['match']);
+});
+
+test('최초 안내 완료는 계정별로 복원되고 선택 항목을 요구하지 않는다',async()=>{
+  const app=setup({dirty:false});await app.run();
+  assert.equal(app.elements.get('profileIntro').hidden,true);
+  vm.runInContext("PROFILE_INTRO_DONE.clear();renderProfileIntro()",app.context);
+  assert.equal(app.elements.get('profileIntro').hidden,true);
+  vm.runInContext("ME='account-b';renderProfileIntro()",app.context);
+  assert.equal(app.elements.get('profileIntro').hidden,false);
+});
+test('저장소가 차단돼도 저장 성공 후 안내를 숨기고 이동한다',async()=>{
+  const app=setup();app.context.localStorage={getItem(){throw Error('차단')},setItem(){throw Error('차단')}};
+  await app.run();
+  assert.deepEqual(app.visits,['match']);assert.equal(app.elements.get('profileIntro').hidden,true);
 });

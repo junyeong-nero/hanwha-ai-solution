@@ -23,7 +23,7 @@
         <div class="acts"><button class="ib av" id="homeAv" onclick="go('profile')" aria-label="내 프로필">🌙</button></div>
       </header>
       <p class="sub">만남이 성사될수록, 내 우주가 밝아집니다.</p>
-      <button class="cta line sm guide-entry" onclick="openUsageGuide()">처음이신가요? 사용 가이드</button>
+      <button class="cta line sm guide-entry" onclick="openUsageGuide(this)">처음이신가요? 사용 가이드</button>
       <div id="nextcard"></div>
       <div class="hero"><div class="space" id="space"></div></div>
       <p class="hint" id="homehint" style="text-align:center;margin-top:6px">아는 사람이 생긴 계열사가 이 은하계에 합류합니다 · 빛나는 행성 = 만남이 성사된 계열사</p>
@@ -65,32 +65,9 @@
     <section class="tabpane" id="tab-profile">
       <header class="top">
         <div class="tt"><h1 class="app">프로필</h1></div>
-        <div class="acts"><button class="ib" id="logoutIb" onclick="logout()" aria-label="로그아웃" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg></button></div>
+        <div class="acts"><button class="cta line sm profile-help" onclick="openUsageGuide(this)" aria-haspopup="dialog" aria-controls="usageGuide">도움말</button><button class="ib" id="logoutIb" onclick="logout()" aria-label="로그아웃" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg></button></div>
       </header>
-      <p class="sub">설문이 아니라 설정입니다. 바꾸고 저장하면 매칭에 바로 반영돼요.</p>
-
-      <div class="card profile-guide">
-        <span class="badge or">첫 만남 준비</span>
-        <h2>먼저, 나에게 맞는 모임을 알려주세요</h2>
-        <p>아래 순서로 확인하고 저장하면 추천을 시작할 수 있어요. 설정은 언제든 바꿀 수 있어요.</p>
-        <ol class="setup-steps">
-          <li><button class="press" onclick="focusProfileField('f-region')"><b>1. 기본 정보 확인</b><span>닉네임·계열사·나이를 확인하고, 갈 수 있는 지역을 골라요.</span></button></li>
-          <li><button class="press" onclick="focusProfileField('f-int')"><b>2. 취향과 만남 방식 선택</b><span>관심사·취미를 고르면 추천에 도움이 돼요. 인원과 관계 방향도 정해보세요.</span></button></li>
-          <li><button class="press" onclick="focusProfileField('profileNext')"><b>3. 저장하고 모임 둘러보기</b><span>선택을 마쳤다면 화면 아래 버튼으로 매칭에 이동해요.</span></button></li>
-        </ol>
-      </div>
-      <details class="card usage-guide" id="usageGuide">
-        <summary>사용 가이드 · 가입부터 첫 만남까지</summary>
-        <ol class="usage-steps">
-          <li><b>프로필 · 추천 기준 저장</b><p>계열사·나이와 선호 지역을 확인해요. 관심사·취미·성별·MBTI·모임 규모는 선택 사항이에요. 같은 성별 우선은 성별을 설정해야 적용돼요.</p></li>
-          <li><b>매칭 · 모임 참가</b><p>저장한 선호 지역의 모임만 보여요. 주황 띠는 이미 만난 사람의 비율이에요. 마음에 드는 모임의 ‘참가하기’를 누르거나 ‘모임 만들기’로 직접 열어보세요.</p></li>
-          <li><b>채팅 · 닉네임으로 인사</b><p>참가한 모임이 채팅 탭에 생겨요. 처음 만나는 동료에게는 닉네임과 아바타로 보여요. 참가한 시점부터의 대화를 볼 수 있어요.</p></li>
-          <li><b>AI 장소 추천 기능 써보기</b><p>참가한 채팅방에서 ‘AI 장소 추천’을 눌러요. 최근 대화에 맞는 장소 후보와 추천 이유, 주소를 비교하고 지도에서 위치를 살펴봐요. 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요.</p><p>‘이곳 어때요?’를 누르면 메시지 초안이 만들어져요. 함께 갈 곳과 시간은 채팅으로 자유롭게 이야기해요.</p></li>
-          <li><b>실제 만남 · 각자 만남 완료</b><p>실제로 만난 뒤 채팅방 ＋ 메뉴의 ‘만남 완료’를 눌러요. 나와 상대가 둘 다 완료해야 서로의 실명·계열사가 공개돼요. 첫 만남 완료 이후 참가한 멤버는 이 만남의 완료를 누를 수 없어요.</p></li>
-          <li><b>홈 · 넓어진 연결 확인</b><p>서로 완료한 동료가 연결되고 해당 계열사 행성이 빛나요. 만남 완료 후 사진첩에 추억을 남기고, 만남 평가도 할 수 있어요.</p></li>
-        </ol>
-        <p class="hint">모임이 보이지 않나요? 프로필에서 선호 지역을 더 선택하고 저장해 보세요. 원하는 모임을 직접 만들어도 좋아요.</p>
-      </details>
+      <p class="sub" id="profileIntro">선호 지역을 고르면 모임을 추천해 드려요.</p>
 
       <div class="card pfhero" style="margin-bottom:14px">
         <div class="pfavw">
@@ -104,36 +81,16 @@
         </div>
       </div>
 
-      <div class="sec" style="margin-top:8px"><h2>기본 정보</h2></div>
       <div class="card" style="margin-bottom:14px">
-        <div class="frow">
-          <label>계열사<span class="req">필수</span></label>
-          <select id="f-co" onchange="setP('company',this.value)"></select>
-          <p class="hint" id="cohint" style="margin-top:8px;display:none">🔒 로그인 정보로 고정돼요 · 다른 계열사로 바꾸려면 그 계열사 사번으로 다시 입장해요</p>
-        </div>
         <div class="frow">
           <label>선호 지역<span class="req">필수 · 복수 선택</span></label>
           <div id="f-region"></div>
           <p class="hint">최소 한 곳을 선택해 주세요. 고른 지역의 모임만 추천되니 실제로 갈 수 있는 곳을 여러 개 골라도 좋아요.</p>
         </div>
-        <div class="frow">
-          <label>나이<span class="req">필수</span></label>
-          <div class="step">
-            <button onclick="bumpAge(-1)" aria-label="나이 줄이기">−</button><b id="f-age"></b><button onclick="bumpAge(1)" aria-label="나이 늘리기">+</button>
-          </div>
-        </div>
       </div>
 
-      <div class="sec"><h2>나에 대해</h2></div>
+      <div class="sec"><h2>관심사 · 취미</h2></div>
       <div class="card" style="margin-bottom:14px">
-        <div class="frow">
-          <label>성별</label>
-          <div class="seg" id="f-gender"></div>
-        </div>
-        <div class="frow">
-          <label>MBTI</label>
-          <select id="f-mbti" onchange="setP('mbti',this.value)"></select>
-        </div>
         <div class="frow">
           <label>관심사</label>
           <div id="f-int"></div>
@@ -143,6 +100,29 @@
           <label>취미</label>
           <div id="f-hob"></div>
           <p class="hint">선택 사항 · 함께 해보고 싶은 활동도 좋아요. 관심사·취미는 모임 추천 순서에 반영돼요.</p>
+        </div>
+      </div>
+
+      <div class="sec"><h2>기본 정보</h2></div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="frow">
+          <label>계열사<span class="req">필수</span></label>
+          <select id="f-co" onchange="setP('company',this.value)"></select>
+          <p class="hint" id="cohint" style="margin-top:8px;display:none">🔒 로그인 정보로 고정돼요 · 다른 계열사로 바꾸려면 그 계열사 사번으로 다시 입장해요</p>
+        </div>
+        <div class="frow">
+          <label>나이<span class="req">필수</span></label>
+          <div class="step">
+            <button onclick="bumpAge(-1)" aria-label="나이 줄이기">−</button><b id="f-age"></b><button onclick="bumpAge(1)" aria-label="나이 늘리기">+</button>
+          </div>
+        </div>
+        <div class="frow">
+          <label>성별</label>
+          <div class="seg" id="f-gender"></div>
+        </div>
+        <div class="frow">
+          <label>MBTI</label>
+          <select id="f-mbti" onchange="setP('mbti',this.value)"></select>
         </div>
         <div class="frow">
           <label>원하는 모임 규모</label>
@@ -187,6 +167,25 @@
       <p class="hint" style="text-align:center;margin-top:14px" id="modehint">데모 프로토타입 · 데이터는 브라우저 안에서만 동작합니다</p>
     </section>
   </main>
+
+  <!-- 도움말은 요청할 때만 열리고, 닫으면 원래 화면으로 돌아간다. -->
+  <dialog id="usageGuide" class="help-dialog" aria-labelledby="usageTitle" onkeydown="trapUsageGuideFocus(event)" oncancel="event.preventDefault();closeUsageGuide()" onclick="if(event.target===this)closeUsageGuide()">
+    <div class="sheet">
+      <div class="grip" aria-hidden="true"></div>
+      <div class="sh"><b id="usageTitle">사용 가이드</b><button class="ib" onclick="closeUsageGuide()" aria-label="도움말 닫기" autofocus><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+      <div class="sbody" tabindex="0" aria-label="가입부터 첫 만남까지">
+        <ol class="usage-steps">
+          <li><b>프로필 · 추천 기준 저장</b><p>계열사·나이와 선호 지역을 확인해요. 관심사·취미·성별·MBTI·모임 규모는 선택 사항이에요. 같은 성별 우선은 성별을 설정해야 적용돼요.</p></li>
+          <li><b>매칭 · 모임 참가</b><p>저장한 선호 지역의 모임만 보여요. 주황 띠는 이미 만난 사람의 비율이에요. 마음에 드는 모임의 ‘참가하기’를 누르거나 ‘모임 만들기’로 직접 열어보세요.</p></li>
+          <li><b>채팅 · 닉네임으로 인사</b><p>참가한 모임이 채팅 탭에 생겨요. 처음 만나는 동료에게는 닉네임과 아바타로 보여요. 참가한 시점부터의 대화를 볼 수 있어요.</p></li>
+          <li><b>AI 장소 추천 기능 써보기</b><p>참가한 채팅방에서 ‘AI 장소 추천’을 눌러요. 최근 대화에 맞는 장소 후보와 추천 이유, 주소를 비교하고 지도에서 위치를 살펴봐요. 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요.</p><p>‘이곳 어때요?’를 누르면 메시지 초안이 만들어져요. 함께 갈 곳과 시간은 채팅으로 자유롭게 이야기해요.</p></li>
+          <li><b>실제 만남 · 각자 만남 완료</b><p>실제로 만난 뒤 채팅방 ＋ 메뉴의 ‘만남 완료’를 눌러요. 나와 상대가 둘 다 완료해야 서로의 실명·계열사가 공개돼요. 첫 만남 완료 이후 참가한 멤버는 이 만남의 완료를 누를 수 없어요.</p></li>
+          <li><b>홈 · 넓어진 연결 확인</b><p>서로 완료한 동료가 연결되고 해당 계열사 행성이 빛나요. 만남 완료 후 사진첩에 추억을 남기고, 만남 평가도 할 수 있어요.</p></li>
+        </ol>
+        <p class="hint">모임이 보이지 않나요? 프로필에서 선호 지역을 더 선택하고 저장해 보세요. 원하는 모임을 직접 만들어도 좋아요.</p>
+      </div>
+    </div>
+  </dialog>
 
   <!-- 매칭 탭 플로팅 버튼 -->
   <button class="fab" id="fab" onclick="openCreate()" aria-label="새 모임 만들기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>모임 만들기</button>

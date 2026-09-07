@@ -32,7 +32,7 @@ async def flow(browser,size,name):
  await page.get_by_role('button',name='홈',exact=True).click()
  assert await page.locator('#nextcard').inner_text()==''
  await page.get_by_role('button',name='프로필',exact=True).click()
- await page.locator('#usageGuide summary').click()
+ await page.get_by_role('button',name='도움말',exact=True).click()
  assert 'AI 장소 추천 기능 써보기' in await page.locator('#usageGuide').inner_text()
  assert not errors,errors
  assert not external,external
