@@ -23,6 +23,7 @@
         <div class="acts"><button class="ib av" id="homeAv" onclick="go('profile')" aria-label="내 프로필">🌙</button></div>
       </header>
       <p class="sub">만남이 성사될수록, 내 우주가 밝아집니다.</p>
+      <button class="cta line sm guide-entry" onclick="openUsageGuide()">처음이신가요? 사용 가이드</button>
       <div id="nextcard"></div>
       <div class="hero"><div class="space" id="space"></div></div>
       <p class="hint" id="homehint" style="text-align:center;margin-top:6px">아는 사람이 생긴 계열사가 이 은하계에 합류합니다 · 빛나는 행성 = 만남이 성사된 계열사</p>
@@ -68,6 +69,29 @@
       </header>
       <p class="sub">설문이 아니라 설정입니다. 바꾸고 저장하면 매칭에 바로 반영돼요.</p>
 
+      <div class="card profile-guide">
+        <span class="badge or">첫 만남 준비</span>
+        <h2>먼저, 나에게 맞는 모임을 알려주세요</h2>
+        <p>아래 순서로 확인하고 저장하면 추천을 시작할 수 있어요. 설정은 언제든 바꿀 수 있어요.</p>
+        <ol class="setup-steps">
+          <li><button class="press" onclick="focusProfileField('f-region')"><b>1. 기본 정보 확인</b><span>닉네임·계열사·나이를 확인하고, 갈 수 있는 지역을 골라요.</span></button></li>
+          <li><button class="press" onclick="focusProfileField('f-int')"><b>2. 취향과 만남 방식 선택</b><span>관심사·취미를 고르면 추천에 도움이 돼요. 인원과 관계 방향도 정해보세요.</span></button></li>
+          <li><button class="press" onclick="focusProfileField('profileNext')"><b>3. 저장하고 모임 둘러보기</b><span>선택을 마쳤다면 화면 아래 버튼으로 매칭에 이동해요.</span></button></li>
+        </ol>
+      </div>
+      <details class="card usage-guide" id="usageGuide">
+        <summary>사용 가이드 · 가입부터 첫 만남까지</summary>
+        <ol class="usage-steps">
+          <li><b>프로필 · 추천 기준 저장</b><p>계열사·나이와 선호 지역을 확인해요. 관심사·취미·성별·MBTI·모임 규모는 선택 사항이에요. 같은 성별 우선은 성별을 설정해야 적용돼요.</p></li>
+          <li><b>매칭 · 모임 참가</b><p>저장한 선호 지역의 모임만 보여요. 주황 띠는 이미 만난 사람의 비율이에요. 마음에 드는 모임의 ‘참가하기’를 누르거나 ‘모임 만들기’로 직접 열어보세요.</p></li>
+          <li><b>채팅 · 닉네임으로 인사</b><p>참가한 모임이 채팅 탭에 생겨요. 처음 만나는 동료에게는 닉네임과 아바타로 보여요. 참가한 시점부터의 대화를 볼 수 있어요.</p></li>
+          <li><b>약속 · 장소와 시간 정하기</b><p>채팅방 ＋ → ‘AI 추천 약속 잡기’로 후보를 받아요. 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요. 장소와 가능한 시간을 조율한 뒤 확정에 참여해요.</p><p>‘모임 의견 조율’ 링크를 사용하면 각자 장소·시간·의견을 제출하고 방장이 최종 확정해요. 의견 수집 중에는 자동 확정되지 않아요.</p></li>
+          <li><b>실제 만남 · 각자 만남 완료</b><p>확정된 약속에 만나고 채팅방 상단의 ‘만남 완료’를 눌러요. 나와 상대가 둘 다 완료해야 서로의 실명·계열사가 공개돼요. 약속 확정 뒤 참가한 멤버는 해당 약속의 완료를 누를 수 없어요.</p></li>
+          <li><b>홈 · 넓어진 연결 확인</b><p>서로 완료한 동료가 연결되고 해당 계열사 행성이 빛나요. 만남 완료 후 사진첩에 추억을 남기고, 만남 평가도 할 수 있어요.</p></li>
+        </ol>
+        <p class="hint">모임이 보이지 않나요? 프로필에서 선호 지역을 더 선택하고 저장해 보세요. 원하는 모임을 직접 만들어도 좋아요.</p>
+      </details>
+
       <div class="card pfhero" style="margin-bottom:14px">
         <div class="pfavw">
           <button class="pfav" id="pfav" onclick="cycleAvatar()" aria-label="아바타 바꾸기">🌙</button>
@@ -89,7 +113,7 @@
         <div class="frow">
           <label>선호 지역<span class="req">필수 · 복수 선택</span></label>
           <div id="f-region"></div>
-          <p class="hint">고른 지역의 모임만 추천돼요</p>
+          <p class="hint">최소 한 곳을 선택해 주세요. 고른 지역의 모임만 추천되니 실제로 갈 수 있는 곳을 여러 개 골라도 좋아요.</p>
         </div>
         <div class="frow">
           <label>나이<span class="req">필수</span></label>
@@ -112,10 +136,12 @@
         <div class="frow">
           <label>관심사</label>
           <div id="f-int"></div>
+          <p class="hint">선택 사항 · 함께 이야기하고 싶은 주제를 골라요. 여러 개 선택하거나 직접 추가할 수 있어요.</p>
         </div>
         <div class="frow">
           <label>취미</label>
           <div id="f-hob"></div>
+          <p class="hint">선택 사항 · 함께 해보고 싶은 활동도 좋아요. 관심사·취미는 모임 추천 순서에 반영돼요.</p>
         </div>
         <div class="frow">
           <label>원하는 모임 규모</label>
@@ -143,6 +169,11 @@
         </div>
       </div>
 
+      <div class="card profile-next">
+        <b>설정을 확인했다면, 첫 모임을 찾아볼까요?</b>
+        <p class="hint">변경한 설정을 저장한 뒤 모임 목록으로 이동해요. 취향은 나중에 더 채워도 괜찮아요.</p>
+        <button class="cta" id="profileNext" onclick="saveProfileAndBrowse()">이 설정으로 모임 둘러보기</button>
+      </div>
       <div class="savebar"><button class="cta" id="saveBtn" onclick="saveProfileNow()" disabled>저장</button></div>
       <p class="hint" style="text-align:center;margin:10px 0 4px" id="savehint">설정을 바꾸면 저장 버튼이 켜져요 · 저장해야 매칭에 반영돼요</p>
 

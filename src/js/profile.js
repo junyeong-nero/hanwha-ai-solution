@@ -22,11 +22,12 @@ function renderSaveBtn(){
   b.textContent=S.dirty?'저장 · 변경 사항 있음':'저장됨';
 }
 async function saveProfileNow(){
-  if(!S.dirty)return;
+  if(!S.dirty)return true;
   const b=$('saveBtn'); b.disabled=true; b.textContent='저장 중…';
-  if(BACKEND){ const ok=await saveProfile(true); if(!ok){renderSaveBtn();return} }
+  if(BACKEND){ const ok=await saveProfile(true); if(!ok){renderSaveBtn();return false} }
   S.dirty=false; R.recDirty=true; renderSaveBtn(); snapProfile();
   toast('저장 완료','바뀐 설정이 다음 매칭 추천에 반영돼요');
+  return true;
 }
 function renderProfile(){
   const P=S.profile;
@@ -132,3 +133,35 @@ function confirmAdd(){
   toast('추가 완료','<b>'+esc(v)+'</b> 항목이 선택됐어요 · 매칭에 반영돼요');
 }
 
+
+/* 가이드는 프로필에 남겨 두고 홈에서도 다시 열 수 있다. */
+function focusProfileField(id){
+  const target=$(id);
+  target.scrollIntoView({block:'center'});
+  const control=target.matches('button, input, select')?target:target.querySelector('button, input, select');
+  if(control)control.focus({preventScroll:true});
+}
+function openUsageGuide(){
+  go('profile');
+  $('usageGuide').open=true;
+  $('usageGuide').scrollIntoView({block:'start'});
+  $('usageGuide').querySelector('summary').focus({preventScroll:true});
+}
+let profileBrowsePending=false;
+async function saveProfileAndBrowse(){
+  if(profileBrowsePending)return;
+  profileBrowsePending=true;
+  const button=$('profileNext');
+  button.disabled=true;
+  button.textContent='설정 확인 중…';
+  try{
+    if(await saveProfileNow())go('match');
+  }catch(e){
+    renderSaveBtn();
+    toast('저장 실패','연결을 확인하고 다시 시도해 주세요. 변경한 설정은 화면에 남아 있어요');
+  }finally{
+    profileBrowsePending=false;
+    button.disabled=false;
+    button.textContent='이 설정으로 모임 둘러보기';
+  }
+}
