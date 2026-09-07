@@ -63,15 +63,16 @@ async function openMembers(){
 }
 function hideMembers(){$('memwrap').classList.remove('on')}
 /* 약속 시각이 지났는지. meetAt 이 없는 카드("평일 저녁"처럼 날짜를 짚을 수 없는 문구)는 항상 false */
-function planDue(plan){ const t=plan&&plan.meetAt?Date.parse(plan.meetAt):NaN; return Number.isFinite(t)&&t<=Date.now() }
+function planDue(plan){ const t=plan&&!plan.collecting&&plan.meetAt?Date.parse(plan.meetAt):NaN; return Number.isFinite(t)&&t<=Date.now() }
 function planDoneMsg(reason,plan){
+  if(reason==='host')return '방장이 약속을 확정했어요 — '+plan.when+' · '+plan.place;
   return reason==='due'
     ? '🌕 약속 시간이 지나 자동으로 확정했어요 — '+esc(plan.when)+' · '+esc(plan.place)+' · 만나셨다면 만남 완료를 눌러 주세요'
     : '📅 전원 확정! 약속이 잡혔어요 — '+esc(plan.when)+' · '+esc(plan.place);
 }
-/* 확정 경로는 둘 — 전원이 확정 투표를 했거나, 약속 시각이 지났거나 */
+/* 의견 수집을 쓰지 않는 카드의 전원 투표·시간 경과 확정 */
 function checkPlanDone(id,msg){
-  const r=S.rooms[id]; if(!r||!msg)return false;
+  const r=S.rooms[id]; if(!r||!msg||msg.plan.collecting)return false;
   const unanimous=(r.votes[msg.planId]||new Set()).size>=roomTotal(id);
   if((unanimous||planDue(msg.plan))&&r.plannedId!==msg.planId){
     r.planned=msg.plan; r.plannedId=msg.planId;
@@ -137,13 +138,13 @@ function renderMsgs(){
     if(m.f==='me')return '<div class="msg me'+(cont?' cont':'')+'"><div><div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
     if(m.f==='ai'){
       const p=m.plan, total=roomTotal(CUR), set=r.votes[m.planId]||new Set(), votes=set.size, mine=set.has(MYID());
-      const unanimous=votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
+      const unanimous=!p.collecting&&votes>=total, auto=planDue(p)&&!unanimous;   // auto: 투표가 다 안 찼는데 시간이 지나 확정된 카드
       const done=r.plannedId===m.planId||unanimous||auto, pct=auto?100:Math.min(100,Math.round(votes/total*100));
       // 후보지: 지도 + 목록. 목록과 Marker 선택은 selectCand 로 양방향 동기화된다
       const note=searchNoteHtml(m.search);   // 검색 결과 없음·할당량 초과·오류 안내
       const cands=(p.cands||[]).length
-        ? '<div class="cands"><b>후보지 · 실제 장소 검색 결과 '+p.cands.length+'곳</b>'
-          +planMapHtml(m.planId,p.cands)+candListHtml(m.planId,p.cands,done)+note+'</div>'
+        ? '<div class="cands"><b>후보지 · '+(BACKEND?'실제 장소 검색 결과 ':'데모 후보 ')+p.cands.length+'곳</b>'
+          +planMapHtml(m.planId,p.cands)+candListHtml(m.planId,p.cands,done||p.collecting)+note+'</div>'
         : (note?'<div class="cands">'+note+'</div>':'');
       return '<div class="msg aimsg"><div class="mav">🌙</div><div><div class="who" style="color:var(--orange-soft)">MoonLight AI'+(m.source==='fallback'?' <small>기본 제안</small>':'')+'</div>'
         +'<div class="bub plan"><h4>'+ico('spark')+'AI 추천 약속</h4>'
@@ -152,11 +153,12 @@ function renderMsgs(){
         +'<div class="row"><i>🎯</i><span>'+esc(p.act)+'</span></div>'
         +'<div class="row"><i>🍜</i><span>'+esc(p.food)+'</span></div>'
         +cands
-        +'<button class="cta line" onclick="openAvailability(\''+m.planId+'\')">가능 시간 조율</button>'
-        +'<div class="vote"><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div>'
+        +'<button '+(p.collecting?'hidden ':'')+'class="cta line" onclick="openAvailability(\''+m.planId+'\')">가능 시간 조율</button>'
+        +(p.collecting?'<button onclick="loadPoll(\''+p.pollId+'\')">'+(done?'확정 결과 · 내 의견 보기':'의견 제출 · 방장 비교 화면')+'</button>':'')
+        +'<div class="vote"'+(p.collecting?' hidden':'')+'><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div>'
         +'<div class="lb"><span>'+(auto?'<b>시간 지나 자동 확정 🌕</b>':done?'<b>전원 확정 🌕</b>':'확정 <b>'+votes+'</b> / '+total+'명')+'</span>'
         +'<span>'+(auto?'약속 시간이 지났어요':done?'약속이 잡혔어요':'모두 누르면 확정돼요')+'</span></div></div>'
-        +'<button '+(done||mine||(p.schedule&&!p.schedule.selected)?'disabled':'')+' onclick="confirmPlan('+i+')">'+(auto?'시간이 지나 확정됨':done?'약속 확정됨':mine?'확정했어요 ✓ · 다른 멤버 기다리는 중':'이 약속으로 확정')+'</button>'
+        +'<button '+(p.collecting?'hidden ':'')+(done||mine||(p.schedule&&!p.schedule.selected)?'disabled':'')+' onclick="confirmPlan('+i+')">'+(auto?'시간이 지나 확정됨':done?'약속 확정됨':mine?'확정했어요 ✓ · 다른 멤버 기다리는 중':'이 약속으로 확정')+'</button>'
         +'</div></div></div>';
     }
     const p=PEOPLE[m.f]||UNKNOWN;
@@ -194,6 +196,7 @@ function showTyping(pid,room,cb){
 
 /* + 메뉴 */
 function openPlus(){
+  $('pollMenuIcon').innerHTML=ico('cal');
   $('plusAlbum').disabled=!S.rooms[CUR].iAttended;
   $('plusRate').disabled=!S.rooms[CUR].iAttended;
   $('pluswrap').classList.add('on');
@@ -244,9 +247,9 @@ async function aiPlan(){
     r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
     const mm=MEETINGS.find(x=>x.id===id)||{region:'',when:'',tags:[]};
     const base=PLANS[id]||{place:(mm.region||'근처')+' 만남의 장소',when:mm.when||'시간 미정',act:((mm.tags||[])[0]||'모임')+' 함께하기',food:'근처 카페 한 곳'};   // 직접 만든 모임용 기본 약속
-    // 로컬 데모: 고정된 mock 장소를 후보지로 쓴다. 후보가 없는 모임(직접 만든 모임)은 "검색 결과 없음" 안내를 보여 준다
-    const cands=PLAN_CANDS[id]||[];
-    const msg={f:'ai',plan:Object.assign({},base,{cands,meetAt:new Date(Date.now()+(base.inH||0)*3600000).toISOString()}),planId:'local-'+id,t:nowT(),
+    // 로컬 데모: 직접 만든 모임도 의견 조율을 시연할 수 있도록 데모임을 밝힌 후보를 제공한다
+    const cands=PLAN_CANDS[id]||(mm.mine?[{name:(mm.region||'근처')+' 데모 카페',address:'데모 후보 · 실제 검색 결과가 아니에요'},{name:(mm.region||'근처')+' 데모 식당',address:'데모 후보 · 실제 검색 결과가 아니에요'}]:[]);
+    const msg={f:'ai',plan:Object.assign({},base,{cands,meetAt:base.inH==null?null:new Date(Date.now()+base.inH*3600000).toISOString()}),planId:'local-'+id,t:nowT(),
       search:cands.length?{provider:'demo',status:'ok',alternatives:[]}:{provider:'demo',status:'empty',alternatives:[(mm.region||'회사')+' 카페',(mm.region||'회사')+' 맛집']}};
     r.msgs.push(msg);
     checkPlanDone(id,msg);   // 이미 지난 약속이면 투표 없이 바로 확정된다
@@ -255,7 +258,7 @@ async function aiPlan(){
 }
 /* 확정 = 투표. 채팅방 인원 전원이 눌러야 약속이 잡힌다 */
 async function confirmPlan(i){
-  const id=CUR, r=S.rooms[id], msg=r.msgs[i]; if(!msg||!msg.planId)return;
+  const id=CUR, r=S.rooms[id], msg=r.msgs[i]; if(!msg||!msg.planId||msg.plan.collecting)return;
   if(msg.plan.schedule&&!msg.plan.schedule.selected){toast('시간 조율','방장이 시간을 먼저 선택해 주세요');return}
   const set=r.votes[msg.planId]||(r.votes[msg.planId]=new Set());
   if(set.has(MYID()))return;

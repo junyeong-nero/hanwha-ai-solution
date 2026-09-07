@@ -230,6 +230,7 @@
     <div class="sheet">
       <div class="grip"></div>
       <div class="sbody">
+      <button class="psheet-item" onclick="openRoomPoll()"><i id="pollMenuIcon"></i><div>모임 의견 조율<small>장소·시간·의견 제출과 방장 비교 · 링크 공유</small></div></button>
       <button class="psheet-item" onclick="aiPlan()"><i>🌙</i><div>AI 추천 약속 잡기<small>채팅 내용을 읽고 장소·시간·활동·맛집까지 한 번에 · 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요</small></div></button>
       <button class="psheet-item" onclick="hidePlus();openMembers()"><i>👥</i><div>채팅방 멤버 보기<small>누가 있는지 · 확정 투표 · 만남 완료 여부</small></div></button>
       <button class="psheet-item" id="plusRate" onclick="hidePlus();openRating(CUR)"><i>⭐</i><div>만남 평가하기<small>별 0.5~5점 · 매칭 정확도 학습에 쓰여요 · 만남 완료 후</small></div></button>
@@ -368,6 +369,7 @@
     </div>
   </div>
 
+  <section id="pollview" aria-label="모임 의견 조율" hidden></section>
   <div id="toast" onclick="this.classList.remove('on')"></div>
 </div>
 
@@ -382,6 +384,7 @@
 <script src="js/map.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/backend.js"></script>
+<script src="js/responses.js"></script>
 <script src="js/boot.js"></script>
 </body>
 </html>

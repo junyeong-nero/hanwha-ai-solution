@@ -49,6 +49,8 @@ npx supabase link --project-ref <프로젝트 ref>
 npx supabase db push
 ```
 
+**의견 제출 기능(#32)은 프런트엔드 반영 전에 `0014_meeting_responses.sql`까지 적용해야 합니다.** 새 Edge Function이나 비밀 키는 필요하지 않습니다. 기존 `meeting_plans`와 `messages`의 Realtime publication을 그대로 사용합니다. 의견 테이블은 직접 접근을 막고 인증된 RPC로만 조회·저장합니다. 배포 확인 시 방장·참여자 두 계정으로 링크 재접속, 응답 수정, 방장 확정과 다른 기기 채팅의 즉시 반영을 확인하세요.
+
 `db push`는 `supabase/migrations/` 의 마이그레이션을 순서대로 적용합니다 (테이블·RLS·Realtime publication·RPC 포함).
 
 > **선택 — 지난 약속 자동 확정 주기 실행**

@@ -14,7 +14,7 @@ function availabilitySummary(slots,members,responses){
 function availabilityLabel(slot){return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(slot))}
 let AV=null;
 function availabilityMembers(){return [MYID(),...MEETINGS.find(m=>m.id===AV.room).members]}
-function availabilityLocked(msg,r){return r.plannedId===msg.planId||planDue(msg.plan)||(r.votes[msg.planId]||new Set()).size>0}
+function availabilityLocked(msg,r){return msg.plan.collecting||r.plannedId===msg.planId||planDue(msg.plan)||(r.votes[msg.planId]||new Set()).size>0}
 function closeAvailability(){const active=AV;AV=null;$('availabilitywrap').classList.remove('on');if(active)document.querySelector('[onclick="openAvailability(\''+active.planId+'\')"]')?.focus()}
 async function openAvailability(planId){
   const room=CUR,r=S.rooms[room],msg=r.msgs.find(m=>m.planId===planId);if(!msg)return;
@@ -29,7 +29,7 @@ function renderAvailability(){
   const host=BACKEND?msg.plan.scheduleHost===MYID():true;
   const today=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
   $('availabilitybody').innerHTML='<p>한국 시간 · 30분 단위 · 최대 7일. 표 밖에서 스크롤하고, 표 안에서 가능한 시간을 칠하세요. Tab과 Space로도 선택할 수 있어요.</p>'
-    +(locked?'<p role="status">확정 투표가 시작되어 일정 입력이 잠겼어요.</p>':'')
+    +(locked?'<p role="status">의견 수집 또는 확정이 시작되어 일정 입력이 잠겼어요.</p>':'')
     +(host&&!locked?'<details'+(!c?' open':'')+'><summary>조율 범위 설정'+(c?' · 변경하면 응답 초기화':'')+'</summary><div class="av-config"><label>시작 날짜<input id="avstart" type="date" value="'+(c?.start||today)+'"></label><label>종료 날짜<input id="avend" type="date" value="'+(c?.end||today)+'"></label><label>시작 시간<input id="avfrom" type="time" step="1800" value="'+avTime(c?.from??1080)+'"></label><label>종료 시간<input id="avto" type="time" step="1800" value="'+avTime(c?.to??1260)+'"></label></div><button class="cta line" onclick="configureAvailability()">범위 적용 · 응답 초기화</button></details>':'')
     +(!c?'<p>방장이 조율 범위를 설정하면 입력할 수 있어요.</p>':'<label>참여자별 보기<select id="avperson" onchange="AV.view=this.value;renderAvailabilityGrid()">'+availabilityMembers().map(id=>'<option value="'+esc(id)+'"'+(id===AV.view?' selected':'')+'>'+esc(id===MYID()?'나':(PEOPLE[id]?.nick||'익명'))+(Object.hasOwn(c.responses,id)?' · 응답':' · 미응답')+'</option>').join('')+'</select></label><p class="av-legend">전원 가능: 초록 · 최다 가능: 주황 · 일부 가능: 채움<br>테두리 ✓: 선택한 참여자의 가능 시간</p><div id="avgrid" class="av-grid"></div><button id="avsave" class="cta" onclick="saveAvailability()" '+(locked?'disabled':'')+'>내 가능 시간 저장</button><div id="avstatus" role="status" aria-live="polite"></div><div id="avcandidates"></div>');
   if(c)renderAvailabilityGrid();
