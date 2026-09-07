@@ -53,7 +53,7 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ### 아키텍처 — 이중 모드
 - **빌드 도구 없음** — `src/index.html`(마크업) · `src/styles.css` · `src/js/*.js` 로 나뉘어 있고, 브라우저가 `<link>`·`<script>`로 그대로 읽는다 (폰트만 `../assets/fonts/` 상대 경로 참조)
 - **JS는 ES 모듈이 아니라 일반 스크립트** — 전역 스코프를 공유하므로 `import`/`export` 없이 파일 간 함수·상수를 그냥 쓰고, 마크업의 인라인 `onclick`도 그대로 유효하다. `file://` 로 열어도 동작하는 이유이기도 하니 `type="module"` 로 바꾸지 말 것
-- **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `map.js`(후보 장소 지도) → `backend.js` → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
+- **로드 순서에 의존한다** — `config.js`(상수·상태) → `app.js`(별 배경·탭 전환) → 화면별(`home` `match` `chat` `profile`) → `map.js`(후보 장소 지도) → `backend.js` → `responses.js`(공유 의견 화면) → `boot.js`(시작). 최상위에서 실행되는 코드는 `app.js`의 별 배경, `profile.js`의 닉네임 입력 바인딩, `boot.js` 뿐이므로 새 파일을 넣을 때 이 순서를 지킬 것
 - 화면별 파일 배치: 모임 만들기는 `match.js`, 만남 평가는 `chat.js`, 약속 카드의 후보지 지도·선택은 `map.js` 에 있다
 - **로컬 데모 모드(기본):** `src/js/config.js` 상단 `CONFIG.SUPABASE_URL`이 비어 있으면 외부 네트워크 요청 없이 하드코딩 데이터(`COMPANIES` / `PEOPLE` / `MEETINGS` / `PLANS`)와 전역 `S` 객체만으로 동작. 새로고침 시 초기화
 - **백엔드 모드:** `CONFIG`에 Supabase URL·anon 키를 채우면 supabase-js(jsDelivr CDN, 이때만 동적 로드)로 Auth·DB·Realtime을 쓰고 Edge Function이 서버 로직을 맡는다. **모임 추천(`recommend-meetings`)은 LLM 없이 규칙 엔진(`_shared/recommendation.ts`)으로 즉시 채점**하고, OpenRouter LLM 호출은 약속 추천(`suggest-meeting-plan`)에만 남아 있다. 서버 데이터를 같은 상수 모양(`PEOPLE`/`MEETINGS`/`S`)으로 채워 넣어 렌더 함수는 공유
@@ -101,9 +101,12 @@ AI 코딩 에이전트를 위한 저장소 안내 문서입니다.
 ## 테스트
 
 ```bash
+npm ci
 npm test
 ```
 
+- `meeting-responses-db.test.mjs` — PGlite(PostgreSQL)에서 의견 RPC의 참여·방장 권한, 수정·마감·확정·탈퇴와 기존 확정 경로 차단을 실행 검증
+- `meeting-responses.test.mjs` — 시간 슬롯·교집합·안전한 의견 렌더링
 - `responsive-ui.test.mjs` — 반응형 CSS 구조
 - `backend-contract.test.mjs` — 비밀 키 미노출, 이중 모드·입장 화면·Realtime 호출 계약
 - `edge-functions.test.mjs` — 마이그레이션 스키마 검사, `_shared/` 순수 함수(입장 코드·추천 규칙 엔진·LLM 파서·익명화)

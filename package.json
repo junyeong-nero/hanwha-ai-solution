@@ -7,5 +7,8 @@
   },
   "scripts": {
     "test": "node scripts/check-node-version.mjs && node --test tests/*.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

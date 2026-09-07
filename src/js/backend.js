@@ -35,6 +35,7 @@ function clearBackendState(){
   if(typeof stopDueWatch==='function')stopDueWatch();
   if(typeof unsubscribeRoom==='function')unsubscribeRoom();
   if(R.saveTimer){clearTimeout(R.saveTimer);R.saveTimer=null}
+  if(typeof resetPoll==='function')resetPoll();
   ME=null;
   MEETINGS.length=0; Object.keys(PEOPLE).forEach(k=>delete PEOPLE[k]); Object.keys(S.met).forEach(k=>delete S.met[k]);
   S.joined=[]; S.rooms={}; S.dirty=false;
@@ -147,6 +148,7 @@ async function afterLogin(){
   await Promise.all([loadConnections(),loadRooms()]);
   R.recDirty=true;
   renderHome();renderProfile();updateBdg();go('home');
+  await openPollLink();
   if(new URLSearchParams(location.search).get('admin')==='1')$('adminbox').style.display='block';
 }
 /* 커넥션 → S.met / PEOPLE (홈 행성 점등·위성) */
@@ -217,12 +219,12 @@ async function refreshMembers(id){
 }
 function pushMsg(r,x){
   if(!x||R.seen.has(x.id))return false; R.seen.add(x.id);
-  r.msgs.push({id:x.id,f:x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at)}); return true;
+  r.msgs.push({id:x.id,f:x.sender_id===null?'sys':x.sender_id===ME?'me':x.sender_id,x:x.body,t:fmtT(x.created_at)}); return true;
 }
 function applyPlan(r,pl,search){
   if(!pl||!pl.id)return;
   const plan={place:pl.place||'',when:pl.time_label||'',meetAt:pl.meet_at||null,act:pl.activity||'',food:(pl.nearby||[]).join(' · '),
-    cands:Array.isArray(pl.candidates)?pl.candidates:[],selected:pl.selected_place||null};
+    cands:Array.isArray(pl.candidates)?pl.candidates:[],selected:pl.selected_place||null,collecting:!!pl.collecting,pollId:pl.poll_id||null,confirmReason:pl.confirm_reason||null};
   let msg=r.msgs.find(m=>m.f==='ai'&&m.planId===pl.id);
   if(!msg){
     if(!r.msgs.some(m=>m.f==='ai'))r.msgs.push({f:'sys',x:'MoonLight AI가 지금까지의 대화를 바탕으로 약속을 제안했어요'});
@@ -240,8 +242,8 @@ function applyPlan(r,pl,search){
   const due=planDue(plan);
   if((pl.confirmed||due)&&r.plannedId!==pl.id){
     r.planned=plan; r.plannedId=pl.id;
-    const reason=(pl.confirm_reason==='due'||(!pl.confirmed&&due))?'due':'vote';
-    if(!r.msgs.some(m=>m.confirmOf===pl.id))r.msgs.push({f:'sys',confirmOf:pl.id,x:planDoneMsg(reason,plan)});
+    const reason=(pl.confirm_reason==='due'||(!pl.confirmed&&due))?'due':pl.confirm_reason||'vote';
+    if(!(BACKEND&&reason==='host')&&!r.msgs.some(m=>m.confirmOf===pl.id))r.msgs.push({f:'sys',confirmOf:pl.id,x:planDoneMsg(reason,plan)});
   }
 }
 async function loadRoom(id){

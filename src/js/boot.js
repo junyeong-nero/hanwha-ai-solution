@@ -2,3 +2,4 @@
 bindChipEvents();
 if(BACKEND)initBackend();
 else{renderHome();renderProfile();updateBdg();}
+if(!BACKEND)openPollLink();

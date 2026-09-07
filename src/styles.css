@@ -639,3 +639,28 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .emrow{display:flex;gap:6px;flex-wrap:wrap}
 .emrow button{width:44px;height:44px;border-radius:13px;background:var(--card2);border:1px solid var(--line);font-size:21px}
 .emrow button.on{border-color:var(--orange);background:var(--orange-a18);box-shadow:0 0 0 3px var(--orange-a12)}
+
+/* 공유 의견 화면: 채팅 밖에서 여는 독립 화면 */
+#pollview{position:fixed;inset:0;z-index:180;background:var(--bg);height:100dvh;overflow:auto;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);color:var(--tx)}
+#pollview[hidden]{display:none}
+#pollview .top,.pollbody{max-width:680px;margin:auto}
+#pollview .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
+.pollbody{padding:16px 20px 40px;overflow-wrap:anywhere}
+.pollbody p{color:var(--tx2);line-height:1.6;margin:12px 0}
+.pollbody .cta{width:100%;margin:12px 0;min-height:44px}
+.pollbody fieldset{border:1px solid var(--line);border-radius:var(--r-m);padding:12px;margin:16px 0;min-width:0}
+.pollbody legend{font-weight:700}
+.pollchoice{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 0}
+.pollchoice small{display:block;color:var(--tx2)}
+.pollbody input[type=radio],.pollbody input[type=checkbox]{accent-color:var(--orange);width:22px;height:22px;flex-shrink:0}
+.pollfield{display:flex;flex-direction:column;gap:8px;margin:20px 0}
+.pollfield input,.pollfield select,.pollfield textarea{font:inherit;font-size:16px;min-height:44px;min-width:0;width:100%;box-sizing:border-box;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:var(--r-s);padding:12px}
+.pollfield textarea{min-height:100px;resize:vertical}
+.pollgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pollgrid fieldset{margin:0;padding:8px}
+.pollslot{display:flex;align-items:center;gap:8px;min-height:44px;border-radius:var(--r-s)}
+.pollslot:has(input:checked){background:var(--orange-a18)}
+.pollbody :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+@media(min-width:600px){.pollgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+.plan [hidden]{display:none}
