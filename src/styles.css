@@ -695,19 +695,17 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .pollfield{display:flex;flex-direction:column;gap:8px;margin:20px 0}
 .pollfield input,.pollfield select,.pollfield textarea{font:inherit;font-size:16px;min-height:44px;min-width:0;width:100%;box-sizing:border-box;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:var(--r-s);padding:12px}
 .pollfield textarea{min-height:100px;resize:vertical}
-.pollgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.pollgrid fieldset{margin:0;padding:8px}
 .pollslot{display:flex;align-items:center;gap:8px;min-height:44px;border-radius:var(--r-s)}
 .pollslot:has(input:checked){background:var(--orange-a18)}
 .pollbody :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
-@media(min-width:600px){.pollgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
 
 .plan [hidden]{display:none}
 
 /* 가능 시간 조율: 표 안은 선택, 표 밖은 스크롤 */
 .av-config{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
 #availabilitybody p{font-size:13px;color:var(--tx2);line-height:1.6;margin:12px 0}
-#availabilitybody input,#availabilitybody select{display:block;width:100%;min-width:0;font-size:16px;min-height:44px;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:var(--r-s);padding:6px}
+#availabilitybody input,#availabilitybody select,.pollbody .av-config input{display:block;width:100%;min-width:0;font-size:16px;min-height:44px;box-sizing:border-box;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:var(--r-s);padding:6px}
 #availabilitybody summary{min-height:44px;padding:12px 0}
 .av-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;touch-action:none;user-select:none;margin:12px 0}
 .av-slot{min-height:54px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--card);padding:4px;font-size:11px;color:var(--tx)}
@@ -734,3 +732,17 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .profile-next>b{font-size:14px;line-height:1.6}
 .profile-next .hint{margin:8px 0 12px}
 .setup-steps button:focus-visible,.usage-guide summary:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:var(--r-s)}
+
+/* 날짜 열 × 시간 행. 작은 화면에서는 시간축을 고정한 채 가로로 이동한다. */
+.pollgrid-scroll{overflow:auto;max-height:55dvh;border:1px solid var(--line);border-radius:var(--r-m);margin:12px 0;overscroll-behavior:contain}
+.pollgrid{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;user-select:none;min-width:max-content}
+.pollgrid caption{padding:10px;text-align:left;color:var(--tx2);background:var(--card)}
+.pollgrid th{min-width:52px;width:52px;height:44px;background:var(--card2);font-size:12px;text-align:center;font-weight:600}
+.pollgrid thead th{position:sticky;top:0;z-index:2}.pollgrid th small{display:block;color:var(--tx3)}
+.pollgrid tr>th:first-child{position:sticky;left:0;z-index:1}.pollgrid thead th:first-child{z-index:3}
+.pollgrid td{padding:0;border-top:1px solid var(--line);border-left:1px solid var(--line);min-width:44px}
+.pollcell{display:block;width:100%;min-width:52px;min-height:44px;border:0;border-radius:0;background:var(--card);color:var(--tx2);touch-action:none;font-size:12px}
+.pollcell.some{background:var(--orange-a18)}.pollcell.all{background:var(--card3);color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.pollcell[aria-pressed="true"]{background:var(--orange-a30);color:var(--tx);box-shadow:inset 0 0 0 2px var(--orange)}
+.pollcell:focus-visible{outline:2px solid var(--tx);outline-offset:-3px}.pollcell:disabled{opacity:.7}
+.pollbody details{margin:12px 0}.pollbody summary{min-height:44px;padding:12px 0;cursor:pointer}

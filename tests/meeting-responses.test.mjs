@@ -38,3 +38,16 @@ test('후보와 자유 의견은 HTML을 실행하지 않고 텍스트로 렌더
   const app=loadApp({files:['config.js','chat.js','availability.js']});
   assert.equal(app.evaluate("availabilityLocked({planId:'p',plan:{collecting:true}},{votes:{}})"),true);
 });
+
+test('시간표 축은 날짜·시간 순서로 정렬하며 다른 시간대와 불규칙 슬롯도 배치한다',()=>{
+  const app=loadApp({files:['responses.js']});
+  const axes=JSON.parse(app.evaluate(`JSON.stringify(pollAxes(['2030-01-02T00:30:00Z','2030-01-01T00:00:00Z','2030-01-02T00:00:00Z']))`));
+  assert.deepEqual(axes.days,['2030-01-01','2030-01-02']);assert.deepEqual(axes.times,['09:00','09:30']);
+});
+test('드래그는 양방향 직사각형 안의 실제 슬롯을 선택하고 빠르게 건너뛴 칸도 포함한다',()=>{
+  const app=loadApp({files:['responses.js']});
+  app.evaluate("globalThis.slots=pollSlots('2030-01-01')");
+  const run=(a,b)=>JSON.parse(app.evaluate(`JSON.stringify(pollRectangle(slots,${a},${b}))`));
+  assert.deepEqual(run(0,18),[0,1,2,8,9,10,16,17,18]);
+  assert.deepEqual(run(18,0),run(0,18));assert.deepEqual(run(-1,3),[]);
+});

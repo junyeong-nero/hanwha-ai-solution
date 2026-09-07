@@ -33,6 +33,7 @@ async function fixture(){
   `);
   await db.exec(readFileSync(new URL('../supabase/migrations/0013_plan_availability.sql',import.meta.url),'utf8'));
   await db.exec(migration);
+  await db.exec(readFileSync(new URL('../supabase/migrations/0016_unified_scheduling.sql',import.meta.url),'utf8'));
   const as=async(id,sql,params=[])=>{
     await db.exec('reset role');
     await db.query("select set_config('test.uid',$1,false)",[id]);
@@ -103,5 +104,20 @@ test('마감·탈퇴·재참가·비인증 요청을 서버에서 거부한다',
     assert.equal((await as(host,'select get_meeting_poll($1) q',[q])).rows[0].q.confirmed,false,'마감은 자동 확정이 아님');
     await db.exec('reset role;set role anon');
     await assert.rejects(db.query('select get_meeting_poll($1)',[q]),/permission denied/);
+  }finally{await db.close()}
+});
+
+test('생성자 없는 기본 모임은 약속 제안자가 수집·조회·확정을 맡는다',async()=>{
+  const {db,as,q,slots,create}=await fixture();
+  try{
+    await db.exec('reset role');
+    await db.query('update meetings set created_by=null where id=$1',[meeting]);
+    assert.equal((await create()).rows[0].id,q);
+    const data=(await as(host,'select get_meeting_poll($1) q',[q])).rows[0].q;
+    assert.equal(data.host,true);assert.equal(data.members.length,2);
+    assert.equal((await as(member,'select get_meeting_poll($1) q',[q])).rows[0].q.host,false);
+    await assert.rejects(as(member,'select finalize_meeting_poll($1,0,$2)',[q,slots[0]]),/방장/);
+    const final=(await as(host,'select finalize_meeting_poll($1,0,$2) p',[q,slots[0]])).rows[0].p;
+    assert.equal(final.confirm_reason,'host');assert.equal(final.confirmed,true);
   }finally{await db.close()}
 });
