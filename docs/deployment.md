@@ -114,7 +114,7 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
    ```
 2. Node.js 24 이상에서 `npm test`가 통과하는지 확인합니다 (비밀 키가 HTML에 들어가면 `backend-contract` 테스트가 실패합니다). Node 24 미만이면 테스트 명령이 원인을 한국어로 안내하고 종료합니다.
 3. 커밋·푸시하면 GitHub Pages가 자동 재배포됩니다 (1~2분).
-4. 공용 주소 `https://junyeong-nero.github.io/hanwha-ai-solution/src/`로 QR을 만듭니다 (아무 QR 생성기나 가능). 관리자용 주소는 `.../src/?admin=1` 입니다.
+4. 공용 주소 `https://junyeong-nero.github.io/hanwha-ai-solution/`로 QR을 만듭니다 (아무 QR 생성기나 가능). 루트의 `index.html`이 쿼리·해시를 유지하며 `src/`로 자동 이동합니다. 관리자용 주소는 `.../hanwha-ai-solution/?admin=1`, 로컬 데모 주소는 `.../hanwha-ai-solution/?demo=1` 입니다. 기존 `/src/` 주소도 그대로 사용할 수 있습니다.
 
 ## 6. OpenAI 확인 (발표 전날·당일 — 모임·장소 추천)
 

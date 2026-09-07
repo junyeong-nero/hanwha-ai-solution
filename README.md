@@ -3,7 +3,7 @@
 한화 그룹사 구성원을 위한 **사내 네트워킹 모바일 웹앱 프로토타입**입니다.
 AI가 프로필에 맞는 소모임을 추천하고, 익명 채팅에서 시작한 대화가 실제 만남과 새로운 커넥션으로 이어지는 경험을 우주와 달빛의 은유로 표현합니다.
 
-**데모:** [junyeong-nero.github.io/hanwha-ai-solution/src/](https://junyeong-nero.github.io/hanwha-ai-solution/src/) · 휴대폰 화면(375×812) 기준으로 설계했습니다.
+**데모:** [junyeong-nero.github.io/hanwha-ai-solution/](https://junyeong-nero.github.io/hanwha-ai-solution/) · 휴대폰 화면(375×812) 기준으로 설계했습니다.
 
 **제출 자료:** [영상](assets/video.mp4) · [발표 슬라이드](assets/ppt.html) · [제출 보고서](assets/report.md)
 
@@ -62,6 +62,8 @@ AI가 프로필에 맞는 소모임을 추천하고, 익명 채팅에서 시작�
 ## 배포
 
 **프론트엔드 — GitHub Pages.** `main` 브랜치 root를 그대로 서빙합니다. 빌드 단계가 없어서 **push가 곧 배포**이므로, 동작을 확인한 뒤 push합니다.
+
+루트 주소의 `index.html`이 앱 경로인 `src/`로 자동 이동합니다. `?demo=1`, `?admin=1` 같은 쿼리와 해시도 유지되므로 공유 주소에서는 `/src/`를 생략할 수 있습니다.
 
 **백엔드 — Supabase.** 마이그레이션(`npx supabase db push`) → 시드 → Edge Function 5개 배포 → 비밀값 등록(`supabase secrets set`) 순서입니다. 전체 절차와 발표 전 회귀 체크리스트는 [docs/deployment.md](docs/deployment.md)에 있고, `scripts/deploy-supabase.ps1`로 한 번에 실행할 수도 있습니다.
 
