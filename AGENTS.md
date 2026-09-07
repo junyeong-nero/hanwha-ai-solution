@@ -101,7 +101,7 @@ npm test
 - `backend-contract.test.mjs` — 비밀 키 미노출, 이중 모드·입장 화면·Realtime 호출 계약
 - `edge-functions.test.mjs` — 마이그레이션 스키마 검사, `_shared/` 순수 함수(입장 코드·추천 규칙 엔진·LLM 파서·익명화)
 - `plan-map.test.mjs` — 약속 카드의 후보 장소 지도. `map.js` 를 브라우저와 같은 전역에서 실행해 좌표 배치(`pinLayout`)·목록↔Marker 선택 동기화·검색 실패 안내·키 분리를 검사한다
-- `home-graph.test.mjs` — 홈 관계 그래프. `helpers/app-context.mjs` 가 `config.js`·`home.js` 를 브라우저와 같은 전역에서 실행해 실제 행성 좌표(겹침·화면 밖·재렌더 안정성)를 검사한다
+- `home-orbit.test.mjs` — 홈 은하계(회전 궤도). `helpers/app-context.mjs` 가 `config.js`·`home.js` 를 브라우저와 같은 전역에서 실행해 실제 궤도 배치(회전 중 겹침·화면 밖·재렌더 안정성)와 "아는 사람이 생긴 계열사만 합류" 규칙을 검사한다
 
 `src/` 를 검사하는 테스트는 `tests/helpers/source.mjs` 가 `index.html` 의 `<link>`·`<script src>` 를 실제 파일 내용으로 인라인해 만든 단일 문자열(`html`)을 씁니다. `src/` 에 CSS·JS 파일을 새로 추가하면 index.html 에 태그만 걸어 두면 되고, 테스트 쪽은 따로 손댈 필요가 없습니다.
 

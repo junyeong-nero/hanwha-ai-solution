@@ -1,5 +1,5 @@
 // src/js/*.js 는 ES 모듈이 아니라 전역 스코프를 공유하는 일반 스크립트다.
-// 브라우저와 같은 방식(같은 전역에 순서대로 로드)으로 실행해 홈 그래프의 실제 배치 결과를
+// 브라우저와 같은 방식(같은 전역에 순서대로 로드)으로 실행해 홈 은하계의 실제 궤도 배치를
 // 검사할 수 있도록, 최소한의 DOM 스텁만 둔 vm 컨텍스트를 만든다.
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -61,23 +61,41 @@ export function loadApp({ files = ['config.js', 'home.js'], width = 320 } = {}) 
   return { evaluate, el: (id) => document.getElementById(id), focused };
 }
 
-/** #space 에 그려진 행성들을 {id 없는} 좌표·클래스 목록으로 파싱한다 */
+/**
+ * #space 에 그려진 행성들을 궤도 정보와 함께 파싱한다.
+ * 행성은 회전하는 .holder 안에 있으므로, 시작 각도(--a)·회전 주기(--d)·반지름(left)이 위치를 정한다.
+ * x·y 는 시작 각도(회전 0초 시점)에서의 중심 좌표(px).
+ */
 export function parsePlanets(spaceHtml, width = 320) {
-  return [...spaceHtml.matchAll(/<button class="planet ([^"]*)"[^>]*left:([\d.]+)%;top:([\d.]+)%"/g)].map((m) => ({
-    classes: m[1].trim().split(/\s+/),
-    xPercent: Number(m[2]),
-    yPercent: Number(m[3]),
-    x: (Number(m[2]) / 100) * width,
-    y: (Number(m[3]) / 100) * width,
-  }));
+  const re = /<div class="holder" style="--a:([\d.]+)deg;--d:([\d.]+)s"><button class="planet ([^"]*)"[^>]*left:([\d.]+)px;top:0"[^>]*data-co="([^"]+)"/g;
+  return [...spaceHtml.matchAll(re)].map((m) => {
+    const angle = Number(m[1]);
+    const r = Number(m[4]);
+    const rad = (angle * Math.PI) / 180;
+    return {
+      angle,
+      secs: Number(m[2]),
+      classes: m[3].trim().split(/\s+/),
+      r,
+      id: m[5],
+      x: width / 2 + r * Math.cos(rad),
+      y: width / 2 + r * Math.sin(rad),
+    };
+  });
 }
 
-/** 두 행성 사이 최소 중심 거리(px) */
+/**
+ * 회전하는 동안 두 행성이 가장 가까워지는 순간의 중심 거리(px).
+ * 같은 궤도(같은 주기)면 각도 차가 고정이라 거리도 그대로고,
+ * 주기가 다르면 각도 차가 언젠가 0이 되므로 최솟값은 반지름 차가 된다.
+ */
 export function minPlanetGap(planets) {
   let min = Infinity;
   for (let i = 0; i < planets.length; i += 1) {
     for (let j = i + 1; j < planets.length; j += 1) {
-      min = Math.min(min, Math.hypot(planets[i].x - planets[j].x, planets[i].y - planets[j].y));
+      const a = planets[i];
+      const b = planets[j];
+      min = Math.min(min, a.secs === b.secs ? Math.hypot(a.x - b.x, a.y - b.y) : Math.abs(a.r - b.r));
     }
   }
   return min;

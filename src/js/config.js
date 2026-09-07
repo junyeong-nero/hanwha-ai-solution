@@ -50,38 +50,6 @@ const PEOPLE={
   p9:{real:'윤소이', nick:'별헤는밤',   co:'life', av:'🦌'},
   p10:{real:'서준호',nick:'만월기사',   co:'inv',  av:'🐯'},
 };
-/* ================= 홈 관계 그래프 =================
-   초기 노출 계열사(주요 10곳) 선정 기준
-   1) 데모 커넥션이 실제로 발생하는 계열사 — PEOPLE 이 소속된 곳
-   2) 그룹 4대 사업축(항공우주·방산 / 에너지·소재 / 금융 / 서비스·유통) 대표사
-   나머지 계열사는 관계를 따라 탐색할 때 하나씩 열린다. */
-const HOME_CORE_IDS=['aero','sol','life','inv','sys','ocean','hotel','gal','corp','vision'];
-/* 계열사 간 연결(사업 영역 기준). 한쪽에만 적어도 로드 시 양방향으로 펼쳐진다. */
-const COMPANY_LINKS={
-  corp:     ['aero','momentum','energy','impact','vision','connect'],
-  aero:     ['sys','vision','ocean','semitech','engine','robotics'],
-  sys:      ['vision','semitech','robotics'],
-  vision:   ['semitech','connect'],
-  semitech: ['momentum','advanced'],
-  momentum: ['robotics','advanced','energy'],
-  robotics: ['semitech'],
-  ocean:    ['engine','energy','hotel'],
-  engine:   ['momentum'],
-  sol:      ['energy','advanced','total','impact','yeocheon'],
-  energy:   ['impact','power','total'],
-  impact:   ['total','yeocheon'],
-  power:    ['total'],
-  total:    ['yeocheon'],
-  advanced: ['gal'],
-  life:     ['ins','asset','life-fs','savings','inv'],
-  inv:      ['asset','savings','life-fs','ins'],
-  ins:      ['asset','savings'],
-  asset:    ['savings'],
-  'life-fs':['connect'],
-  hotel:    ['gal','connect','life'],
-  gal:      ['connect','vision'],
-  connect:  ['vision'],
-};
 const MEETINGS=[
   {id:'m1', em:'🏃', name:'판교 퇴근 후 20분 러닝 크루', region:'판교', when:'평일 저녁', cap:6,
    tags:['러닝','운동'], members:['p2','p4','p5'],
@@ -156,13 +124,10 @@ const S={
   feedback:{},                           // 로컬 데모용 만남 평가 (meeting id -> {rating, comment})
   joined:[],                             // 참가한 모임 id
   rooms:{},                              // id -> {msgs, unread, planned, photos, votes, attended, iAttended}
-  homeGraph:{                            // 홈 태양계 — 탐색할수록 넓어지는 관계 그래프
-    seed:Math.floor(Math.random()*1e9),  // 세션 단위 시드 — 같은 세션에서는 재렌더링해도 배치가 같다
-    shown:new Set(HOME_CORE_IDS),        // 지금까지 열린 계열사
-    origin:{},                           // 새로 열린 계열사 -> 어느 계열사에서 뻗어 나왔는지
-    slots:{},                            // 계열사 -> {ring, slot, ang, rf} 정규화 좌표 (한 번 정하면 고정)
+  homeOrbit:{                            // 홈 은하계 — 아는 사람이 생긴 계열사가 궤도를 돌며 합류한다
+    seed:Math.floor(Math.random()*1e9),  // 세션 단위 시드 — 궤도 시작 각도와 슬롯 선택에 쓴다
+    slots:{},                            // 계열사 -> {ring, slot} 궤도 자리 (한 번 정하면 고정)
     entering:new Set(),                  // 이번 렌더에서 등장 애니메이션을 줄 행성
-    enteringLinks:new Set(),             // 이번 렌더에서 등장 애니메이션을 줄 연결선
   },
 };
 const AVATARS=['🌙','🌕','⭐','☄️','🪐','🌌'];
