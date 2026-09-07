@@ -304,7 +304,7 @@ async function recommendPollPlaces(id){
     const msg={f:'ai',planId,source:'fallback',plan:{place:cands[0].name,when:'가능 시간 조율 중',act:'함께 만나 이야기해요',food:'',cands,meetAt:null},t:nowT()};
     r.msgs.push(msg);return msg;
   }catch(e){
-    const messages={NOT_HOST:'방장이 약속 잡기를 시작하면 시간과 장소를 선택할 수 있어요',NOT_MEMBER:'이 모임에 참가한 뒤 다시 시도해 주세요',UNAUTHORIZED:'세션이 만료됐어요. 다시 로그인해 주세요'};
+    const messages={RATE_LIMITED:'AI 약속 추천 한도에 도달했어요. 기존 약속을 이용하거나 잠시 후 다시 시도해 주세요',NOT_HOST:'방장이 약속 잡기를 시작하면 시간과 장소를 선택할 수 있어요',NOT_MEMBER:'이 모임에 참가한 뒤 다시 시도해 주세요',UNAUTHORIZED:'세션이 만료됐어요. 다시 로그인해 주세요'};
     if(e.code)throw new Error(messages[e.code]||'장소 추천에 연결하지 못했어요. 잠시 후 다시 시도해 주세요');
     throw e;
   }finally{r.planPending=false;if(CUR===id){renderMsgs();renderBanner()}}

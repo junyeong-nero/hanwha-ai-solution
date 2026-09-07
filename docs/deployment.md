@@ -129,6 +129,8 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 
 ## 6. OpenAI 확인 (발표 전날·당일 — 모임·약속 추천)
 
+호출 제한 설정과 배포 전 검증은 [AI 호출 예산](ai-rate-limit.md)을 확인합니다.
+
 - Supabase Dashboard → Edge Functions → Secrets에 사용자 소유 키를 `OPENAI_API_KEY`로 등록합니다. 채팅·소스·셸 명령에 실제 키를 적지 않습니다. 기존 `OPENROUTER_API_KEY`와 `OPENROUTER_MODEL`은 두 추천 함수에서 사용하지 않습니다.
 - OpenAI 프로젝트의 사용 한도와 `gpt-5.4-mini` 호출 권한을 확인하고, 위 §3 절차로 `recommend-meetings`와 `suggest-meeting-plan`을 배포합니다. 키 등록만으로 코드가 배포되지는 않습니다.
 - 매칭 응답의 `model: gpt-5.4-mini`, `fallback: false`를 확인합니다. 같은 입력은 서버 인스턴스 내 60초 캐시를 사용할 수 있습니다.

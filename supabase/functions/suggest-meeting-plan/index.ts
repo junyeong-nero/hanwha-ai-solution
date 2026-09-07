@@ -13,6 +13,8 @@ import { anonymizeMessages } from '../_shared/chat.ts';
 import { inferPlaceIntent } from '../_shared/place-intent.ts';
 import { searchPlaces } from '../_shared/search.ts';
 
+import { consumeAIBudget } from '../_shared/ai-limit.ts';
+
 const FN = 'suggest-meeting-plan';
 const MESSAGE_LIMIT = 30;
 const MESSAGE_MAX_LEN = 300;
@@ -49,6 +51,10 @@ Deno.serve(async (req) => {
     if (!meeting) return fail(404, 'NOT_FOUND', '모임을 찾을 수 없어요');
 
     if (meeting.created_by && meeting.created_by !== user.id) return fail(403, 'NOT_HOST', '방장이 약속 잡기를 시작하면 시간과 장소를 선택할 수 있어요');
+
+    // 외부 검색·의도 분석·약속 생성보다 먼저 예산을 예약한다.
+    const allowed = await consumeAIBudget(svc, user.id, FN, meetingId, (key) => Deno.env.get(key));
+    if (!allowed) return fail(429, 'RATE_LIMITED', 'AI 약속 추천 한도에 도달했어요. 기존 약속을 이용하거나 잠시 후 다시 시도해 주세요');
 
     const meetingForPrompt = {
       title: String(meeting.title ?? ''),
