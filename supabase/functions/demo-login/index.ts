@@ -9,9 +9,7 @@ import { preflight, json, fail, errorResponse, readJsonBody } from '../_shared/c
 import { serviceClient, anonClient } from '../_shared/supabase.ts';
 import {
   hashCode,
-  sha256Hex,
   evaluateCode,
-  isRateLimited,
   sessionExpiry,
   normalizeEmployeeNo,
   normalizeName,
@@ -19,9 +17,9 @@ import {
   derivePassword,
 } from '../_shared/auth.ts';
 
+import { loginAttemptKeys } from '../_shared/login-limit.ts';
+
 const FN = 'demo-login';
-const RATE_LIMIT = 20;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
 const SESSION_HOURS = 12;
 
 const MESSAGES: Record<string, string> = {
@@ -72,24 +70,11 @@ Deno.serve(async (req) => {
     const svc = serviceClient();
     const now = new Date();
 
-    // 1. 레이트리밋 — IP 해시 기준 10분 20회
-    const forwarded = req.headers.get('x-forwarded-for') ?? '';
-    const ip = forwarded.split(',')[0].trim() || 'unknown';
-    const attemptKey = await sha256Hex(ip);
-    const since = new Date(now.getTime() - RATE_WINDOW_MS).toISOString();
-    const { data: attempts, error: attemptsError } = await svc
-      .from('demo_entry_attempts')
-      .select('attempted_at')
-      .eq('attempt_key', attemptKey)
-      .gte('attempted_at', since)
-      .limit(RATE_LIMIT + 5);
-    if (attemptsError) throw attemptsError;
-    const stamps = (attempts ?? []).map((a: { attempted_at: string }) => new Date(a.attempted_at));
-    if (isRateLimited(stamps, now, RATE_LIMIT, RATE_WINDOW_MS)) {
-      return fail(429, 'RATE_LIMITED', MESSAGES.RATE_LIMITED);
-    }
-    const { error: insertAttemptError } = await svc.from('demo_entry_attempts').insert({ attempt_key: attemptKey });
-    if (insertAttemptError) throw insertAttemptError;
+    // 1. 신뢰 경계가 확인된 IP와 계정별 시도를 원자적으로 소비한다.
+    const keys = await loginAttemptKeys(req.headers, companyId, employeeNo, Deno.env.get('DEMO_LOGIN_TRUSTED_PROXY_HOPS'));
+    const { data: allowed, error: limitError } = await svc.rpc('consume_login_attempt', { p_keys: keys });
+    if (limitError) throw limitError;
+    if (allowed !== true) return fail(429, 'RATE_LIMITED', MESSAGES.RATE_LIMITED);
 
     // 2. 계열사 존재 확인
     const { data: company, error: companyError } = await svc

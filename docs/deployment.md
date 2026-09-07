@@ -106,6 +106,8 @@ npx supabase functions deploy reset-demo --no-verify-jwt
 
 ## 4. 발표용 입장 코드 만들기
 
+호출 제한 설정과 배포 전 검증은 [입장 시도 제한](login-rate-limit.md)을 확인합니다.
+
 Dashboard → SQL Editor에서 실행 (코드는 발표 직전에 새로 만들고, 저장소에 커밋하지 않습니다):
 
 ```sql
