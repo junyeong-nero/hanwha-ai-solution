@@ -125,6 +125,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&g
 const safeUrl=u=>/^https?:\/\//i.test(String(u||''))?String(u):'#';   // 후보지 링크는 http(s)만 (javascript: 차단)
 /* 인라인 SVG 아이콘 — 정보용 이모지 대신 쓰는 UI 아이콘 (currentColor 를 따라간다) */
 const ICON={
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
   pin:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>',
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   users:'<circle cx="9" cy="8" r="3.4"/><path d="M2.8 19c.7-3.2 3.2-4.9 6.2-4.9s5.5 1.7 6.2 4.9"/><circle cx="17" cy="9" r="2.6"/><path d="M16.2 14.3c2.6.2 4.5 1.7 5.1 4.7"/>',

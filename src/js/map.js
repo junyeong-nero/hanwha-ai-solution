@@ -69,6 +69,8 @@ function candListHtml(planId,cands,disabled){
   return (cands||[]).map((c,i)=>{
     const on=i===selIdx(planId), url=safeUrl(c.url);
     return '<div class="cand'+(on?' on':'')+'" id="cand-'+esc(planId)+'-'+i+'">'
+      +'<details class="cand-reason"><summary class="press" aria-label="'+esc(c.name||'장소')+' 추천 이유">'+ico('info')+'</summary>'
+      +'<div class="cand-reason-panel"><strong>추천 이유</strong>'+esc(c.why||'모임 지역에서 검색한 후보예요. 주소와 업종을 비교해 보세요.')+'</div></details>'
       +'<button class="pick" aria-pressed="'+(on?'true':'false')+'" onclick="selectCand(\''+esc(planId)+'\','+i+')">'
       +'<span class="no">'+(i+1)+'</span>'
       +'<span class="txt"><b>'+esc(c.name||'')+'</b>'
@@ -76,7 +78,6 @@ function candListHtml(planId,cands,disabled){
       +(c.verified===false?'<span class="cat warn">검색 미확인</span>':'')
       +(c.ambiguous?'<span class="cat warn">같은 이름 여러 곳</span>':'')
       +(c.address?'<small>'+esc(c.address)+'</small>':'')
-      +'<em><strong>추천 이유</strong>'+esc(c.why||'모임 지역에서 검색한 후보예요. 주소와 업종을 비교해 보세요.')+'</em>'
       +'</span></button>'
       +'<div class="cand-actions"><button class="opinion press" onclick="draftPlaceOpinion(\''+esc(planId)+'\','+i+')">이곳 어때요?</button>'
       +(url!=='#'?'<a class="detail" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc(c.name||'')+' 상세 보기">상세 ↗</a>':'')

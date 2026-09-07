@@ -154,3 +154,24 @@ test('후보 카드·Marker 는 44px 터치 타겟을 지킨다', () => {
   assert.match(html, /\.plan \.pickbtn\{[^}]*min-height:44px/);
   assert.match(html, /\.plan \.planmap \.pin\{[^}]*width:44px;height:44px/);
 });
+
+test('추천 이유는 내부 클릭으로 유지되고 바깥 클릭·Escape로 닫히며 포커스를 복원한다', () => {
+  const handlers = {};
+  let focused = false;
+  const inside = {};
+  const detail = {open: true, contains: target => target === inside, querySelector: () => ({focus: () => {focused = true;}})};
+  loadApp({files: ['boot.js'], globals: {
+    BACKEND: false, bindChipEvents() {}, renderHome() {}, renderProfile() {}, updateBdg() {},
+    document: {addEventListener: (name, handler) => {handlers[name] = handler;}, querySelectorAll: () => detail.open ? [detail] : []},
+  }});
+  handlers.click({target: inside});
+  assert.equal(detail.open, true);
+  handlers.keydown({key: 'Enter'});
+  assert.equal(detail.open, true);
+  handlers.click({target: {}});
+  assert.equal(detail.open, false);
+  detail.open = true;
+  handlers.keydown({key: 'Escape'});
+  assert.equal(detail.open, false);
+  assert.equal(focused, true);
+});
