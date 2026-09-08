@@ -15,6 +15,7 @@
   --orange:#F37321; --orange-soft:#FF9A57; --orange-deep:#D9600F;
   --grad:linear-gradient(135deg,#FF9A57 0%,#F37321 58%,#E7620F 100%);
   --orange-a12:rgba(243,115,33,.12); --orange-a18:rgba(243,115,33,.18); --orange-a30:rgba(243,115,33,.3);
+  --on-orange:#241306;
   --moon:#F5E9C9; --moon-a:rgba(245,233,201,.14);
   /* 표면 (어두운 곳 → 밝은 곳) */
   --bg:#090C18; --bg2:#0F1326; --card:#151A31; --card2:#1D2340; --card3:#252C4D;
@@ -24,10 +25,12 @@
   /* 의미 */
   --ok:#3DDC97; --warn:#F5C86B; --err:#FF7A7A; --info:#7C9CF5;
   /* 형태 */
-  --r-s:10px; --r-m:14px; --r-l:20px; --r-xl:26px;
+  --r-s:12px; --r-m:16px; --r-l:20px; --r-xl:24px; --r-pill:999px;
+  /* Material 간격 원칙을 4·8px 단위로 적용한다. */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px;
   --sh-1:0 2px 10px rgba(0,0,0,.25); --sh-2:0 12px 32px rgba(0,0,0,.42);
   --sh-orange:0 10px 26px rgba(243,115,33,.32);
-  --nav-h:calc(62px + env(safe-area-inset-bottom));
+  --nav-h:calc(80px + env(safe-area-inset-bottom));
   --ease:cubic-bezier(.2,.8,.2,1); --spring:cubic-bezier(.34,1.4,.4,1);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -42,6 +45,9 @@ body{
 button{font-family:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation;letter-spacing:inherit}
 input,select{font-family:inherit;font-size:16px} /* 16px 미만이면 iOS가 포커스 시 강제 확대 */
 input::placeholder{color:var(--tx3)}
+:where(button,a,input,select,summary,[tabindex]):focus-visible{outline:2px solid var(--orange-soft);outline-offset:3px}
+button{min-width:0}
+[hidden]{display:none!important}
 svg{display:block}
 ::selection{background:var(--orange-a30)}
 /* 터치 피드백 — 카드·행·칩·버튼 공통 */
@@ -75,26 +81,26 @@ svg{display:block}
 main{flex:1;position:relative;z-index:1;overflow:hidden}
 .tabpane{
   position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  padding:calc(10px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 26px);
+  padding:calc(var(--space-4) + env(safe-area-inset-top)) max(var(--space-4),env(safe-area-inset-right)) calc(var(--nav-h) + var(--space-6)) max(var(--space-4),env(safe-area-inset-left));
   display:none;
 }
 .tabpane.on{display:block;animation:fadeup .22s var(--ease) both}
 @keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* 상단 바: 제목 + 오른쪽 아이콘 버튼 */
-.top{display:flex;align-items:center;gap:10px;min-height:52px;margin-bottom:4px}
+.top{display:flex;align-items:center;gap:var(--space-3);min-height:56px;margin-bottom:var(--space-2)}
 .top .tt{flex:1;min-width:0}
-.top .acts{display:flex;gap:6px;flex-shrink:0}
+.top .acts{display:flex;gap:var(--space-2);flex-shrink:0}
 h1.app{font-size:24px;font-weight:800;letter-spacing:-.6px;line-height:1.2}
 h1.app em{font-style:normal;color:var(--orange)}
-.sub{font-size:13.5px;color:var(--tx2);margin:2px 0 16px;line-height:1.5}
+.sub{font-size:13.5px;color:var(--tx2);margin:0 0 var(--space-6);line-height:1.6}
 .t{font-size:16px;font-weight:800;letter-spacing:-.3px;margin:24px 0 10px}
-.sec{display:flex;align-items:baseline;justify-content:space-between;margin:24px 0 10px}
+.sec{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3);margin:var(--space-6) 0 var(--space-3)}
 .sec h2{font-size:16px;font-weight:800;letter-spacing:-.3px}
 .sec small{font-size:12.5px;color:var(--tx3);font-weight:600}
 .hint{font-size:13px;color:var(--tx2);line-height:1.65}
 .ib{
-  width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  width:48px;height:48px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
   background:var(--card);border:1px solid var(--line);color:var(--tx2);position:relative;flex-shrink:0;
 }
 .ib svg{width:20px;height:20px}
@@ -109,13 +115,13 @@ nav#nav{
   position:absolute;left:0;right:0;bottom:0;z-index:40;
   display:flex;background:rgba(9,12,24,.82);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
   border-top:1px solid var(--hair);
-  padding:6px 10px calc(4px + env(safe-area-inset-bottom));
+  height:var(--nav-h);padding:var(--space-2) max(var(--space-2),env(safe-area-inset-right)) calc(var(--space-2) + env(safe-area-inset-bottom)) max(var(--space-2),env(safe-area-inset-left));
 }
 nav#nav button{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:4px 0 2px;color:var(--tx3);font-size:10.5px;font-weight:700;position:relative;min-height:50px;letter-spacing:-.1px;
+  padding:var(--space-1) 0;color:var(--tx3);font-size:12px;font-weight:700;position:relative;min-height:50px;letter-spacing:-.1px;
 }
-nav#nav .ni{width:56px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+nav#nav .ni{width:64px;height:32px;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;transition:background .2s}
 nav#nav svg{width:24px;height:24px;transition:transform .2s var(--spring)}
 nav#nav svg.f{display:none}
 nav#nav button.on{color:var(--orange-soft)}
@@ -124,40 +130,40 @@ nav#nav button.on svg.o{display:none}
 nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .navbdg{
   position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;border-radius:9px;
-  background:var(--orange);color:#fff;font-size:10px;font-weight:800;
+  background:var(--orange);color:var(--on-orange);font-size:10px;font-weight:800;
   display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #0b0e1b;
 }
 
 /* ===== 공용 컴포넌트 ===== */
 .card{
-  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 40%),var(--card);
-  border:1px solid var(--line);border-radius:var(--r-l);padding:16px;box-shadow:var(--sh-1);
+  background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-l);padding:var(--space-4);box-shadow:none;
 }
 .chip{
   display:inline-flex;align-items:center;gap:5px;padding:0 14px;border-radius:999px;border:1px solid var(--line);
-  background:var(--card);color:var(--tx2);font-size:13.5px;font-weight:600;margin:0 6px 8px 0;height:36px;white-space:nowrap;
+  background:var(--card);color:var(--tx2);font-size:13.5px;font-weight:600;margin:0 var(--space-2) var(--space-2) 0;min-height:48px;white-space:nowrap;
 }
-.chip.on{background:var(--orange-a18);border-color:var(--orange);color:var(--orange-soft);font-weight:700}
-.chip.on::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--orange);box-shadow:0 0 8px var(--orange)}
+.chip.on{background:var(--moon-a);border-color:var(--moon);color:var(--moon);font-weight:700}
+.chip.on::before{content:'';width:10px;height:6px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);margin-right:var(--space-1)}
 .chip.add{border-style:dashed;color:var(--tx3);background:transparent}
 .chip.add::before{display:none}
 /* 직접 추가한 항목: 칩 오른쪽에 삭제(×) 버튼 */
-.chipwrap{display:inline-flex;align-items:stretch;margin:0 6px 8px 0}
+.chipwrap{display:inline-flex;align-items:stretch;margin:0 var(--space-2) var(--space-2) 0}
 .chipwrap .chip{margin:0;border-radius:999px 0 0 999px;border-right:0}
-.chipx{border:1px solid var(--line);border-radius:0 999px 999px 0;background:var(--card);color:var(--tx3);padding:0 12px 0 8px;font-size:15px;height:36px;min-width:36px}
-.chipwrap .chip.on+.chipx{border-color:var(--orange);color:var(--orange-soft);background:var(--orange-a18)}
+.chipx{border:1px solid var(--line);border-radius:0 999px 999px 0;background:var(--card);color:var(--tx3);padding:0 12px 0 8px;font-size:15px;min-height:48px;min-width:48px}
+.chipwrap .chip.on+.chipx{border-color:var(--moon);color:var(--moon);background:var(--moon-a)}
 /* 가로 스크롤 칩 줄 (필터) */
-.hscroll{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:2px 18px 6px;-webkit-overflow-scrolling:touch}
+.hscroll{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0;padding:var(--space-1) 0 var(--space-2);-webkit-overflow-scrolling:touch}
 .hscroll::-webkit-scrollbar{display:none}
 .hscroll .chip{margin:0;flex-shrink:0}
 .cta{
-  display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:0 16px;height:52px;border-radius:16px;
-  background:var(--grad);color:#fff;font-size:15.5px;font-weight:800;text-align:center;box-shadow:var(--sh-orange);letter-spacing:-.2px;
+  display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:var(--space-3) var(--space-4);min-height:48px;height:auto;border-radius:var(--r-pill);
+  background:var(--orange);color:var(--on-orange);font-size:15px;font-weight:800;text-align:center;box-shadow:none;letter-spacing:-.2px;
 }
 .cta:disabled{background:var(--card2);color:var(--tx-disabled);box-shadow:none}
 .cta.line{background:transparent;border:1px solid var(--line);color:var(--tx2);box-shadow:none;font-weight:700}
 .cta.soft{background:var(--orange-a12);color:var(--orange-soft);box-shadow:none;border:1px solid var(--orange-a30)}
-.cta.sm{height:44px;font-size:14px;border-radius:13px}
+.cta.sm{min-height:48px;font-size:14px}
 .tag{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:8px;background:var(--card2);color:var(--tx2);font-size:11.5px;font-weight:700;margin:0 5px 4px 0}
 .tag.or{background:var(--orange-a18);color:var(--orange-soft)}
 .badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;background:var(--card2);color:var(--tx2)}
@@ -196,30 +202,19 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 #toast b{color:var(--orange-soft)}
 
 /* ===== 홈: 다음 할 일 카드 ===== */
-.next{margin:0 0 14px;padding:14px 16px 16px}
+.next{margin:0 0 var(--space-4);padding:var(--space-4)}
 .next .nh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
 .next .nh b{font-size:15px;font-weight:800;letter-spacing:-.2px}
-.next .nh small{font-size:12px;color:var(--tx3);font-weight:700}
-.next .ns{display:flex;align-items:center;gap:11px;padding:7px 0}
-.next .ck{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#0B1A12}
-.next .ns.ok .ck{background:var(--ok);border-color:var(--ok)}
-.next .ns.cur .ck{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-a18)}
-.next .ns b{display:block;font-size:14px;font-weight:700;letter-spacing:-.2px}
-.next .ns.ok b{color:var(--tx3)}
-.next .ns small{font-size:13px;color:var(--tx2);line-height:1.6}
 .next-action{font-size:14px;color:var(--tx2)}
-.next .cta{margin-top:10px}
-.next-steps{margin-top:8px;border-top:1px solid var(--line)}
-.next-steps summary{min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)}
-.next-steps summary::before{content:'+';font-size:16px}
-.next-steps[open] summary::before{content:'−'}
-.next-steps summary:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:var(--r-s)}
+.next .cta{margin-top:var(--space-4)}
 
 /* ===== 홈: 태양계 ===== */
-.hero{position:relative;margin:2px -18px 0;padding:0 18px}
-.hero::before{content:'';position:absolute;left:50%;top:50%;width:360px;height:360px;transform:translate(-50%,-50%);border-radius:50%;
+.hero{position:relative;margin:var(--space-6) calc(0px - var(--space-4)) 0;min-width:0}
+#homehint{text-align:center;margin-top:var(--space-3)}
+#colist{padding:var(--space-1) var(--space-3)}
+.hero::before{content:'';position:absolute;left:50%;top:50%;width:min(100%,360px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
   background:radial-gradient(circle,rgba(245,233,201,.09),rgba(243,115,33,.05) 40%,transparent 70%);pointer-events:none}
-.space{position:relative;width:320px;height:320px;margin:4px auto 0}
+.space{position:relative;width:min(100%,320px);aspect-ratio:1;margin:var(--space-2) auto 0}
 .orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px dashed rgba(165,172,198,.18);border-radius:50%}
 /* 궤도 회전 — 시작 각도(--a)와 한 바퀴 도는 시간(--d)을 궤도마다 다르게 받는다.
    애니메이션이 꺼져도(reduced-motion) 기본 transform 이 시작 각도를 지켜 행성이 한곳에 겹치지 않는다. */
@@ -237,7 +232,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 /* 번호를 역회전시켜 움직이는 행성에서도 똑바로 읽는다. */
 .planet .dot{width:24px;height:24px;border-radius:50%;background:var(--card);border:2px solid var(--c);color:var(--tx);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;transform:rotate(calc(0deg - var(--a)));animation:planetLabel var(--d) linear infinite}
 @keyframes planetLabel{from{transform:rotate(calc(0deg - var(--a)))}to{transform:rotate(calc(-360deg - var(--a)))}}
-.planet-help{position:relative;color:var(--tx2);font-size:13px;line-height:1.6;text-align:center;text-wrap:pretty}
+.planet-help{position:relative;padding-inline:var(--space-4);color:var(--tx2);font-size:13px;line-height:1.6;text-align:center;text-wrap:pretty}
 .planet:focus-visible{outline:2px solid var(--tx);outline-offset:0}
 .planet.dim .dot{border-color:var(--tx3);box-shadow:none}
 .planet.lit .dot{box-shadow:0 0 6px var(--c),0 0 18px var(--c),0 0 34px color-mix(in srgb,var(--c) 45%,transparent)}
@@ -248,9 +243,9 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   box-shadow:0 0 24px rgba(245,233,201,.6),0 0 80px rgba(245,233,201,.22);
   display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:900;color:#4A3F22;letter-spacing:-.2px;
 }
-.spacestats{display:flex;gap:8px;margin:14px 0 4px}
-.spacestats .card{flex:1;padding:12px 8px 11px;text-align:center;border-radius:16px}
-.spacestats b{display:block;font-size:20px;font-weight:800;color:var(--orange-soft);letter-spacing:-.5px;line-height:1.15}
+.spacestats{display:flex;gap:var(--space-2);margin:var(--space-4) 0;align-self:start}
+.spacestats .card{flex:1;padding:var(--space-4) var(--space-2);text-align:center;border-radius:var(--r-m)}
+.spacestats b{display:block;font-size:24px;font-weight:800;color:var(--tx);letter-spacing:-.5px;line-height:1.15}
 .spacestats span{font-size:11.5px;color:var(--tx2);font-weight:600}
 .corow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--hair);min-height:52px}
 .corow:last-child{border-bottom:0}
@@ -287,20 +282,20 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @keyframes fade{from{opacity:0}}
 .sheet{
   position:absolute;left:0;right:0;bottom:0;background:var(--bg2);border-radius:var(--r-xl) var(--r-xl) 0 0;
-  border-top:1px solid var(--line2);padding:8px 20px calc(20px + env(safe-area-inset-bottom));
-  animation:up .34s var(--spring);box-shadow:0 -20px 60px rgba(0,0,0,.5);max-height:calc(100dvh - 40px);display:flex;flex-direction:column;
+  border-top:1px solid var(--line2);padding:var(--space-2) max(var(--space-4),env(safe-area-inset-right)) calc(var(--space-4) + env(safe-area-inset-bottom)) max(var(--space-4),env(safe-area-inset-left));
+  animation:up .34s var(--spring);box-shadow:0 -20px 60px rgba(0,0,0,.5);max-height:calc(100dvh - 40px - env(safe-area-inset-top));display:flex;flex-direction:column;
 }
 @keyframes up{from{transform:translateY(60%);opacity:.6}}
 .grip{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 14px;flex-shrink:0}
-.sh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;flex-shrink:0}
+.sh{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3);flex-shrink:0}
 .sh b{font-size:18px;font-weight:800;letter-spacing:-.4px}
-.sh .ib{width:36px;height:36px}
+.sh .ib{width:48px;height:48px}
 .sh .ib svg{width:18px;height:18px}
 .sbody{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;scrollbar-width:none}
 .sbody::-webkit-scrollbar,.cwrap::-webkit-scrollbar{display:none}
 
 /* ===== 매칭 ===== */
-.prefbar{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+.prefbar{display:flex;align-items:center;gap:var(--space-3);margin:0 0 var(--space-4);padding:var(--space-3) var(--space-4);background:var(--card);border-radius:var(--r-m)}
 .prefbar .pf{flex:1;display:flex;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--tx2);line-height:1.5;min-width:0}
 .prefbar .pf b{color:var(--tx);font-weight:700}
 .prefbar .edit{flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--tx2);padding:8px 10px;min-height:44px;border-radius:var(--r-s);background:var(--card2)}
@@ -308,16 +303,16 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 /* 플로팅 버튼이 목록 끝 카드·안내문을 가리지 않도록 매칭 탭만 아래 여백을 더 둔다 */
 #tab-match{padding-bottom:calc(var(--nav-h) + 96px)}
 .filters{margin-bottom:16px}
-.meet{margin-bottom:14px;padding:20px 16px 16px;position:relative;overflow:hidden;background:var(--card);box-shadow:none;border-radius:var(--r-m);display:flex;flex-direction:column}
-.meet .hd{display:flex;align-items:flex-start;gap:12px}
+.meet{margin-bottom:var(--space-4);padding:var(--space-4);position:relative;overflow:hidden;background:var(--card);box-shadow:none;border-radius:var(--r-m);display:flex;flex-direction:column}
+.meet .hd{display:flex;align-items:flex-start;gap:var(--space-3);cursor:pointer;border-radius:var(--r-s)}
 .meet .em{width:48px;height:48px;border-radius:var(--r-s);background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
-.meet h3{font-size:16.5px;font-weight:800;line-height:1.3;letter-spacing:-.35px}
+.meet h3{font-size:16.5px;font-weight:800;line-height:1.5;letter-spacing:-.35px;overflow-wrap:anywhere}
 .meet .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:var(--tx2);margin-top:5px;font-weight:600}
 .meet .meta span{display:inline-flex;align-items:center;gap:4px}
 .meet .meta .ic{color:var(--tx3);width:14px;height:14px}
-.meet .tags{margin-top:14px;display:flex;flex-wrap:wrap;margin-bottom:auto;padding-bottom:16px}
+.meet .tags{margin-top:var(--space-4);display:flex;flex-wrap:wrap;margin-bottom:auto;padding-bottom:var(--space-4)}
 .meet .tag{background:transparent;border-color:transparent;padding-left:0;margin-bottom:0}
-.meet .ft{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--hair)}
+.meet .ft{display:flex;align-items:center;gap:10px;padding-top:var(--space-4);border-top:1px solid var(--hair)}
 .dt .em{width:52px;height:52px;border-radius:16px;background:linear-gradient(145deg,var(--card3),var(--card2));border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 .dt .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:var(--tx2);margin-top:5px;font-weight:600}
 .dt .meta span{display:inline-flex;align-items:center;gap:4px}
@@ -341,8 +336,8 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .meet .cta{margin-top:12px;height:48px;font-size:15px}
 .meet .cta.line{color:var(--tx);border-color:var(--line2);background:var(--card2)}
 .fab{
-  position:absolute;right:18px;bottom:calc(var(--nav-h) + 16px);z-index:30;height:50px;padding:0 18px 0 14px;border-radius:25px;
-  background:var(--grad);color:#fff;font-weight:800;font-size:14.5px;display:none;align-items:center;gap:6px;box-shadow:var(--sh-orange);
+  position:absolute;right:max(var(--space-4),env(safe-area-inset-right));bottom:calc(var(--nav-h) + var(--space-4));z-index:30;min-height:56px;padding:0 var(--space-6);border-radius:var(--r-m);
+  background:var(--orange);color:var(--on-orange);font-weight:800;font-size:14.5px;display:none;align-items:center;gap:6px;box-shadow:var(--sh-orange);
 }
 .fab svg{width:20px;height:20px}
 .fab.on{display:flex;animation:pop2 .3s var(--spring) both}
@@ -351,7 +346,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 #matchnote{font-size:12.5px;color:var(--orange-soft);background:var(--orange-a12);border:1px solid rgba(243,115,33,.25);border-radius:12px;padding:10px 12px;margin-bottom:12px}
 
 /* ===== 채팅 리스트 ===== */
-.room{display:flex;gap:13px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--hair);width:100%;text-align:left;min-height:72px;border-radius:14px}
+.room{display:flex;gap:var(--space-4);align-items:center;padding:var(--space-4) 0;border-bottom:1px solid var(--hair);width:100%;text-align:left;min-height:72px;border-radius:var(--r-m)}
 .room:last-child{border-bottom:0}
 .room .av{width:54px;height:54px;border-radius:18px;background:linear-gradient(145deg,var(--card3),var(--card2));border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0;position:relative}
 .room .av .full{position:absolute;right:-4px;bottom:-4px;font-size:13px;width:22px;height:22px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--bg2)}
@@ -363,21 +358,21 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .room .r2{display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:8px}
 .room .r2 p{font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 .room .r2 p.ai{color:var(--orange-soft);font-weight:600}
-.room .ub{min-width:20px;height:20px;border-radius:10px;background:var(--orange);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0}
+.room .ub{min-width:20px;height:20px;border-radius:10px;background:var(--orange);color:var(--on-orange);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0}
 .room .r2 .pl{font-size:11px;color:var(--tx3);font-weight:700;flex-shrink:0}
 
 /* ===== 채팅방 — 탭 바를 덮지 않아 채팅 중에도 다른 탭으로 이동할 수 있다 ===== */
 #roomview{position:absolute;top:0;left:0;right:0;bottom:var(--nav-h);z-index:35;background:var(--bg);display:none;flex-direction:column}
 #roomview.on{display:flex}
 #rhead{
-  display:flex;align-items:center;gap:4px;padding:calc(6px + env(safe-area-inset-top)) 10px 8px 6px;
+  display:flex;align-items:center;gap:var(--space-1);padding:calc(var(--space-2) + env(safe-area-inset-top)) var(--space-4) var(--space-2);
   border-bottom:1px solid var(--hair);background:rgba(9,12,24,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
 }
 #rhead .ttl{flex:1;min-width:0;padding:0 4px}
 #rhead b{font-size:16px;font-weight:800;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.3px}
 #rhead span{font-size:11.5px;color:var(--tx3);font-weight:600}
-#rhead .ib{width:40px;height:40px;background:transparent;border:0}
-#rhead .back{padding:8px 6px}
+#rhead .ib{width:48px;height:48px;background:transparent;border:0}
+#rhead .back{padding:var(--space-3);min-width:48px;min-height:48px}
 .membtn{display:flex;align-items:center;gap:4px;padding:8px 8px;min-height:44px;color:var(--tx2);border-radius:12px}
 .membtn svg{width:20px;height:20px}
 .membtn b{font-size:12.5px;color:var(--tx2);font-weight:800}
@@ -405,8 +400,8 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .mbadge.full{background:var(--moon-a);color:var(--moon)}
 #rbanner{display:none;background:linear-gradient(90deg,rgba(243,115,33,.14),rgba(243,115,33,.06));border-bottom:1px solid rgba(243,115,33,.25);padding:9px 14px;font-size:12.5px;color:var(--orange-soft);align-items:center;gap:8px;font-weight:600}
 #rbanner.on{display:flex}
-#rbanner button{margin-left:auto;background:var(--grad);color:#fff;font-size:12px;font-weight:800;padding:0 12px;height:34px;border-radius:10px;flex-shrink:0;box-shadow:0 4px 12px rgba(243,115,33,.3)}
-#msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 10px;display:flex;flex-direction:column;gap:3px}
+#rbanner button{margin-left:auto;background:var(--orange);color:var(--on-orange);font-size:12px;font-weight:800;padding:0 12px;height:34px;border-radius:10px;flex-shrink:0;box-shadow:0 4px 12px rgba(243,115,33,.3)}
+#msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--space-4);min-height:0;display:flex;flex-direction:column;gap:3px}
 .msg{display:flex;gap:8px;max-width:84%;margin-top:10px;align-items:flex-end}
 .msg.cont{margin-top:0}
 .msg .mav{width:34px;height:34px;border-radius:12px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;align-self:flex-start}
@@ -417,7 +412,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .msg.cont .bub{border-radius:18px}
 .msg time{font-size:10.5px;color:var(--tx3);flex-shrink:0;margin-bottom:3px;font-weight:600}
 .msg.me{align-self:flex-end;flex-direction:row-reverse}
-.msg.me .bub{background:var(--grad);border:0;border-radius:18px 6px 18px 18px;color:#fff;box-shadow:0 4px 14px rgba(243,115,33,.22)}
+.msg.me .bub{background:var(--grad);border:0;border-radius:18px 6px 18px 18px;color:var(--on-orange);box-shadow:none}
 .msg.me.cont .bub{border-radius:18px}
 .msg.sys{align-self:center;max-width:92%;margin:12px 0 2px}
 .msg.sys .bub{background:var(--moon-a);border:1px solid rgba(245,233,201,.18);border-radius:12px;color:var(--moon);font-size:12px;text-align:center;padding:7px 12px}
@@ -463,12 +458,12 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .vote .fill{height:100%;border-radius:4px;background:var(--grad);transition:width .4s}
 .vote .lb{font-size:11.5px;color:var(--tx3);margin-top:6px;display:flex;justify-content:space-between;font-weight:600}
 .vote .lb b{color:var(--orange-soft)}
-#composer{display:flex;gap:8px;align-items:center;padding:8px 12px calc(8px + 2px);border-top:1px solid var(--hair);background:rgba(9,12,24,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
-#composer .plus{width:42px;height:42px;border-radius:50%;background:var(--card2);color:var(--tx2);flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+#composer{display:flex;gap:8px;align-items:center;padding:var(--space-3) var(--space-4);border-top:1px solid var(--hair);background:rgba(9,12,24,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+#composer .plus{width:48px;height:48px;border-radius:50%;background:var(--card2);color:var(--tx2);flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
 #composer .plus svg{width:20px;height:20px}
 #composer input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:11px 16px;color:var(--tx);outline:none;min-width:0;min-height:44px}
 #composer input:focus{border-color:var(--orange-a30)}
-#composer .send{width:42px;height:42px;border-radius:50%;background:var(--grad);flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(243,115,33,.35)}
+#composer .send{width:48px;height:48px;border-radius:50%;background:var(--orange);color:var(--on-orange);flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(243,115,33,.35)}
 .psheet-item{display:flex;align-items:center;gap:14px;width:100%;padding:12px 4px;font-size:15px;font-weight:700;text-align:left;border-bottom:1px solid var(--hair);min-height:60px;letter-spacing:-.2px}
 .psheet-item:last-child{border-bottom:0}
 .psheet-item i{font-style:normal;font-size:20px;width:44px;height:44px;border-radius:14px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -499,10 +494,16 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @keyframes fin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
 /* ===== 프로필 ===== */
+#tab-profile{padding-bottom:var(--nav-h);scroll-padding-bottom:calc(var(--nav-h) + 96px)}
 #tab-profile :is(.hint,.sub,.pfhead small,.lb span){word-break:keep-all;overflow-wrap:anywhere}
-.pfhero{display:flex;align-items:center;gap:16px;padding:18px 16px}
+.profile-grid{display:grid;gap:var(--space-6)}
+.profile-section{min-width:0;display:flex;flex-direction:column;gap:var(--space-3)}
+.profile-section>.sec{margin:0;min-height:24px}
+.profile-section>.card{flex:1}
+.profile-section>.pfhero{flex:0}
+.profile-preferences{display:flex;flex-direction:column;gap:var(--space-6)}
+.pfhero{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4)}
 .pfavw{position:relative;flex-shrink:0}
-.pfavw>.hint{display:block;text-align:center;margin-top:6px}
 .pfav{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--card3),var(--card2));border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 0 22px var(--orange-a30)}
 .pfavw .edit{position:absolute;right:-2px;top:52px;width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 0 0 2px var(--card)}
 .pfavw .edit svg{width:13px;height:13px;color:#fff}
@@ -511,11 +512,11 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .pfhead input:focus{border-bottom-color:var(--orange)}
 .pfhead small{display:block;font-size:13px;color:var(--tx2);margin-top:5px;line-height:1.6}
 .pfhead .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.req{display:inline-block;font-size:10px;font-weight:800;color:var(--orange);border:1px solid rgba(243,115,33,.5);border-radius:5px;padding:1.5px 5px;margin-left:6px;vertical-align:2px}
+.req{display:inline-block;font-size:11px;font-weight:600;color:var(--tx2);padding:var(--space-1) 0;margin-left:6px;vertical-align:2px}
 .req.opt{color:var(--tx3);border-color:var(--line)}
-.frow{margin-bottom:18px}
-.frow:last-child{margin-bottom:2px}
-.frow label{display:block;font-size:13.5px;font-weight:800;margin-bottom:9px;letter-spacing:-.2px}
+.frow{margin-bottom:var(--space-6)}
+.frow:last-child{margin-bottom:0}
+.frow label{display:block;font-size:13.5px;font-weight:800;margin-bottom:var(--space-2);letter-spacing:-.2px}
 .frow select,.frow-select{
   width:100%;background:var(--card2);border:1px solid var(--line);border-radius:14px;
   padding:13px 40px 13px 15px;color:var(--tx);outline:none;-webkit-appearance:none;appearance:none;min-height:50px;font-weight:600;
@@ -524,38 +525,40 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 }
 .frow select:disabled{opacity:.7}
 .step{display:inline-flex;align-items:center;gap:0;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:3px}
-.step button{width:44px;height:40px;border-radius:11px;background:transparent;font-size:20px;color:var(--tx2);display:flex;align-items:center;justify-content:center}
+.step button{width:48px;height:48px;border-radius:var(--r-s);background:transparent;font-size:20px;color:var(--tx2);display:flex;align-items:center;justify-content:center}
 .step button:active{background:var(--card3)}
 .step b{font-size:16px;min-width:64px;text-align:center;font-weight:800;letter-spacing:-.3px}
 .seg{display:flex;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:3px;gap:2px}
-.seg button{flex:1;padding:0 4px;border-radius:11px;font-size:13px;font-weight:700;color:var(--tx3);min-height:42px;letter-spacing:-.2px}
-.seg button.on{background:var(--grad);color:#fff;box-shadow:0 4px 12px rgba(243,115,33,.3)}
+.seg button{flex:1;padding:0 4px;border-radius:11px;font-size:13px;font-weight:700;color:var(--tx3);min-height:48px;letter-spacing:-.2px}
+.seg button.on{background:var(--moon-a);color:var(--moon);box-shadow:none}
 .swrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0}
 .swrow .lb b{font-size:14px;display:block;font-weight:800;letter-spacing:-.2px}
 .swrow .lb span{font-size:13px;color:var(--tx2);line-height:1.6;display:block;margin-top:2px}
-.sw{width:52px;height:31px;border-radius:16px;background:var(--card3);position:relative;transition:.25s;flex-shrink:0;border:1px solid var(--line)}
-.sw::after{content:'';position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;transition:.25s var(--spring);box-shadow:0 2px 6px rgba(0,0,0,.3)}
-.sw.on{background:var(--orange);border-color:var(--orange)}
+.sw{width:52px;height:48px;position:relative;flex-shrink:0}
+.sw::before{content:'';position:absolute;inset:8px 0;border-radius:var(--r-pill);background:var(--card3);border:1px solid var(--line)}
+.sw::after{content:'';position:absolute;top:12px;left:4px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.25s var(--spring);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.sw.on::before{background:var(--orange);border-color:var(--orange)}
 .sw.on::after{left:24px}
-/* 저장 바 — 변경 사항이 있을 때 화면 아래에 떠 있다 */
-.savebar{position:sticky;bottom:calc(var(--nav-h) + 10px);z-index:5;padding:10px 0 0;margin-top:6px;pointer-events:none;display:none}
-.savebar.on{display:block;animation:up .3s var(--spring) both}
-.savebar .cta{pointer-events:auto}
-#saveBtn.dirty{box-shadow:var(--sh-orange),0 0 0 4px rgba(243,115,33,.22)}
-#saveBtn:disabled{background:var(--card);border:1px solid var(--line);color:var(--tx-disabled)}
-.pfoot{display:flex;flex-direction:column;gap:8px;margin-top:22px}
-.pfoot .cta.line{height:46px;font-size:14px}
+/* 저장과 다음 행동을 한곳에 모아 긴 설정 화면에서도 접근한다. */
+.profile-actions{position:sticky;bottom:0;z-index:5;display:flex;gap:var(--space-2);align-items:center;justify-content:flex-end;margin-top:var(--space-6);padding:var(--space-3) 0;background:var(--bg2);border-top:1px solid var(--line)}
+.profile-actions>.cta{flex:1;max-width:360px}
+.savebar{display:none;flex-shrink:0}
+.savebar.on{display:block}
+.savebar .cta{min-width:80px}
+.pfoot{display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-6)}
+.pfoot .cta.line{font-size:14px}
+#modehint{text-align:center;margin-top:var(--space-4)}
 
 /* ===== 발표 입장 화면 (백엔드 모드에서만 표시) ===== */
 #entry{position:absolute;inset:0;z-index:80;display:none;align-items:flex-start;justify-content:center;padding:calc(28px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
   background:radial-gradient(90% 45% at 50% 0%,rgba(245,233,201,.10),transparent 60%),linear-gradient(180deg,#0A0D1B,#121738);overflow-y:auto}
 #entry.on{display:flex}
-.ecard{width:100%;max-width:360px;margin:auto 0}
+.ecard{width:100%;max-width:440px;margin:auto 0}
 .emoon{width:74px;height:74px;border-radius:50%;margin:8px auto 18px;background:radial-gradient(circle at 36% 32%,#FFF7DF,var(--moon) 58%,#CDB983);box-shadow:0 0 30px rgba(245,233,201,.6),0 0 90px rgba(245,233,201,.2);animation:floaty 5s ease-in-out infinite}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .ecard h1.app{font-size:28px;text-align:center}
 .ecard .sub{text-align:center;margin-bottom:20px}
-.eform{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 16px 16px;box-shadow:var(--sh-1)}
+.eform{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:var(--space-4);box-shadow:var(--sh-1)}
 .elb{display:block;font-size:12.5px;font-weight:800;margin:14px 0 6px;color:var(--tx2);letter-spacing:-.1px}
 .elb small{font-weight:500;color:var(--tx3);margin-left:6px}
 #entry input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:13px 15px;color:var(--tx);outline:none;min-height:50px;font-weight:600;transition:border-color .15s,box-shadow .15s}
@@ -575,16 +578,8 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 /* ===== 반응형 레이아웃 ===== */
 /* 모바일: 휴대폰과 좁은 폴더블 화면 */
 @media (max-width:599px){
-  #app{width:100%;max-width:520px;}
+  #app{width:100%;max-width:599px;}
 }
-@media (max-width:430px){
-  .tabpane{padding-left:18px;padding-right:18px;}
-}
-@media (min-width:431px) and (max-width:599px){
-  .tabpane{padding-left:24px;padding-right:24px;}
-  .hscroll{margin:0 -24px;padding-left:24px;padding-right:24px}
-}
-
 /* 넓은 화면의 시트는 중앙에 두고, 빈 상태는 카드 열 전체를 쓴다. */
 @media (min-width:600px){
   .sheet{
@@ -592,6 +587,8 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
     border-radius:var(--r-xl);transform:translateX(-50%);animation-name:up-wide;
   }
   @keyframes up-wide{from{transform:translate(-50%,40%);opacity:.7}to{transform:translate(-50%,0);opacity:1}}
+  .profile-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .sheet{padding-inline:var(--space-6)}
   .meetgrid > .empty{grid-column:1 / -1}
   .empty .cta{max-width:320px;margin-left:auto;margin-right:auto}
 }
@@ -604,12 +601,12 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
     border-left:1px solid #1b2038; border-right:1px solid #1b2038;
   }
   .tabpane{
-    padding:clamp(24px,4vw,42px) clamp(24px,5vw,56px) calc(var(--nav-h) + 34px);
+    padding:calc(var(--space-6) + env(safe-area-inset-top)) max(var(--space-6),env(safe-area-inset-right)) calc(var(--nav-h) + var(--space-8)) max(var(--space-6),env(safe-area-inset-left));
   }
   .hscroll{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
-  .space{width:min(50vw,420px);height:min(50vw,420px);}
+  .space{width:clamp(320px,50vw,420px);height:auto;}
   .spacestats{
-    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-4);
   }
   .spacestats .card{min-width:0;}
   .meetgrid{
@@ -623,34 +620,32 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @media (min-width:1024px){
   #app{max-width:1440px;}
   nav#nav{
-    top:0; right:auto; bottom:0; width:112px;
+    top:0; right:auto; bottom:0; width:96px;height:auto;
     flex-direction:column; align-items:stretch; gap:8px;
-    padding:calc(22px + env(safe-area-inset-top)) 12px calc(22px + env(safe-area-inset-bottom));
+    padding:calc(var(--space-6) + env(safe-area-inset-top)) var(--space-3) calc(var(--space-6) + env(safe-area-inset-bottom));
     border-top:0; border-right:1px solid var(--line);
   }
   nav#nav button{
     flex:none; width:100%; min-height:64px; gap:5px; padding:10px 4px;
-    border-radius:14px; font-size:11px;
+    border-radius:var(--r-m); font-size:12px;
   }
   nav#nav button.on{background:var(--orange-a12);}
   nav#nav button.on .ni{background:transparent}
   nav#nav svg{width:24px;height:24px;}
   .navbdg{top:7px;left:calc(50% + 7px);}
   /* 제목·설명·목록·하단 행동이 같은 콘텐츠 경계를 공유한다. */
-  .tabpane{left:112px;padding:34px max(32px,calc((100% - 112px - 1080px) / 2)) 42px;}
-  #tab-chat,#tab-profile{padding-inline:max(32px,calc((100% - 112px - 920px) / 2))}
+  .tabpane{left:96px;padding:calc(var(--space-8) + env(safe-area-inset-top)) max(var(--space-8),env(safe-area-inset-right),calc((100% - 96px - 1080px) / 2)) calc(var(--space-8) + env(safe-area-inset-bottom)) max(var(--space-8),env(safe-area-inset-left),calc((100% - 96px - 1080px) / 2));}
   #tab-match{padding-bottom:110px}
   .hscroll{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
   .sheet{max-width:640px;}
   .tabpane > .top h1.app{font-size:27px;}
   .tabpane > .sub{font-size:14px;}
   /* 홈의 다음 행동과 은하계를 나란히 두어 연결 현황도 바로 보이게 한다. */
-  #tab-home.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;align-content:start;
-    grid-template-areas:"top top" "sub sub" "next galaxy" "stats galaxy" "guide caption" "section section" "companies companies"}
-  #tab-home:has(#nextcard:empty){grid-template-areas:"top top" "sub sub" "stats stats" "galaxy galaxy" "caption caption" "guide guide" "section section" "companies companies"}
+  #tab-home.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:var(--space-6);align-content:start;
+    grid-template-areas:"top top" "sub sub" "next galaxy" "stats galaxy" "stats caption" "section section" "companies companies"}
+  #tab-home:has(#nextcard:empty){grid-template-areas:"top top" "sub sub" "stats stats" "galaxy galaxy" "caption caption" "section section" "companies companies"}
   #tab-home > .top{grid-area:top}
   #tab-home > .sub{grid-area:sub}
-  #tab-home > .guide-entry{grid-area:guide;align-self:start}
   #nextcard{grid-area:next}
   #nextcard:empty{display:none}
   #tab-home .hero{grid-area:galaxy;margin:0;padding:0;min-width:0}
@@ -661,10 +656,11 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   #colist{grid-area:companies}
   .meetgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1080px;}
   .meetgrid > .meet{margin-bottom:0;}
-  .savebar{bottom:16px}
-  .fab{right:max(32px,calc((100% - 112px - 1080px) / 2));bottom:24px}
-  #roomview,#album,#satview{left:112px;bottom:0;}
-  #toast{left:128px;right:32px;max-width:760px;margin:0 auto;}
+  #tab-profile{padding-bottom:0;scroll-padding-bottom:96px}
+  #rhead,#rbanner,#msgs,#composer,#roomview .openers,#roomview .typing{padding-inline:max(var(--space-8),env(safe-area-inset-left),env(safe-area-inset-right),calc((100% - 880px) / 2))}
+  .fab{right:max(32px,calc((100% - 96px - 1080px) / 2));bottom:24px}
+  #roomview,#album,#satview{left:96px;bottom:0;}
+  #toast{left:112px;right:32px;max-width:760px;margin:0 auto;}
 }
 
 /* ===== UX 후속: 상세 시트 · 확인 시트 · 첫 인사 칩 · 날짜 구분선 · 이전 제안 · 멤버 태그 ===== */
@@ -703,18 +699,15 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .emrow button.on{border-color:var(--orange);background:var(--orange-a18);box-shadow:0 0 0 3px var(--orange-a12)}
 
 /* 입력을 먼저 보여 주고 자세한 사용법은 도움말 시트에 둔다. */
-.guide-entry,.profile-next{margin-bottom:14px}
 .profile-help{min-height:44px}
 .help-dialog{position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:var(--tx)}
 .help-dialog::backdrop{background:var(--bg);opacity:.75}
 .help-dialog .sheet{max-width:600px;margin:0 auto;max-height:calc(100dvh - 40px - env(safe-area-inset-top))}
-.help-dialog .sh .ib{width:44px;height:44px}
 .help-dialog .sbody{overscroll-behavior:contain}
 .usage-steps{padding-left:22px;margin:12px 0}
 .usage-steps li{padding:8px 0 8px 4px;color:var(--orange)}
 .usage-steps b{font-size:14px;color:var(--tx)}
 .usage-steps p{margin-top:6px;font-size:13px;color:var(--tx2);line-height:1.65}
-.profile-next .hint{margin:0 0 12px}
 .profile-help:focus-visible,.help-dialog button:focus-visible,.help-dialog .sbody:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
 
 /* 장소 후보를 대화 속에서 비교한다. 모바일은 한 열, 넓은 채팅방은 두 열이다. */
@@ -766,7 +759,6 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @media(min-width:768px){
   .place-candidates{grid-template-columns:repeat(2,minmax(0,1fr))}
   .place-plan .planmap{height:340px}
-  #msgs{padding:20px 28px}
 }
 
 /* AI 스몰토크 — 채팅 안에서 개인 추천과 편집 가능한 질문을 보여준다. */
@@ -781,3 +773,9 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .talk-topic p{margin:8px 0;line-height:1.6}
 .talk-source{display:flex;align-items:center;min-height:44px;color:var(--orange);font-size:13px;text-decoration:underline}
 .talk-topic .cta{margin-top:6px;min-height:44px}
+
+@media(max-width:1023px){
+  #rhead,#rbanner,#msgs,#composer,#roomview .openers,#roomview .typing{padding-left:max(var(--space-4),env(safe-area-inset-left));padding-right:max(var(--space-4),env(safe-area-inset-right))}
+}
+
+input:focus-visible,select:focus-visible{outline:2px solid var(--orange-soft);outline-offset:3px}

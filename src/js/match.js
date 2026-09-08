@@ -12,9 +12,9 @@ function setFilter(k,v){
 function renderFilters(){
   const regs=[...new Set(savedProfile().regions)];
   if(MF.region&&!regs.includes(MF.region))MF.region=null;   // 프로필에서 뺀 지역의 필터는 자동으로 푼다
-  $('mfilters').innerHTML='<button class="chip'+(!MF.region&&!MF.mine?' on':'')+'" onclick="setFilter(\'all\')">전체</button>'
-    +regs.map(r=>'<button class="chip'+(MF.region===r?' on':'')+'" data-mf-region="'+esc(r)+'">'+ico('pin')+esc(r)+'</button>').join('')
-    +'<button class="chip'+(MF.mine?' on':'')+'" onclick="setFilter(\'mine\')">내가 만든 모임</button>';
+  $('mfilters').innerHTML='<button class="chip'+(!MF.region&&!MF.mine?' on':'')+'" aria-pressed="'+(!MF.region&&!MF.mine)+'" onclick="setFilter(\'all\')">전체</button>'
+    +regs.map(r=>'<button class="chip'+(MF.region===r?' on':'')+'" aria-pressed="'+(MF.region===r)+'" data-mf-region="'+esc(r)+'">'+ico('pin')+esc(r)+'</button>').join('')
+    +'<button class="chip'+(MF.mine?' on':'')+'" aria-pressed="'+MF.mine+'" onclick="setFilter(\'mine\')">내가 만든 모임</button>';
 }
 function renderMatch(){
   const P=savedProfile(), c=co(P.company);   // 저장된 프로필 기준 (저장 전 변경은 반영되지 않는다)
@@ -51,7 +51,7 @@ function renderMatchCards(list,note){
       +(others>4?'<span class="more">+'+(others-4)+'</span>':'');
     const badge=m.mine?'<span class="badge">내 모임</span>':'';
     return '<div class="card meet'+(joined?' joined':'')+'">'
-      +'<div class="hd press" role="button" onclick="openDetail(\''+m.id+'\')"><div class="em">'+esc(m.em||'🌙')+'</div><div style="flex:1;min-width:0">'
+      +'<div class="hd press" role="button" tabindex="0" onkeydown="if(event.key===&quot;Enter&quot;||event.key===&quot; &quot;){event.preventDefault();this.click()}" onclick="openDetail(\''+m.id+'\')"><div class="em">'+esc(m.em||'🌙')+'</div><div style="flex:1;min-width:0">'
       +'<h3>'+esc(m.name)+'</h3>'
       +'<div class="meta"><span>'+ico('pin')+esc(m.region)+'</span><span>'+ico('clock')+esc(m.when)+'</span><span>'+ico('users')+shown+'/'+m.cap+'명</span></div>'
       +'</div>'+badge+'</div>'
