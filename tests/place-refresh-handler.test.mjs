@@ -8,7 +8,7 @@ import {suggestWithAI} from '../supabase/functions/_shared/ai-plan.ts';
 
 // 핸들러 전체를 실행해 저장한 후보가 다음 검색으로 전달되는 경로를 확인한다.
 test('추천 핸들러는 저장한 직전 후보를 제외하고 후보 소진 시 추가 저장하지 않는다',async()=>{
-  const source=readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+  const source=readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
   const saved=[],joined='2026-09-08T00:00:00+00:00';
   let handler,available=10;
   const svc={from(table){
