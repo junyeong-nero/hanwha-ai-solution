@@ -1,0 +1,50 @@
+import asyncio
+from pathlib import Path
+from playwright.async_api import async_playwright
+
+URL = (Path(__file__).resolve().parents[2] / 'src/index.html').as_uri() + '?demo=1'
+
+
+async def main():
+    async with async_playwright() as p:
+        for engine in ['chromium', 'webkit']:
+            browser = await getattr(p, engine).launch()
+            for width, height in [(375, 812), (1440, 1000)]:
+                page = await browser.new_page(viewport={'width': width, 'height': height}, reduced_motion='reduce')
+                errors = []
+                page.on('pageerror', lambda e: errors.append(str(e)))
+                await page.goto(URL)
+                await page.get_by_role('button', name='프로필', exact=True).click()
+                await page.locator('#nick').fill('크레딧확인')
+                link = page.get_by_role('button', name='크레딧', exact=True)
+                dialog = page.get_by_role('dialog', name='크레딧', exact=True)
+                await link.scroll_into_view_if_needed()
+                assert await link.evaluate('e=>e.getBoundingClientRect().height>=44')
+                await page.screenshot(path=f'/tmp/profile-credits-footer-{engine}-{width}.png')
+                for close in ['button', 'backdrop', 'Escape']:
+                    await link.click()
+                    assert await dialog.is_visible()
+                    content = await dialog.inner_text()
+                    for text in ['한화시스템 해양사업부 SW1팀', '2026년 9월 한화 인재경영원', '4팀 3파트', '송준영, 이수민, 이정현, 윤민영, 정태홍, 조성민']:
+                        assert text in content
+                    assert await page.locator('.credits-body').evaluate('e=>e.scrollWidth<=e.clientWidth && e.scrollHeight<=e.clientHeight')
+                    for key in ['Tab', 'Shift+Tab']:
+                        await page.keyboard.press(key)
+                        assert await dialog.evaluate('e=>e.contains(document.activeElement)')
+                    if close == 'button':
+                        await page.screenshot(path=f'/tmp/profile-credits-sheet-{engine}-{width}.png')
+                        await page.get_by_role('button', name='크레딧 닫기').click()
+                    elif close == 'backdrop':
+                        await page.mouse.click(3, 3)
+                    else:
+                        await page.keyboard.press('Escape')
+                    assert not await dialog.is_visible()
+                    assert await link.evaluate('e=>e===document.activeElement')
+                    assert await page.locator('#nick').input_value() == '크레딧확인'
+                assert not errors, errors
+                print(f'{engine} {width}×{height}: 크레딧 내용·열기·닫기·포커스·설정 보존 통과')
+                await page.close()
+            await browser.close()
+
+
+asyncio.run(main())
