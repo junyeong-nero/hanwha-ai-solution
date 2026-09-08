@@ -76,10 +76,10 @@ function renderHome(){
     const n=Object.keys(S.met).filter(p=>PEOPLE[p]&&PEOPLE[p].co===c.id).length;
     h+='<div class="holder" style="--a:'+homeAngle(s).toFixed(1)+'deg;--d:'+HOME_RING_SECS[s.ring]+'s">'
       +'<button class="planet '+(lit?'lit':'dim')+(mine?' mine':'')+(g.entering.has(c.id)?' new':'')+'"'
-      +' style="--c:'+c.c+';--s:'+(mine?'19px':'15px')+';left:'+r+'px;top:0"'
+      +' style="--c:'+c.c+';left:'+r+'px;top:0"'
       +' onclick="showCo(&quot;'+c.id+'&quot;)" data-co="'+c.id+'"'
       +' aria-label="'+esc(c.name)+(mine?' · 내 계열사':'')+(n?' · 아는 사람 '+n+'명':'')+'">'
-      +'<span class="dot"></span></button></div>';
+      +'<span class="dot" aria-hidden="true">'+(COMPANIES.indexOf(c)+1)+'</span></button></div>';
   });
   $('space').innerHTML=h;
   g.entering.clear();
@@ -120,7 +120,7 @@ function renderHome(){
     const lit=act.has(c.id);
     const n=Object.keys(S.met).filter(p=>PEOPLE[p]&&PEOPLE[p].co===c.id).length;
     return '<button class="corow'+(!top(c)&&!S.ui.coAll?' hid':'')+'" style="width:100%;text-align:left" onclick="showCo(&quot;'+c.id+'&quot;)" data-co="'+c.id+'">'
-      +'<span class="pd" style="background:'+(lit?c.c:'#2A3050')+';box-shadow:'+(lit?'0 0 8px '+c.c:'none')+'"></span>'
+      +'<span class="pd" style="--c:'+c.c+'" aria-hidden="true">'+(top(c)?COMPANIES.indexOf(c)+1:'')+'</span>'
       +'<span class="nm">'+esc(c.name)+(c.id===S.profile.company?' <small style="color:var(--orange);font-size:10.5px">MY</small>':'')+'</span>'
       +'<span class="st '+(lit?'lit':'')+'">'+(lit?'커넥션 활성 · '+n+'명':'미개척')+'</span>'+ico('chev','chev')+'</button>';
   }).join('')
