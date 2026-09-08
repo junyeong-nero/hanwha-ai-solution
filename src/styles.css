@@ -494,7 +494,8 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @keyframes fin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
 /* ===== 프로필 ===== */
-#tab-profile{padding-bottom:var(--nav-h);scroll-padding-bottom:calc(var(--nav-h) + 96px)}
+/* 본문 스크롤을 내비게이션 위에서 잘라 하단 콘텐츠가 뒤로 비치지 않게 한다. */
+#tab-profile{bottom:var(--nav-h);padding-bottom:0;scroll-padding-bottom:96px}
 #tab-profile :is(.hint,.sub,.pfhead small,.lb span){word-break:keep-all;overflow-wrap:anywhere}
 .profile-grid{display:grid;gap:var(--space-6)}
 .profile-section{min-width:0;display:flex;flex-direction:column;gap:var(--space-3)}
@@ -656,7 +657,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   #colist{grid-area:companies}
   .meetgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1080px;}
   .meetgrid > .meet{margin-bottom:0;}
-  #tab-profile{padding-bottom:0;scroll-padding-bottom:96px}
+  #tab-profile{bottom:0}
   #rhead,#rbanner,#msgs,#composer,#roomview .openers,#roomview .typing{padding-inline:max(var(--space-8),env(safe-area-inset-left),env(safe-area-inset-right),calc((100% - 880px) / 2))}
   .fab{right:max(32px,calc((100% - 96px - 1080px) / 2));bottom:24px}
   #roomview,#album,#satview{left:96px;bottom:0;}
