@@ -165,3 +165,26 @@ test('궤도 회전은 시작 각도를 CSS 변수로 받고, prefers-reduced-mo
   assert.match(html, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.holder\{animation:none\}/);
   assert.match(html, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.planet\.new,\.orbit\.new\{animation:none/);
 });
+
+test('다음 행동은 미완료 첫 단계만 안내하고 전체 단계는 접어 두며 모두 완료하면 사라진다', () => {
+  const app = loadApp();
+  app.evaluate('S.profile.interests=[];S.profile.hobbies=[];S.joined=[];S.placeRecommendationTried=false');
+  const states = [
+    ['', '관심사·취미 설정', "go('profile')", 0],
+    ["S.profile.interests=['독서']", '어울리는 모임 참가', "go('match')", 1],
+    ["S.joined=['m1']", 'AI 장소 추천 기능 써보기', 'tryPlaceRecommendations()', 2],
+  ];
+  for (const [setup, title, action, done] of states) {
+    app.evaluate(setup+';renderHome()');
+    const card = app.el('nextcard').innerHTML;
+    const [visible, collapsed] = card.split('<details class="next-steps">');
+    assert.ok(collapsed, '전체 단계는 기본적으로 닫힌 details 안에 있다');
+    assert.ok(visible.includes('<p class="next-action">'+title+'</p>'));
+    assert.ok(visible.includes('onclick="'+action+'"'));
+    assert.doesNotMatch(visible, /class="ns/);
+    assert.ok(collapsed.includes('전체 단계 · '+done+' / 3 완료'));
+    assert.ok(collapsed.includes('AI 장소 추천 기능 써보기'));
+  }
+  app.evaluate('S.placeRecommendationTried=true;renderHome()');
+  assert.equal(app.el('nextcard').innerHTML, '');
+});

@@ -204,9 +204,15 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .next .ns.ok .ck{background:var(--ok);border-color:var(--ok)}
 .next .ns.cur .ck{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-a18)}
 .next .ns b{display:block;font-size:14px;font-weight:700;letter-spacing:-.2px}
-.next .ns.ok b{color:var(--tx3);text-decoration:line-through}
+.next .ns.ok b{color:var(--tx3)}
 .next .ns small{font-size:13px;color:var(--tx2);line-height:1.6}
+.next-action{font-size:14px;color:var(--tx2)}
 .next .cta{margin-top:10px}
+.next-steps{margin-top:8px;border-top:1px solid var(--line)}
+.next-steps summary{min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)}
+.next-steps summary::before{content:'+';font-size:16px}
+.next-steps[open] summary::before{content:'−'}
+.next-steps summary:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:var(--r-s)}
 
 /* ===== 홈: 태양계 ===== */
 .hero{position:relative;margin:2px -18px 0;padding:0 18px}
@@ -637,8 +643,8 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   .tabpane > .sub{font-size:14px;}
   /* 홈의 다음 행동과 은하계를 나란히 두어 연결 현황도 바로 보이게 한다. */
   #tab-home.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;align-content:start;
-    grid-template-areas:"top top" "sub sub" "guide galaxy" "next galaxy" "next caption" "stats stats" "section section" "companies companies"}
-  #tab-home:has(#nextcard:empty){grid-template-areas:"top top" "sub sub" "guide guide" "galaxy galaxy" "caption caption" "stats stats" "section section" "companies companies"}
+    grid-template-areas:"top top" "sub sub" "next galaxy" "stats galaxy" "guide caption" "section section" "companies companies"}
+  #tab-home:has(#nextcard:empty){grid-template-areas:"top top" "sub sub" "stats stats" "galaxy galaxy" "caption caption" "guide guide" "section section" "companies companies"}
   #tab-home > .top{grid-area:top}
   #tab-home > .sub{grid-area:sub}
   #tab-home > .guide-entry{grid-area:guide;align-self:start}
