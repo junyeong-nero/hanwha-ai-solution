@@ -27,10 +27,9 @@
       <div id="nextcard"></div>
       <div class="spacestats" id="spacestats"></div>
       <div class="hero"><p class="planet-help">행성이나 아래 계열사를 누르면 연결된 동료를 볼 수 있어요.</p><div class="space" id="space"></div></div>
-      <p class="hint" id="homehint" style="text-align:center;margin-top:6px">아는 사람이 생긴 계열사가 이 은하계에 합류합니다 · 빛나는 행성 = 만남이 성사된 계열사</p>
-      <button class="cta line sm guide-entry" onclick="openUsageGuide(this)">처음이신가요? 사용 가이드</button>
+      <p class="hint" id="homehint"></p>
       <div class="sec"><h2>행성 번호 · 계열사</h2><small id="cocount"></small></div>
-      <div class="card" id="colist" style="padding:4px 14px"></div>
+      <div class="card" id="colist"></div>
     </section>
 
     <!-- ============ 매칭 ============ -->
@@ -45,7 +44,6 @@
       <div class="hscroll filters" id="mfilters"></div>
       <div id="matchnote"></div>
       <div id="meets" class="meetgrid"></div>
-      <p class="hint" style="margin-top:4px">주황 띠는 이전에 만난 동료의 비율이에요.</p>
     </section>
 
     <!-- ============ 채팅 ============ -->
@@ -54,7 +52,7 @@
         <div class="tt"><h1 class="app">채팅</h1></div>
       </header>
       <p class="sub">만나기 전까지는 모두 익명이에요.</p>
-      <div class="sec" style="margin-top:4px"><h2>참여 중인 모임</h2><small id="roomcount"></small></div>
+      <div class="sec"><h2>참여 중인 모임</h2><small id="roomcount"></small></div>
       <div id="roomlist"></div>
     </section>
 
@@ -62,95 +60,93 @@
     <section class="tabpane" id="tab-profile">
       <header class="top">
         <div class="tt"><h1 class="app">프로필</h1></div>
-        <div class="acts"><button class="cta line sm profile-help" onclick="openUsageGuide(this)" aria-haspopup="dialog" aria-controls="usageGuide">도움말</button><button class="ib" id="logoutIb" onclick="logout()" aria-label="로그아웃" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg></button></div>
+        <div class="acts"><button class="cta line sm profile-help" onclick="openUsageGuide(this)" aria-haspopup="dialog" aria-controls="usageGuide">도움말</button></div>
       </header>
       <p class="sub" id="profileIntro">선호 지역을 고르면 모임을 추천해 드려요.</p>
 
-      <div class="card pfhero" style="margin-bottom:14px">
-        <div class="pfavw">
-          <button class="pfav" id="pfav" onclick="cycleAvatar()" aria-label="아바타 바꾸기">🌙</button>
-          <small class="hint">눌러서 변경</small>
-          <span class="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
-        </div>
-        <div class="pfhead">
-          <input id="nick" maxlength="8" autocomplete="off" aria-label="닉네임">
-          <small>채팅에서 사용할 이름</small>
-          <div class="badges" id="pfident"></div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:14px">
-        <div class="frow">
-          <label>선호 지역<span class="req">필수 · 복수 선택</span></label>
-          <div id="f-region"></div>
-          <p class="hint">1곳 이상 · 선택한 지역의 모임만 보여요</p>
-        </div>
-      </div>
-
-      <div class="sec"><h2>관심사 · 취미</h2></div>
-      <div class="card" style="margin-bottom:14px">
-        <div class="frow">
-          <label>관심사<span class="req opt">선택 · 복수 선택</span></label>
-          <div id="f-int"></div>
-          <p class="hint">이야기하고 싶은 주제 · 추천 순서에 반영돼요</p>
-        </div>
-        <div class="frow">
-          <label>취미<span class="req opt">선택 · 복수 선택</span></label>
-          <div id="f-hob"></div>
-          <p class="hint">함께 할 활동 · 추천 순서에 반영돼요</p>
-        </div>
-      </div>
-
-      <div class="sec"><h2>기본 정보</h2></div>
-      <div class="card" style="margin-bottom:14px">
-        <div class="frow">
-          <label>계열사<span class="req">필수</span></label>
-          <select id="f-co" onchange="setP('company',this.value)"></select>
-          <p class="hint" id="cohint" style="margin-top:8px;display:none">🔒 로그인 정보로 고정돼요 · 다른 계열사로 바꾸려면 그 계열사 사번으로 다시 입장해요</p>
-        </div>
-        <div class="frow">
-          <label>나이<span class="req">필수</span></label>
-          <div class="step">
-            <button onclick="bumpAge(-1)" aria-label="나이 줄이기">−</button><b id="f-age"></b><button onclick="bumpAge(1)" aria-label="나이 늘리기">+</button>
+      <div class="profile-grid">
+        <div class="profile-section">
+          <div class="card pfhero">
+            <div class="pfavw">
+              <button class="pfav" id="pfav" onclick="cycleAvatar()" aria-label="아바타 바꾸기">🌙</button>
+              <span class="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+            </div>
+            <div class="pfhead">
+              <input id="nick" maxlength="8" autocomplete="off" aria-label="닉네임">
+              <small>채팅에서 사용할 이름</small>
+              <div class="badges" id="pfident"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="frow">
+              <label>선호 지역<span class="req">필수 · 복수 선택</span></label>
+              <div id="f-region"></div>
+              <p class="hint">1곳 이상 · 선택한 지역의 모임만 보여요</p>
+            </div>
           </div>
         </div>
-        <div class="frow">
-          <label>성별</label>
-          <div class="seg" id="f-gender"></div>
+        <div class="profile-section">
+          <div class="sec"><h2>관심사 · 취미</h2></div>
+          <div class="card">
+            <div class="frow">
+              <label>관심사<span class="req opt">선택 · 복수 선택</span></label>
+              <div id="f-int"></div>
+              <p class="hint">이야기하고 싶은 주제 · 추천 순서에 반영돼요</p>
+            </div>
+            <div class="frow">
+              <label>취미<span class="req opt">선택 · 복수 선택</span></label>
+              <div id="f-hob"></div>
+              <p class="hint">함께 할 활동 · 추천 순서에 반영돼요</p>
+            </div>
+          </div>
         </div>
-        <div class="frow">
-          <label>MBTI</label>
-          <select id="f-mbti" onchange="setP('mbti',this.value)"></select>
+        <div class="profile-section">
+          <div class="sec"><h2>기본 정보</h2></div>
+          <div class="card">
+            <div class="frow">
+              <label for="f-co">계열사<span class="req">필수</span></label>
+              <select id="f-co" onchange="setP('company',this.value)"></select>
+              <p class="hint" id="cohint" style="margin-top:8px;display:none">🔒 로그인 정보로 고정돼요 · 다른 계열사로 바꾸려면 그 계열사 사번으로 다시 입장해요</p>
+            </div>
+            <div class="frow">
+              <label>나이<span class="req">필수</span></label>
+              <div class="step">
+                <button onclick="bumpAge(-1)" aria-label="나이 줄이기">−</button><b id="f-age"></b><button onclick="bumpAge(1)" aria-label="나이 늘리기">+</button>
+              </div>
+            </div>
+            <div class="frow">
+              <label>성별</label>
+              <div class="seg" id="f-gender"></div>
+            </div>
+            <div class="frow">
+              <label for="f-mbti">MBTI</label>
+              <select id="f-mbti" onchange="setP('mbti',this.value)"></select>
+            </div>
+            <div class="frow">
+              <label>원하는 모임 규모</label>
+              <div class="seg sizes" id="f-size"></div>
+              <p class="hint" id="sizehint"></p>
+            </div>
+          </div>
         </div>
-        <div class="frow">
-          <label>원하는 모임 규모</label>
-          <div class="seg sizes" id="f-size"></div>
-          <p class="hint" id="sizehint" style="margin-top:8px"></p>
+        <div class="profile-section">
+          <div class="sec"><h2>매칭 성향</h2></div>
+          <div class="card profile-preferences">
+            <div class="swrow">
+              <div class="lb"><b>같은 성별 우선 매칭</b><span id="samehint">같은 성별 멤버가 많은 모임을 먼저 추천해요</span></div>
+              <button class="sw" id="f-same" onclick="toggleSame()" aria-label="같은 성별 우선" role="switch"></button>
+            </div>
+            <div>
+              <div class="lb" style="margin-bottom:8px"><b style="font-size:14px">계열사 범위</b></div>
+              <div class="seg" id="f-scope"></div>
+            </div>
+            <div>
+              <div class="lb" style="margin-bottom:8px"><b style="font-size:14px">관계 방향</b></div>
+              <div class="seg" id="f-dir"></div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div class="sec"><h2>매칭 성향</h2></div>
-      <div class="card" style="display:flex;flex-direction:column;gap:16px;margin-bottom:6px">
-        <div class="swrow">
-          <div class="lb"><b>같은 성별 우선 매칭</b><span id="samehint">같은 성별 멤버가 많은 모임을 먼저 추천해요</span></div>
-          <button class="sw" id="f-same" onclick="toggleSame()" aria-label="같은 성별 우선" role="switch"></button>
-        </div>
-        <div>
-          <div class="lb" style="margin-bottom:8px"><b style="font-size:14px">계열사 범위</b></div>
-          <div class="seg" id="f-scope"></div>
-        </div>
-        <div>
-          <div class="lb" style="margin-bottom:8px"><b style="font-size:14px">관계 방향</b></div>
-          <div class="seg" id="f-dir"></div>
-        </div>
-      </div>
-
-      <div class="card profile-next">
-        <p class="hint">변경 사항을 저장하고 모임 목록으로 이동해요</p>
-        <button class="cta" id="profileNext" onclick="saveProfileAndBrowse()">이 설정으로 모임 둘러보기</button>
-      </div>
-      <div class="savebar"><button class="cta" id="saveBtn" onclick="saveProfileNow()" disabled>저장</button></div>
-      <p class="hint" style="text-align:center;margin:10px 0 4px" id="savehint">설정은 저장해야 추천에 반영돼요</p>
 
       <div class="card" id="adminbox" style="display:none;margin-top:16px">
         <b style="font-size:14px">발표 관리</b>
@@ -161,7 +157,11 @@
         <button class="cta line" id="reloadBtn" onclick="location.reload()">데모 처음부터 다시 보기</button>
         <button class="cta line" id="logoutBtn" onclick="logout()" style="display:none">로그아웃</button>
       </div>
-      <p class="hint" style="text-align:center;margin-top:14px" id="modehint">데모 프로토타입 · 데이터는 브라우저 안에서만 동작합니다</p>
+      <p class="hint" id="modehint">데모 프로토타입 · 데이터는 브라우저 안에서만 동작합니다</p>
+      <div class="profile-actions">
+        <div class="savebar"><button class="cta line" id="saveBtn" onclick="saveProfileNow()" disabled>저장</button></div>
+        <button class="cta" id="profileNext" onclick="saveProfileAndBrowse()">모임 둘러보기</button>
+      </div>
     </section>
   </main>
 
@@ -245,9 +245,9 @@
     <div class="hscroll openers" id="openers" style="display:none"></div>
     <div id="composer">
       <button class="plus" onclick="openPlus()" aria-label="더보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-      <input id="cin" placeholder="메시지 보내기" autocomplete="off" enterkeyhint="send" maxlength="500" oninput="updateCount()" onkeydown="if(event.key==='Enter')sendMsg()">
+      <input id="cin" aria-label="메시지" placeholder="메시지 보내기" autocomplete="off" enterkeyhint="send" maxlength="500" oninput="updateCount()" onkeydown="if(event.key==='Enter')sendMsg()">
       <span class="cnt" id="cincount"></span>
-      <button class="send" onclick="sendMsg()" aria-label="보내기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3"><path d="M4 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="send" onclick="sendMsg()" aria-label="보내기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M4 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
   </div>
 
@@ -375,7 +375,7 @@
     <div class="ecard">
       <div class="emoon"></div>
       <h1 class="app">MoonLight <em>Hanwha</em></h1>
-      <p class="sub">한화 계열사 신입사원을 잇는 달빛 매칭.<br>입장 코드와 사번으로 로그인하면 어디서든 이어져요.</p>
+      <p class="sub">관심사가 맞는 한화 동료를 만나보세요.</p>
       <div class="eform">
         <label class="elb" for="e-code">입장 코드</label>
         <input id="e-code" inputmode="numeric" maxlength="6" placeholder="발표 화면의 6자리 숫자" autocomplete="one-time-code">
@@ -385,11 +385,10 @@
         <input id="e-emp" maxlength="20" placeholder="예: 2024001" autocomplete="off" autocapitalize="characters">
         <label class="elb" for="e-name">이름<small>베일 벗기기 때만 공개돼요</small></label>
         <input id="e-name" maxlength="10" placeholder="홍길동" autocomplete="off">
-        <label class="elb" for="e-nick">닉네임<small>처음 입장할 때만 적용 · 계정이 있으면 프로필 탭에서 바꿔요</small></label>
+        <label class="elb" for="e-nick">닉네임<small>첫 입장 시 사용 · 이후 프로필에서 변경</small></label>
         <input id="e-nick" maxlength="8" placeholder="달토끼" autocomplete="off" enterkeyhint="go" onkeydown="if(event.key==='Enter')enterDemo()">
         <p class="eerr" id="e-err"></p>
         <button class="cta" id="e-btn" onclick="enterDemo()">입장하기</button>
-        <p class="hint" style="text-align:center;margin-top:10px">첫 접속은 서버가 깨어나느라 10초쯤 걸릴 수 있어요</p>
       </div>
       <p class="hint" style="text-align:center;margin-top:14px">사번은 본인 확인과 데이터 복원에만 쓰이며 다른 사용자와 AI에게 공개되지 않아요</p>
     </div>

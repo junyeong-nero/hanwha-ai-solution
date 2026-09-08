@@ -14,7 +14,7 @@ const SIZE_PRESETS=[[2,3,'2~3명','소규모'],[4,6,'4~6명','적당히'],[7,10,
 function setSize(min,max){S.profile.sizeMin=min;S.profile.sizeMax=max;renderProfile();profileChanged()}
 function renderSizeSeg(){
   const P=S.profile;
-  $('f-size').innerHTML=SIZE_PRESETS.map(([a,b,l,d])=>'<button class="'+(P.sizeMin===a&&P.sizeMax===b?'on':'')+'" onclick="setSize('+a+','+b+')">'+l+'<small>'+d+'</small></button>').join('');
+  $('f-size').innerHTML=SIZE_PRESETS.map(([a,b,l,d])=>'<button class="'+(P.sizeMin===a&&P.sizeMax===b?'on':'')+'" aria-pressed="'+(P.sizeMin===a&&P.sizeMax===b)+'" onclick="setSize('+a+','+b+')">'+l+'<small>'+d+'</small></button>').join('');
   $('sizehint').textContent='현재 '+P.sizeMin+'~'+P.sizeMax+'명 · 희망 인원에 가까운 모임이 먼저 추천돼요';
 }
 function toggleSame(){S.profile.sameGender=!S.profile.sameGender;renderProfile();profileChanged()}
@@ -27,7 +27,8 @@ function tglRegion(r){
 function renderSaveBtn(){
   const b=$('saveBtn'); b.disabled=!S.dirty; b.classList.toggle('dirty',S.dirty);
   const bar=b.parentElement; if(bar)bar.classList.toggle('on',S.dirty);   // 변경 사항이 있을 때만 저장 바가 떠 있다
-  b.textContent=S.dirty?'저장 · 변경 사항 있음':'저장됨';
+  b.textContent=S.dirty?'저장':'저장됨';
+  $('profileNext').textContent=S.dirty?'저장하고 둘러보기':'모임 둘러보기';
 }
 async function saveProfileNow(){
   if(!S.dirty)return true;
@@ -48,7 +49,6 @@ function renderProfile(){
     +(P.realName?'<span class="badge">'+esc(P.realName)+' · 로그인 정보</span>':'<span class="badge">로컬 데모 계정</span>');
   $('homeAv').textContent=P.av;
   $('logoutBtn').style.display=BACKEND&&ME?'':'none';
-  $('logoutIb').style.display=BACKEND&&ME?'':'none';
   $('f-co').innerHTML=COMPANIES.map(c=>'<option value="'+c.id+'"'+(c.id===P.company?' selected':'')+'>'+c.name+'</option>').join('');
   $('f-co').disabled=!!(BACKEND&&ME);   // 백엔드 모드에서는 계열사가 로그인 정보로 고정된다
   $('cohint').style.display=(BACKEND&&ME)?'':'none';
@@ -57,7 +57,7 @@ function renderProfile(){
     +'<button class="chip add" onclick="openAdd(\'region\')">＋ 직접 추가</button>';
   $('f-age').textContent=P.age+'세';
   $('f-gender').innerHTML=[['m','남성'],['f','여성'],[null,'선택 안 함']].map(([v,l])=>
-    '<button class="'+(P.gender===v?'on':'')+'" onclick="setP(\'gender\','+(v?'\''+v+'\'':'null')+')">'+l+'</button>').join('');
+    '<button class="'+(P.gender===v?'on':'')+'" aria-pressed="'+(P.gender===v)+'" onclick="setP(\'gender\','+(v?'\''+v+'\'':'null')+')">'+l+'</button>').join('');
   const MB=['ISTJ','ISFJ','INFJ','INTJ','ISTP','ISFP','INFP','INTP','ESTP','ESFP','ENFP','ENTP','ESTJ','ESFJ','ENFJ','ENTJ'];
   $('f-mbti').innerHTML=MB.map(m=>'<option'+(m===P.mbti?' selected':'')+'>'+m+'</option>').join('');
   $('f-int').innerHTML=INTS.map(v=>chipHtml('int',v,P.interests.includes(v))).join('')
@@ -70,15 +70,15 @@ function renderProfile(){
   $('samehint').textContent=P.gender?'같은 성별 멤버가 많은 모임을 먼저 추천해요':'성별을 설정하면 적용돼요 · 같은 성별 멤버가 많은 모임을 먼저 추천';
   renderSaveBtn();
   $('f-scope').innerHTML=[['mine','내 계열사 위주'],['all','다른 계열사와도']].map(([v,l])=>
-    '<button class="'+(P.scope===v?'on':'')+'" onclick="setP(\'scope\',\''+v+'\')">'+l+'</button>').join('');
-  $('f-dir').innerHTML=[['deep','깊은 유대 — 만난 사람과 또'],['wide','넓은 인맥 — 새로운 만남']].map(([v,l])=>
-    '<button class="'+(P.dir===v?'on':'')+'" onclick="setP(\'dir\',\''+v+'\')">'+l+'</button>').join('');
+    '<button class="'+(P.scope===v?'on':'')+'" aria-pressed="'+(P.scope===v)+'" onclick="setP(\'scope\',\''+v+'\')">'+l+'</button>').join('');
+  $('f-dir').innerHTML=[['deep','만난 동료와 다시'],['wide','새로운 동료와']].map(([v,l])=>
+    '<button class="'+(P.dir===v?'on':'')+'" aria-pressed="'+(P.dir===v)+'" onclick="setP(\'dir\',\''+v+'\')">'+l+'</button>').join('');
 }
 $('nick').addEventListener('input',e=>{S.profile.nick=e.target.value.trim().slice(0,8)||'달토끼';profileChanged()});
 
 /* 칩 렌더링: 직접 추가한 항목은 × 삭제 버튼이 붙는다 */
 function chipHtml(kind,v,on){
-  const chip=`<button class="chip${on?' on':''}" data-kind="${esc(kind)}" data-v="${esc(v)}">${esc(v)}</button>`;
+  const chip=`<button class="chip${on?' on':''}" aria-pressed="${on}" data-kind="${esc(kind)}" data-v="${esc(v)}">${esc(v)}</button>`;
   if(BASE[kind].includes(v))return chip;
   return `<span class="chipwrap">${chip}<button class="chipx" data-chip-remove data-kind="${esc(kind)}" data-v="${esc(v)}" aria-label="${esc(v)} 삭제">×</button></span>`;
 }
@@ -194,6 +194,6 @@ async function saveProfileAndBrowse(){
   }finally{
     profileBrowsePending=false;
     button.disabled=false;
-    button.textContent='이 설정으로 모임 둘러보기';
+    renderSaveBtn();
   }
 }

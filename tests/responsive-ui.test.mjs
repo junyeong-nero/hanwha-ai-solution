@@ -10,8 +10,9 @@ test('responsive layout defines mobile, web, and pc ranges', () => {
 });
 
 test('intermediate device widths use the available frame width', () => {
-  assert.match(html, /@media\s*\(max-width:\s*599px\)[\s\S]*#app[\s\S]*max-width:\s*520px/);
-  assert.match(html, /@media\s*\(max-width:\s*430px\)[\s\S]*\.tabpane[\s\S]*padding-left:\s*18px/);
+  assert.match(html, /@media\s*\(max-width:\s*599px\)[\s\S]*#app[\s\S]*max-width:\s*599px/);
+  assert.match(html, /--space-4:16px/);
+  assert.match(html, /padding:calc\(var\(--space-4\) \+ env\(safe-area-inset-top\)\)/);
 });
 
 test('pc layout expands the app frame and uses a side navigation rail', () => {
