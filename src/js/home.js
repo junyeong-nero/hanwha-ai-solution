@@ -87,15 +87,18 @@ function renderHome(){
   const met=Object.keys(S.met).length, rest=COMPANIES.length-list.length;
   // 다음 할 일 — 프로필 → 참가 → AI 장소 추천. 세 단계가 모두 끝나면 카드는 사라진다
   const P=S.profile, steps=[
-    {ok:P.interests.length+P.hobbies.length>0, t:'관심사·취미 설정', d:'AI 추천의 재료가 돼요', go:'profile', cta:'프로필 설정하기'},
+    {ok:P.interests.length+P.hobbies.length>0, t:'관심사·취미 설정', d:'취향이 맞는 동료를 찾아봐요', go:'profile', cta:'프로필 설정하기'},
     {ok:S.joined.length>0, t:'어울리는 모임 참가', d:'매칭 탭에서 골라요', go:'match', cta:'모임 찾기'},
     {ok:!!S.placeRecommendationTried, t:'AI 장소 추천 기능 써보기', d:'채팅방에서 후보와 추천 이유를 살펴봐요', go:'chat', cta:'장소 추천 써보기'},
   ];
   const next=steps.find(s=>!s.ok);
   $('nextcard').innerHTML=next
-    ?'<div class="card next"><div class="nh"><b>다음 할 일</b><small>'+steps.filter(s=>s.ok).length+' / 3 완료</small></div>'
-      +steps.map(s=>'<div class="ns'+(s.ok?' ok':s===next?' cur':'')+'"><span class="ck">'+(s.ok?ico('check'):'')+'</span><div><b>'+s.t+'</b><small>'+s.d+'</small></div></div>').join('')
-      +'<button class="cta sm" onclick="'+(next.go==='chat'?'tryPlaceRecommendations()':'go(\''+next.go+'\')')+'">'+next.cta+'</button></div>'
+    ?'<div class="card next"><div class="nh"><b>다음 할 일</b></div>'
+      +'<p class="next-action">'+next.t+'</p>'
+      +'<button class="cta sm" onclick="'+(next.go==='chat'?'tryPlaceRecommendations()':'go(\''+next.go+'\')')+'">'+next.cta+'</button>'
+      +'<details class="next-steps"><summary>전체 단계 · '+steps.filter(s=>s.ok).length+' / 3 완료</summary>'
+      +steps.map(s=>'<div class="ns'+(s.ok?' ok':s===next?' cur':'')+'"><span class="ck">'+(s.ok?ico('check'):'')+'</span><div><b>'+s.t+(s.ok?' · 완료':'')+'</b><small>'+s.d+'</small></div></div>').join('')
+      +'</details></div>'
     :'';
   $('homehint').innerHTML=met
     ?(rest
