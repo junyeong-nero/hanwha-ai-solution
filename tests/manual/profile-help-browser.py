@@ -6,7 +6,7 @@ async def main():
  async with async_playwright() as p:
   for engine in ['chromium','webkit']:
    browser=await getattr(p,engine).launch()
-   for width,height in [(375,812),(1440,1000)]:
+   for width,height in [(320,812),(375,812),(1440,1000)]:
     page=await browser.new_page(viewport={'width':width,'height':height},reduced_motion='reduce')
     errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
     await page.goto(URL)
@@ -14,6 +14,16 @@ async def main():
     assert await page.locator('#profileIntro').is_visible()
     assert await page.locator('#f-region').evaluate('(e)=>e.getBoundingClientRect().bottom') < height
     await page.screenshot(path=f'/tmp/profile-help-{engine}-{width}.png')
+    # 최대 길이 닉네임과 안내가 작은 화면에서도 잘리거나 겹치지 않는다.
+    await page.locator('#nick').fill('가나다라마바사아')
+    assert await page.locator('#nick').evaluate('(e)=>e.scrollWidth<=e.clientWidth')
+    assert await page.locator('.pfhead small').evaluate('''e=>{
+     const range=document.createRange();range.selectNodeContents(e);
+     const box=e.getBoundingClientRect();
+     return getComputedStyle(e).wordBreak==='keep-all' && [...range.getClientRects()].every(r=>r.left>=box.left && r.right<=box.right+1);
+    }''')
+    assert await page.locator('.pfhero').evaluate('(e)=>e.scrollWidth<=e.clientWidth')
+    await page.screenshot(path=f'/tmp/profile-copy-{engine}-{width}.png')
     await page.locator('#nick').fill('가이드검증')
     help=page.get_by_role('button',name='도움말',exact=True)
     await help.click()
