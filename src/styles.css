@@ -20,7 +20,7 @@
   --bg:#090C18; --bg2:#0F1326; --card:#151A31; --card2:#1D2340; --card3:#252C4D;
   --line:#242B4A; --line2:rgba(255,255,255,.1); --hair:rgba(255,255,255,.06);
   /* 글자 */
-  --tx:#F3F5FB; --tx2:#A5ACC6; --tx3:#6F779A;
+  --tx:#F3F5FB; --tx2:#A5ACC6; --tx3:#929BBB; --tx-disabled:#6F779A;
   /* 의미 */
   --ok:#3DDC97; --warn:#F5C86B; --err:#FF7A7A; --info:#7C9CF5;
   /* 형태 */
@@ -91,7 +91,7 @@ h1.app em{font-style:normal;color:var(--orange)}
 .sec{display:flex;align-items:baseline;justify-content:space-between;margin:24px 0 10px}
 .sec h2{font-size:16px;font-weight:800;letter-spacing:-.3px}
 .sec small{font-size:12.5px;color:var(--tx3);font-weight:600}
-.hint{font-size:12px;color:var(--tx3);line-height:1.55}
+.hint{font-size:13px;color:var(--tx2);line-height:1.65}
 .ib{
   width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
   background:var(--card);border:1px solid var(--line);color:var(--tx2);position:relative;flex-shrink:0;
@@ -153,7 +153,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:0 16px;height:52px;border-radius:16px;
   background:var(--grad);color:#fff;font-size:15.5px;font-weight:800;text-align:center;box-shadow:var(--sh-orange);letter-spacing:-.2px;
 }
-.cta:disabled{background:var(--card2);color:var(--tx3);box-shadow:none}
+.cta:disabled{background:var(--card2);color:var(--tx-disabled);box-shadow:none}
 .cta.line{background:transparent;border:1px solid var(--line);color:var(--tx2);box-shadow:none;font-weight:700}
 .cta.soft{background:var(--orange-a12);color:var(--orange-soft);box-shadow:none;border:1px solid var(--orange-a30)}
 .cta.sm{height:44px;font-size:14px;border-radius:13px}
@@ -205,7 +205,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .next .ns.cur .ck{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-a18)}
 .next .ns b{display:block;font-size:14px;font-weight:700;letter-spacing:-.2px}
 .next .ns.ok b{color:var(--tx3);text-decoration:line-through}
-.next .ns small{font-size:11.5px;color:var(--tx3)}
+.next .ns small{font-size:13px;color:var(--tx2);line-height:1.6}
 .next .cta{margin-top:10px}
 
 /* ===== 홈: 태양계 ===== */
@@ -320,7 +320,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .dt .ai .lb{display:block;font-size:11px;font-weight:800;color:var(--orange-soft);letter-spacing:.2px;margin-bottom:2px}
 .dt .ai b{color:var(--orange-soft)}
 .meet .ft .who{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.meet .ft .who .k{font-size:12px;color:var(--tx3);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meet .ft .who .k{font-size:13px;color:var(--tx2);font-weight:600;line-height:1.6}
 .meet .ft .who .k b{color:var(--orange-soft)}
 .band{margin-top:10px;display:flex;align-items:center;gap:10px}
 .band .bar{flex:1}
@@ -421,7 +421,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .plan .row{display:flex;gap:9px;font-size:13.5px;margin:7px 0;line-height:1.45;align-items:flex-start}
 .plan .row i{font-style:normal;flex-shrink:0;width:26px;height:26px;border-radius:8px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:13px}
 .plan button{width:100%;margin-top:10px;background:var(--grad);color:#fff;font-size:13.5px;font-weight:800;padding:0 10px;height:44px;border-radius:12px;box-shadow:0 6px 16px rgba(243,115,33,.25)}
-.plan button:disabled{background:var(--card2);color:var(--tx3);box-shadow:none}
+.plan button:disabled{background:var(--card2);color:var(--tx-disabled);box-shadow:none}
 /* 후보지 지도 · 목록 · 전원 확정 진행 바 */
 .cands{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
 .cands b{font-size:12px;color:var(--tx2)}
@@ -500,7 +500,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .pfhead{flex:1;min-width:0}
 .pfhead input{background:none;border:0;border-bottom:1.5px solid var(--line);color:var(--tx);font-size:19px;font-weight:800;padding:4px 2px;width:100%;max-width:190px;outline:none;letter-spacing:-.4px}
 .pfhead input:focus{border-bottom-color:var(--orange)}
-.pfhead small{display:block;font-size:11.5px;color:var(--tx3);margin-top:5px;line-height:1.4}
+.pfhead small{display:block;font-size:13px;color:var(--tx2);margin-top:5px;line-height:1.6}
 .pfhead .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .req{display:inline-block;font-size:10px;font-weight:800;color:var(--orange);border:1px solid rgba(243,115,33,.5);border-radius:5px;padding:1.5px 5px;margin-left:6px;vertical-align:2px}
 .req.opt{color:var(--tx3);border-color:var(--line)}
@@ -523,7 +523,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .seg button.on{background:var(--grad);color:#fff;box-shadow:0 4px 12px rgba(243,115,33,.3)}
 .swrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0}
 .swrow .lb b{font-size:14px;display:block;font-weight:800;letter-spacing:-.2px}
-.swrow .lb span{font-size:11.5px;color:var(--tx3);line-height:1.4;display:block;margin-top:2px}
+.swrow .lb span{font-size:13px;color:var(--tx2);line-height:1.6;display:block;margin-top:2px}
 .sw{width:52px;height:31px;border-radius:16px;background:var(--card3);position:relative;transition:.25s;flex-shrink:0;border:1px solid var(--line)}
 .sw::after{content:'';position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;transition:.25s var(--spring);box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .sw.on{background:var(--orange);border-color:var(--orange)}
@@ -533,7 +533,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .savebar.on{display:block;animation:up .3s var(--spring) both}
 .savebar .cta{pointer-events:auto}
 #saveBtn.dirty{box-shadow:var(--sh-orange),0 0 0 4px rgba(243,115,33,.22)}
-#saveBtn:disabled{background:var(--card);border:1px solid var(--line);color:var(--tx3)}
+#saveBtn:disabled{background:var(--card);border:1px solid var(--line);color:var(--tx-disabled)}
 .pfoot{display:flex;flex-direction:column;gap:8px;margin-top:22px}
 .pfoot .cta.line{height:46px;font-size:14px}
 
