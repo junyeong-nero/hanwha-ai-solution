@@ -492,13 +492,15 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @keyframes fin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
 /* ===== 프로필 ===== */
+#tab-profile :is(.hint,.sub,.pfhead small,.lb span){word-break:keep-all;overflow-wrap:anywhere}
 .pfhero{display:flex;align-items:center;gap:16px;padding:18px 16px}
 .pfavw{position:relative;flex-shrink:0}
+.pfavw>.hint{display:block;text-align:center;margin-top:6px}
 .pfav{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--card3),var(--card2));border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 0 22px var(--orange-a30)}
-.pfavw .edit{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 0 0 2px var(--card)}
+.pfavw .edit{position:absolute;right:-2px;top:52px;width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 0 0 2px var(--card)}
 .pfavw .edit svg{width:13px;height:13px;color:#fff}
 .pfhead{flex:1;min-width:0}
-.pfhead input{background:none;border:0;border-bottom:1.5px solid var(--line);color:var(--tx);font-size:19px;font-weight:800;padding:4px 2px;width:100%;max-width:190px;outline:none;letter-spacing:-.4px}
+.pfhead input{background:none;border:0;border-bottom:1.5px solid var(--line);color:var(--tx);font-size:clamp(16px,4.8vw,19px);font-weight:800;padding:4px 2px;width:100%;max-width:190px;outline:none;letter-spacing:-.4px}
 .pfhead input:focus{border-bottom-color:var(--orange)}
 .pfhead small{display:block;font-size:11.5px;color:var(--tx3);margin-top:5px;line-height:1.4}
 .pfhead .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
@@ -706,8 +708,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .usage-steps li{padding:8px 0 8px 4px;color:var(--orange)}
 .usage-steps b{font-size:14px;color:var(--tx)}
 .usage-steps p{margin-top:6px;font-size:13px;color:var(--tx2);line-height:1.65}
-.profile-next>b{font-size:14px;line-height:1.6}
-.profile-next .hint{margin:8px 0 12px}
+.profile-next .hint{margin:0 0 12px}
 .profile-help:focus-visible,.help-dialog button:focus-visible,.help-dialog .sbody:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
 
 /* 장소 후보를 대화 속에서 비교한다. 모바일은 한 열, 넓은 채팅방은 두 열이다. */

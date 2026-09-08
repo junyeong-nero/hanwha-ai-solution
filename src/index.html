@@ -73,11 +73,12 @@
       <div class="card pfhero" style="margin-bottom:14px">
         <div class="pfavw">
           <button class="pfav" id="pfav" onclick="cycleAvatar()" aria-label="아바타 바꾸기">🌙</button>
+          <small class="hint">눌러서 변경</small>
           <span class="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
         </div>
         <div class="pfhead">
           <input id="nick" maxlength="8" autocomplete="off" aria-label="닉네임">
-          <small>익명 채팅에서 쓰이는 닉네임 · 아바타를 눌러 변경</small>
+          <small>채팅에서 사용할 이름</small>
           <div class="badges" id="pfident"></div>
         </div>
       </div>
@@ -86,21 +87,21 @@
         <div class="frow">
           <label>선호 지역<span class="req">필수 · 복수 선택</span></label>
           <div id="f-region"></div>
-          <p class="hint">최소 한 곳을 선택해 주세요. 고른 지역의 모임만 추천되니 실제로 갈 수 있는 곳을 여러 개 골라도 좋아요.</p>
+          <p class="hint">1곳 이상 · 선택한 지역의 모임만 보여요</p>
         </div>
       </div>
 
       <div class="sec"><h2>관심사 · 취미</h2></div>
       <div class="card" style="margin-bottom:14px">
         <div class="frow">
-          <label>관심사</label>
+          <label>관심사<span class="req opt">선택 · 복수 선택</span></label>
           <div id="f-int"></div>
-          <p class="hint">선택 사항 · 함께 이야기하고 싶은 주제를 골라요. 여러 개 선택하거나 직접 추가할 수 있어요.</p>
+          <p class="hint">이야기하고 싶은 주제 · 추천 순서에 반영돼요</p>
         </div>
         <div class="frow">
-          <label>취미</label>
+          <label>취미<span class="req opt">선택 · 복수 선택</span></label>
           <div id="f-hob"></div>
-          <p class="hint">선택 사항 · 함께 해보고 싶은 활동도 좋아요. 관심사·취미는 모임 추천 순서에 반영돼요.</p>
+          <p class="hint">함께 할 활동 · 추천 순서에 반영돼요</p>
         </div>
       </div>
 
@@ -149,12 +150,11 @@
       </div>
 
       <div class="card profile-next">
-        <b>설정을 확인했다면, 첫 모임을 찾아볼까요?</b>
-        <p class="hint">변경한 설정을 저장한 뒤 모임 목록으로 이동해요. 취향은 나중에 더 채워도 괜찮아요.</p>
+        <p class="hint">변경 사항을 저장하고 모임 목록으로 이동해요</p>
         <button class="cta" id="profileNext" onclick="saveProfileAndBrowse()">이 설정으로 모임 둘러보기</button>
       </div>
       <div class="savebar"><button class="cta" id="saveBtn" onclick="saveProfileNow()" disabled>저장</button></div>
-      <p class="hint" style="text-align:center;margin:10px 0 4px" id="savehint">설정을 바꾸면 저장 버튼이 켜져요 · 저장해야 매칭에 반영돼요</p>
+      <p class="hint" style="text-align:center;margin:10px 0 4px" id="savehint">설정은 저장해야 추천에 반영돼요</p>
 
       <div class="card" id="adminbox" style="display:none;margin-top:16px">
         <b style="font-size:14px">발표 관리</b>
@@ -176,7 +176,7 @@
       <div class="sh"><b id="usageTitle">사용 가이드</b><button class="ib" onclick="closeUsageGuide()" aria-label="도움말 닫기" autofocus><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
       <div class="sbody" tabindex="0" aria-label="가입부터 첫 만남까지">
         <ol class="usage-steps">
-          <li><b>프로필 · 추천 기준 저장</b><p>계열사·나이와 선호 지역을 확인해요. 관심사·취미·성별·MBTI·모임 규모는 선택 사항이에요. 같은 성별 우선은 성별을 설정해야 적용돼요.</p></li>
+          <li><b>프로필 · 추천 기준 저장</b><p>계열사·나이와 선호 지역을 확인해요. 관심사·취미·성별·MBTI·모임 규모는 선택 사항이에요. 같은 성별 우선은 성별을 설정해야 적용돼요. 관심사·취미는 여러 개 고르거나 직접 추가할 수 있고, 추천 순서에 반영돼요. 취향은 나중에 더 채워도 괜찮아요.</p></li>
           <li><b>매칭 · 모임 참가</b><p>저장한 선호 지역의 모임만 보여요. 주황 띠는 이미 만난 사람의 비율이에요. 마음에 드는 모임의 ‘참가하기’를 누르거나 ‘모임 만들기’로 직접 열어보세요.</p></li>
           <li><b>채팅 · 닉네임으로 인사</b><p>참가한 모임이 채팅 탭에 생겨요. 처음 만나는 동료에게는 닉네임과 아바타로 보여요. 참가한 시점부터의 대화를 볼 수 있어요.</p></li>
           <li><b>AI 장소 추천 기능 써보기</b><p>참가한 채팅방에서 ‘AI 장소 추천’을 눌러요. 최근 대화에 맞는 장소 후보와 추천 이유, 주소를 비교하고 지도에서 위치를 살펴봐요. 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요.</p><p>‘이곳 어때요?’를 누르면 메시지 초안이 만들어져요. 함께 갈 곳과 시간은 채팅으로 자유롭게 이야기해요.</p></li>
