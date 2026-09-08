@@ -7,8 +7,11 @@ import {searchPlaces,placeKey,toPlace} from '../supabase/functions/_shared/searc
 import {suggestWithAI} from '../supabase/functions/_shared/ai-plan.ts';
 
 // 핸들러 전체를 실행해 저장한 후보가 다음 검색으로 전달되는 경로를 확인한다.
-test('추천 핸들러는 저장한 직전 후보를 제외하고 후보 소진 시 추가 저장하지 않는다',async()=>{
-  const source=readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
+for(const [format,newline] of [['LF','\n'],['CRLF','\r\n']]){
+test(`추천 핸들러(${format})는 저장한 직전 후보를 제외하고 후보 소진 시 추가 저장하지 않는다`,async()=>{
+  // 체크아웃 설정과 무관하게 Windows 줄바꿈에서도 import 제거를 검증한다.
+  const raw=readFileSync(new URL('../supabase/functions/suggest-meeting-plan/index.ts',import.meta.url),'utf8').replace(/\r?\n/g,newline);
+  const source=raw.replace(/^import .*;\r?\n/gm,'');
   const saved=[],joined='2026-09-08T00:00:00+00:00';
   let handler,available=10;
   const svc={from(table){
@@ -39,3 +42,4 @@ test('추천 핸들러는 저장한 직전 후보를 제외하고 후보 소진 
   const empty=await handler({method:'POST'});
   assert.equal(empty.plan,null);assert.equal(empty.search.status,'no_new');assert.equal(saved.length,2);
 });
+}
