@@ -1,19 +1,35 @@
 # 사전 준비: python3 -m pip install playwright && python3 -m playwright install chromium webkit
 # 저장소 루트에서 python3 -m http.server 8766 --bind 127.0.0.1 실행 후 이 스크립트를 실행한다.
-import asyncio,json
+import asyncio,json,os
 from playwright.async_api import async_playwright
 async def flow(browser,size,name):
  page=await browser.new_page(viewport=size,device_scale_factor=1,reduced_motion='reduce')
  errors=[];external=[]
  page.on('pageerror',lambda e:errors.append(str(e)))
  page.on('request',lambda r:external.append(r.url) if not r.url.startswith('http://127.0.0.1') else None)
- await page.goto('http://127.0.0.1:8766/src/?demo=1')
+ await page.goto(os.environ.get('APP_URL','http://127.0.0.1:8766')+'/src/?demo=1')
  await page.get_by_role('button',name='매칭',exact=True).click()
  await page.get_by_role('button',name='참가하기',exact=True).first.click()
  await page.get_by_role('button',name='참가 중 · 채팅방 열기',exact=True).first.click()
  await page.get_by_role('button',name='AI 장소 추천',exact=True).click()
  await page.locator('.place-plan h4').wait_for()
- await page.locator('.place-plan h4').scroll_into_view_if_needed()
+ # 추천 직후 첫 인사 칩이 남아 있어도 두 후보의 핵심 정보가 보여야 한다.
+ if size['width']==375:
+  comparison=await page.evaluate("""() => {
+   const cards=[...document.querySelectorAll('.cand')];
+   const bounds=document.querySelector('#msgs').getBoundingClientRect();
+   return cards.slice(0,2).every(card=>['.txt b','.cat'].every(selector=>{
+    const r=card.querySelector(selector).getBoundingClientRect();
+    return r.top>=bounds.top && r.bottom<=bounds.bottom;
+   })) && cards[0].getBoundingClientRect().height<170;
+  }""")
+  assert comparison,'첫 두 후보의 이름·업종이 함께 보여야 한다'
+ for selector in ['.cand-reason summary','.cand-actions .opinion']:
+  sizes=await page.locator(selector).evaluate_all('(els)=>els.map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height}))')
+  assert all(s['w']>=44 and s['h']>=44 for s in sizes),sizes
+ await page.locator('.cand-reason summary').first.click()
+ assert await page.locator('.cand-reason-panel').first.is_visible()
+ await page.locator('.cand-reason summary').first.click()
  await page.wait_for_timeout(3000)
  await page.screenshot(path='/tmp/places-'+name+'.png')
  assert await page.locator('.place-plan .cand').count()==3

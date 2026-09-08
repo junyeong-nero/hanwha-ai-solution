@@ -1,6 +1,6 @@
 # 사전 준비: python3 -m pip install playwright && python3 -m playwright install chromium webkit
 # 저장소 루트에서 python3 -m http.server 8766 --bind 127.0.0.1 실행 후 이 스크립트를 실행한다.
-import asyncio,json,re
+import asyncio,json,re,os
 from pathlib import Path
 from playwright.async_api import async_playwright
 ROOT=Path(__file__).resolve().parents[2]
@@ -21,14 +21,28 @@ async def main():
     callFn=async()=>{testCount++;await new Promise(r=>setTimeout(r,150));
       if(testMode==='fail')throw Error('장소 검색에 연결하지 못했어요. 다시 시도해 주세요');
       if(testMode==='empty')return {plan:null,search:{status:'empty'}};
-      return {plan:{id:'test-'+testCount,recommendation_only:true,candidates:Array.from({length:5},(_,i)=>({name:'검증용 장소 후보 '+(i+1),address:'경기 성남시 분당구 판교역로 테스트 주소',category:i%2?'카페':'음식점',why:i%2?'대화에서 식사 후 차를 마시자는 의견이 있어, 같은 지역에서 검색한 카페를 후보에 넣었어요.':'대화에서 원한 음식점 업종과 모임 지역이 맞는 후보예요. 운영 여부는 상세에서 확인해 주세요.',lat:37.39+i*.003,lng:127.1+i*.004,url:'https://place.map.kakao.com/test-'+i}))}};
+      return {plan:{id:'test-'+testCount,recommendation_only:true,candidates:Array.from({length:5},(_,i)=>({name:'검증용 이름이 긴 장소 후보 판교역점 '+(i+1),address:'경기 성남시 분당구 판교역로 235 에이치스퀘어 엔동 지하 1층 검증용 상세 주소',category:i%2?'카페':'음식점',why:i%2?'대화에서 식사 후 차를 마시자는 의견이 있어, 같은 지역에서 검색한 카페를 후보에 넣었어요.':'대화에서 원한 음식점 업종과 모임 지역이 맞는 후보예요. 운영 여부는 상세에서 확인해 주세요.',lat:37.39+i*.003,lng:127.1+i*.004,url:'https://place.map.kakao.com/test-'+i}))}};
     };
    """))
-   await page.goto('http://127.0.0.1:8766/src/')
+   await page.goto(os.environ.get('APP_URL','http://127.0.0.1:8766')+'/src/')
    await page.get_by_role('button',name='AI 장소 추천',exact=True).click()
    await page.locator('.cand').nth(4).wait_for()
    await page.locator('.planmap.ph').wait_for()
    assert await page.locator('.cand .detail').count()==5
+   # 긴 이름·주소와 마지막 후보의 이유도 잘리지 않고 스크롤해 읽을 수 있다.
+   summary=page.locator('.cand-reason summary').last
+   await summary.click()
+   panel=page.locator('.cand-reason-panel').last
+   await panel.scroll_into_view_if_needed()
+   assert await panel.is_visible()
+   bounds=await panel.evaluate("""e=>{
+    const r=e.getBoundingClientRect(),m=document.querySelector('#msgs').getBoundingClientRect();
+    return {visible:r.top>=m.top && r.bottom<=m.bottom && r.left>=0 && r.right<=innerWidth,
+     hit:e.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))};
+   }""")
+   assert bounds['visible'] and bounds['hit'],bounds
+   await page.screenshot(path='/tmp/places-backend-'+str(width)+'.png')
+   await summary.click()
    await page.locator('.cand .pick').nth(2).press('Enter')
    assert await page.locator('.cand .pick').nth(2).get_attribute('aria-pressed')=='true'
    assert await page.locator('.planmap .pin').nth(2).get_attribute('aria-pressed')=='true'
