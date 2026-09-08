@@ -720,36 +720,40 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 /* 장소 후보를 대화 속에서 비교한다. 모바일은 한 열, 넓은 채팅방은 두 열이다. */
 #rbanner{flex-wrap:wrap;background:var(--orange-a12);border-color:var(--orange-a30)}
 #rbanner button{min-height:44px;height:auto;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-s);box-shadow:none}
+/* 후보가 있으면 재추천 버튼만 남겨 비교 공간을 확보한다. */
+#roomview:has(.place-candidates .cand) #rbanner:has(button){padding-block:4px;background:var(--bg2);border-color:var(--line)}
+#roomview:has(.place-candidates .cand) #rbanner>span{display:none}
+#roomview:has(.place-candidates .cand) #rbanner button{background:transparent;color:var(--tx2)}
 #rbanner button:disabled{background:var(--card2);color:var(--tx2)}
 .msg.places-msg{width:100%;max-width:100%;align-items:flex-start;margin-top:18px}
 .places-msg .place-content{flex:1;min-width:0;max-width:880px}
 .places-msg .mav{width:28px;height:28px;border-radius:var(--r-s);color:var(--orange-soft);box-shadow:none}
 .places-msg .who{color:var(--orange-soft)}
-.place-plan.plan{width:100%;min-width:0;padding:16px!important;background:var(--bg2)!important;border-color:var(--line)!important;border-radius:var(--r-l)!important}
+.place-plan.plan{width:100%;min-width:0;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important}
 .place-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--tx2)}
 .place-plan h4{font-size:16px;letter-spacing:-.2px;color:var(--tx);margin:8px 0 4px}
-.place-intro{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:14px}
 .place-plan .planmap{height:280px;border-radius:var(--r-m)}
-.place-candidates{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:12px}
+.place-intro{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:8px}
+.place-candidates{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
 .place-plan .cand{position:relative;display:flex;flex-direction:column;gap:0;min-width:0;margin:0;border:1px solid var(--line);border-radius:var(--r-m);background:var(--card)}
 .place-plan .cand.on{border-color:var(--orange-soft);background:var(--card)}
-.place-plan .cand .pick{padding:12px 12px 4px 48px;gap:0;border-radius:var(--r-m);flex:1;overflow-wrap:anywhere}
-.place-plan .cand .no{position:absolute;top:56px;left:12px;margin:0;width:24px;height:24px;border-radius:var(--r-s)}
-.place-plan .cand.on .no{background:var(--orange-a18);color:var(--orange-soft)}
-.place-plan .cand .txt b{font-size:14px;display:block;margin-bottom:4px;line-height:1.5}
-.place-plan .cand .cat{font-size:11px;margin:0 4px 4px 0;padding:0 6px;border-radius:var(--r-s);color:var(--tx2)}
+.place-plan .cand .pick{padding:12px 48px 4px 12px;gap:8px;border-radius:var(--r-m);flex:1;overflow-wrap:anywhere}
+.place-plan .cand .no{margin:2px 0 0;width:20px;height:20px;border-radius:0;background:transparent;color:var(--tx3)}
+.place-plan .cand.on .no{background:transparent;color:var(--orange-soft)}
+.place-plan .cand .txt b{font-size:16px;display:block;margin-bottom:2px;line-height:1.5}
+.place-plan .cand .cat{font-size:11px;margin:0 6px 2px 0;padding:0;border:0;border-radius:0;color:var(--tx2)}
 .place-plan .cand small{font-size:13px;color:var(--tx2);line-height:1.5}
 /* 추천 이유는 카드 위에 겹쳐 열려 목록 높이를 바꾸지 않는다. */
 .cand:has(.cand-reason[open]){z-index:1}
-.cand-reason summary{position:absolute;top:4px;left:2px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer;color:var(--tx2);border-radius:var(--r-s)}
+.cand-reason summary{position:absolute;top:2px;right:2px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer;color:var(--tx2);border-radius:var(--r-s)}
 .cand-reason summary::-webkit-details-marker{display:none}
 .cand-reason summary .ic{width:18px;height:18px}
 .cand-reason[open] summary{color:var(--orange-soft);background:var(--orange-a12)}
 .cand-reason summary:focus-visible{outline:2px solid var(--orange);outline-offset:-2px}
 .cand-reason-panel{position:absolute;top:56px;left:8px;right:8px;padding:12px;background:var(--card2);border:1px solid var(--orange-a30);border-radius:var(--r-s);box-shadow:var(--sh-2);font-size:13px;line-height:1.65;color:var(--tx);overflow-wrap:anywhere;max-height:220px;overflow-y:auto}
 .cand-reason-panel strong{display:block;font-size:11px;font-weight:600;color:var(--orange-soft);margin-bottom:3px}
-/* Material 카드처럼 내용과 액션을 나누고, 주요 동작은 고유한 버튼 표면으로 표시한다. */
-.cand-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;padding:4px 8px 8px;gap:4px}
+/* 내용 아래에 의견·상세 버튼의 터치 영역을 유지한다. */
+.cand-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;padding:0 8px 8px;gap:4px}
 .place-plan .cand-actions .opinion{display:inline-flex;align-items:center;justify-content:center;margin:0;padding:0 16px;height:auto;min-height:44px;flex:0 1 auto;width:auto;background:var(--orange-a18);color:var(--orange-soft);border:1px solid var(--orange-a30);border-radius:var(--r-xl);box-shadow:none;font-size:14px;font-weight:700;line-height:1.5}
 .place-plan .cand-actions .detail{justify-content:center;min-height:44px;padding:0 12px;border-radius:var(--r-xl);font-size:14px;font-weight:600;color:var(--tx2)}
 .place-footnote{font-size:11px;line-height:1.65;color:var(--tx2);margin-top:12px}
@@ -761,7 +765,6 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .place-plan button:focus-visible,.place-plan a:focus-visible,.previous-places summary:focus-visible,#rbanner button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 @media(min-width:768px){
   .place-candidates{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .place-plan.plan{padding:14px!important}
   .place-plan .planmap{height:340px}
   #msgs{padding:20px 28px}
 }
