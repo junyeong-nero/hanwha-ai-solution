@@ -104,3 +104,15 @@ test('실제 핸들러: 인증·멤버·예산 가드, 참가 이후 조회와 �
     assert.deepEqual(queries,['success','rejoined'].includes(mode)?[['created_at','2026-09-08']]:[]);
   }
 });
+
+test('새 메시지 렌더링 뒤 스몰토크 주제 입력 포커스와 선택 위치를 복원한다',()=>{
+  const app=fixture();
+  app.evaluate(`document.activeElement={id:'talk-topic',selectionStart:1,selectionEnd:3,selectionDirection:'backward'};
+    globalThis.restored=false;globalThis.selection=null;
+    $('talk-topic').focus=()=>{restored=true};$('talk-topic').setSelectionRange=(...args)=>{selection=args};
+    S.rooms.m1.msgs.push({f:'sys',x:'새 메시지'});renderMsgs()`);
+  assert.equal(app.evaluate('restored'),true);
+  assert.equal(app.evaluate('JSON.stringify(selection)'),JSON.stringify([1,3,'backward']));
+  app.evaluate('restored=false;document.activeElement=null;renderMsgs()');
+  assert.equal(app.evaluate('restored'),false);
+});
