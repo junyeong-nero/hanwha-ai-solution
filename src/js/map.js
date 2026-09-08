@@ -80,8 +80,8 @@ function candListHtml(planId,cands,disabled){
       +(c.address?'<small>'+esc(c.address)+'</small>':'')
       +'</span></button>'
       +'<div class="cand-actions">'
-      +(url!=='#'?'<a class="detail press" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc(c.name||'')+' 상세 보기">상세 ↗</a>':'')
-      +'<button class="opinion press" onclick="draftPlaceOpinion(\''+esc(planId)+'\','+i+')">이곳 어때요?</button>'
+      +(url!=='#'?'<a class="detail press" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc(c.name||'')+' 상세 보기 (새 탭)" title="상세 보기 (새 탭)">'+ico('external')+'</a>':'')
+      +'<button class="opinion press" aria-label="'+esc(c.name||'장소')+' 이곳 어때요? 의견 초안 작성" title="이곳 어때요?" onclick="draftPlaceOpinion(\''+esc(planId)+'\','+i+')">'+ico('chat')+'</button>'
       +'</div></div>';
   }).join('');
 }
