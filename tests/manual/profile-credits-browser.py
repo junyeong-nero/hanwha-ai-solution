@@ -20,6 +20,7 @@ async def main():
                 dialog = page.get_by_role('dialog', name='크레딧', exact=True)
                 await link.scroll_into_view_if_needed()
                 assert await link.evaluate('e=>e.getBoundingClientRect().height>=44')
+                assert await link.evaluate("e=>e.previousElementSibling.id==='modehint' && e.nextElementSibling.classList.contains('profile-actions')")
                 await page.screenshot(path=f'/tmp/profile-credits-footer-{engine}-{width}.png')
                 for close in ['button', 'backdrop', 'Escape']:
                     await link.click()
@@ -28,6 +29,13 @@ async def main():
                     for text in ['한화시스템 해양사업부 SW1팀', '2026년 9월 한화 인재경영원', '4팀 3파트', '송준영, 이수민, 이정현, 윤민영, 정태홍, 조성민']:
                         assert text in content
                     assert await page.locator('.credits-body').evaluate('e=>e.scrollWidth<=e.clientWidth && e.scrollHeight<=e.clientHeight')
+                    email = dialog.get_by_role('link', name='junyeong.song@hanwha.com')
+                    assert await email.get_attribute('href') == 'mailto:junyeong.song@hanwha.com'
+                    assert await email.evaluate('e=>e.getBoundingClientRect().height>=44')
+                    await page.keyboard.press('Tab')
+                    assert await email.evaluate('e=>e===document.activeElement')
+                    await page.keyboard.press('Tab')
+                    assert await page.get_by_role('button', name='크레딧 닫기').evaluate('e=>e===document.activeElement')
                     for key in ['Tab', 'Shift+Tab']:
                         await page.keyboard.press(key)
                         assert await dialog.evaluate('e=>e.contains(document.activeElement)')

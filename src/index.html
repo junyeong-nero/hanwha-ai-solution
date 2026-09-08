@@ -158,27 +158,27 @@
         <button class="cta line" id="logoutBtn" onclick="logout()" style="display:none">로그아웃</button>
       </div>
       <p class="hint" id="modehint">데모 프로토타입 · 데이터는 브라우저 안에서만 동작합니다</p>
+      <button type="button" id="creditsLink" class="profile-credits press" onclick="this.focus();$('creditsDialog').showModal()" aria-haspopup="dialog" aria-controls="creditsDialog">크레딧</button>
       <div class="profile-actions">
         <div class="savebar"><button class="cta line" id="saveBtn" onclick="saveProfileNow()" disabled>저장</button></div>
         <button class="cta" id="profileNext" onclick="saveProfileAndBrowse()">모임 둘러보기</button>
       </div>
-      <button type="button" id="creditsLink" class="profile-credits press" onclick="this.focus();$('creditsDialog').showModal()" aria-haspopup="dialog" aria-controls="creditsDialog">크레딧</button>
     </section>
   </main>
 
-  <dialog id="creditsDialog" class="help-dialog" aria-labelledby="creditsTitle" onclick="if(event.target===this)this.close()" onclose="$('creditsLink').focus({preventScroll:true})" onkeydown="if(event.key==='Tab'){event.preventDefault();this.querySelector('button').focus()}">
+  <dialog id="creditsDialog" class="help-dialog" aria-labelledby="creditsTitle" onclick="if(event.target===this)this.close()" onclose="$('creditsLink').focus({preventScroll:true})" onkeydown="trapProfileDialogFocus(event,'creditsDialog')">
     <div class="sheet">
       <div class="grip" aria-hidden="true"></div>
       <div class="sh"><b id="creditsTitle">크레딧</b><button type="button" class="ib" onclick="$('creditsDialog').close()" aria-label="크레딧 닫기" autofocus>닫기</button></div>
       <div class="sbody credits-body">
-        <div><b>만든이</b><p>한화시스템 해양사업부 SW1팀<br>송준영</p></div>
+        <div><b>만든이</b><p>한화시스템 해양사업부 SW1팀<br>송준영<br><a href="mailto:junyeong.song@hanwha.com" tabindex="0">junyeong.song@hanwha.com</a></p></div>
         <div><b>2026년 9월 한화 인재경영원</b><p>4팀 3파트<br>송준영, 이수민, 이정현, 윤민영, 정태홍, 조성민</p></div>
       </div>
     </div>
   </dialog>
 
   <!-- 도움말은 요청할 때만 열리고, 닫으면 원래 화면으로 돌아간다. -->
-  <dialog id="usageGuide" class="help-dialog" aria-labelledby="usageTitle" onkeydown="trapUsageGuideFocus(event)" oncancel="event.preventDefault();closeUsageGuide()" onclick="if(event.target===this)closeUsageGuide()">
+  <dialog id="usageGuide" class="help-dialog" aria-labelledby="usageTitle" onkeydown="trapProfileDialogFocus(event)" oncancel="event.preventDefault();closeUsageGuide()" onclick="if(event.target===this)closeUsageGuide()">
     <div class="sheet">
       <div class="grip" aria-hidden="true"></div>
       <div class="sh"><b id="usageTitle">사용 가이드</b><button class="ib" onclick="closeUsageGuide()" aria-label="도움말 닫기" autofocus><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>

@@ -158,9 +158,9 @@ function closeUsageGuide(){
   if(usageGuideTrigger?.isConnected)usageGuideTrigger.focus({preventScroll:true});
   usageGuideTrigger=null;
 }
-function trapUsageGuideFocus(event){
+function trapProfileDialogFocus(event,dialogId='usageGuide'){
   if(event.key!=='Tab')return;
-  const controls=$('usageGuide').querySelectorAll('button,[tabindex="0"]');
+  const controls=$(dialogId).querySelectorAll('button,a[href],[tabindex="0"]');
   const first=controls[0],last=controls[controls.length-1];
   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
