@@ -9,7 +9,7 @@ async def main():
     async with async_playwright() as p:
         for engine in ['chromium', 'webkit']:
             browser = await getattr(p, engine).launch()
-            for width, height in [(375, 812), (1440, 1000)]:
+            for width, height in [(375, 812), (599, 700), (600, 700), (768, 700), (1023, 768), (1024, 768), (1440, 1000)]:
                 page = await browser.new_page(viewport={'width': width, 'height': height}, reduced_motion='reduce')
                 errors = []
                 page.on('pageerror', lambda e: errors.append(str(e)))
@@ -18,6 +18,21 @@ async def main():
                 await page.locator('#nick').fill('크레딧확인')
                 link = page.get_by_role('button', name='크레딧', exact=True)
                 dialog = page.get_by_role('dialog', name='크레딧', exact=True)
+                await page.wait_for_timeout(100)
+                # 끝 지점뿐 아니라 스크롤 중에도 본문이 내비게이션 뒤로 내려가지 않는다.
+                for fraction in [0, .5, 1]:
+                    await page.locator('#tab-profile').evaluate('(e,f)=>e.scrollTop=(e.scrollHeight-e.clientHeight)*f', fraction)
+                    assert await page.evaluate('''()=>{
+                        const pane=document.querySelector('#tab-profile').getBoundingClientRect();
+                        const nav=document.querySelector('#nav').getBoundingClientRect();
+                        const actions=document.querySelector('.profile-actions').getBoundingClientRect();
+                        const limit=innerWidth<1024?nav.top:innerHeight;
+                        return pane.bottom<=limit+1 && actions.bottom<=limit+1;
+                    }'''), (engine, width, fraction)
+                assert await link.evaluate('''e=>{
+                    const r=e.getBoundingClientRect(), actions=document.querySelector('.profile-actions').getBoundingClientRect();
+                    return r.top>=0 && r.bottom<=actions.top;
+                }''')
                 await link.scroll_into_view_if_needed()
                 assert await link.evaluate('e=>e.getBoundingClientRect().height>=44')
                 assert await link.evaluate("e=>e.previousElementSibling.id==='modehint' && e.nextElementSibling.classList.contains('profile-actions')")
