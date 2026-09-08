@@ -64,7 +64,8 @@ svg{display:block}
 @keyframes tw{0%,100%{opacity:.12}50%{opacity:.6}}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001s !important;animation-iteration-count:1 !important;transition:none !important}
   /* 궤도 회전은 멈추고 시작 각도 그대로 세워 둔다 (기본 transform 이 각도를 유지) */
-  .holder{animation:none}
+  .holder{animation:none!important}
+  .planet .dot{animation:none!important}
   .holder .sat{animation:none}
   /* 합류 연출도 끄고 최종 상태로 바로 보여 준다 */
   .planet.new,.orbit.new{animation:none;opacity:1}
@@ -227,8 +228,12 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .orbit.new{animation:ring .5s ease both}
 @keyframes pop{from{opacity:0;transform:translate(-50%,-50%) scale(.2)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes ring{from{opacity:0}to{opacity:1}}
-.planet .dot{width:var(--s);height:var(--s);border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3,transparent 45%),var(--c);transition:all .5s}
-.planet.dim .dot{background:#2A3050;box-shadow:none}
+/* 번호를 역회전시켜 움직이는 행성에서도 똑바로 읽는다. */
+.planet .dot{width:24px;height:24px;border-radius:50%;background:var(--card);border:2px solid var(--c);color:var(--tx);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;transform:rotate(calc(0deg - var(--a)));animation:planetLabel var(--d) linear infinite}
+@keyframes planetLabel{from{transform:rotate(calc(0deg - var(--a)))}to{transform:rotate(calc(-360deg - var(--a)))}}
+.planet-help{position:relative;color:var(--tx2);font-size:13px;line-height:1.6;text-align:center;text-wrap:pretty}
+.planet:focus-visible{outline:2px solid var(--tx);outline-offset:0}
+.planet.dim .dot{border-color:var(--tx3);box-shadow:none}
 .planet.lit .dot{box-shadow:0 0 6px var(--c),0 0 18px var(--c),0 0 34px color-mix(in srgb,var(--c) 45%,transparent)}
 .planet.mine .dot{outline:2px solid rgba(245,233,201,.8);outline-offset:3px}
 #sun{
@@ -243,9 +248,10 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .spacestats span{font-size:11.5px;color:var(--tx2);font-weight:600}
 .corow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--hair);min-height:52px}
 .corow:last-child{border-bottom:0}
-.corow .pd{width:14px;height:14px;border-radius:50%;flex-shrink:0}
-.corow .nm{flex:1;font-size:14px;font-weight:700;letter-spacing:-.2px}
-.corow .st{font-size:12px;color:var(--tx3);font-weight:600}
+.corow .pd{width:24px;height:24px;border-radius:50%;flex-shrink:0;border:2px solid var(--c);background:var(--card);color:var(--tx);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.corow .pd:empty{border-color:var(--line2)}
+.corow .nm{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;font-weight:700;letter-spacing:-.2px}
+.corow .st{flex-shrink:0;font-size:12px;color:var(--tx3);font-weight:600}
 .corow .st.lit{color:var(--orange-soft)}
 .corow .chev{width:16px;height:16px;color:var(--tx3);flex-shrink:0}
 
@@ -637,8 +643,8 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
   .tabpane > .sub{font-size:14px;}
   /* 홈의 다음 행동과 은하계를 나란히 두어 연결 현황도 바로 보이게 한다. */
   #tab-home.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;align-content:start;
-    grid-template-areas:"top top" "sub sub" "guide galaxy" "next galaxy" "next caption" "stats stats" "section section" "companies companies"}
-  #tab-home:has(#nextcard:empty){grid-template-areas:"top top" "sub sub" "guide guide" "galaxy galaxy" "caption caption" "stats stats" "section section" "companies companies"}
+    grid-template-areas:"top top" "sub sub" "guide galaxy" "next galaxy" "next caption" "section section" "companies companies" "stats stats"}
+  #tab-home:has(#nextcard:empty){grid-template-areas:"top top" "sub sub" "guide guide" "galaxy galaxy" "caption caption" "section section" "companies companies" "stats stats"}
   #tab-home > .top{grid-area:top}
   #tab-home > .sub{grid-area:sub}
   #tab-home > .guide-entry{grid-area:guide;align-self:start}
