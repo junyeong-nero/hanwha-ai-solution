@@ -35,8 +35,7 @@ function renderMatchCards(list,note){
   const P=savedProfile(), mineSet=new Set([...P.interests,...P.hobbies]);
   const shownList=list.filter(m=>(!MF.region||m.region===MF.region)&&(!MF.mine||m.mine));
   if(!list.length){
-    $('meets').innerHTML='<div class="empty"><i>🌘</i><b>모임을 찾지 못했어요</b>선호 지역('+esc(P.regions.join('·'))+')에 열린 모임이 없어요.<br>프로필에서 지역을 늘리거나 직접 만들어 보세요.'
-      +'<button class="cta sm" onclick="openCreate()">＋ 새 모임 만들기</button></div>';
+    $('meets').innerHTML='<div class="empty"><i>🌘</i><b>모임을 찾지 못했어요</b>선호 지역('+esc(P.regions.join('·'))+')에 열린 모임이 없어요.<br>프로필에서 지역을 늘리거나 오른쪽 아래 ‘모임 만들기’를 눌러 보세요.</div>';
     return;
   }
   if(!shownList.length){
