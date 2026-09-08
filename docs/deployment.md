@@ -154,3 +154,11 @@ values (encode(extensions.digest('482913', 'sha256'), 'hex'), now() + interval '
 모바일(375×812)과 웹(1440×1000)에서 참가 → 후보 요청 → 추천 이유 읽기 → 의견 초안 수정·전송 → 재추천을 확인합니다. 검색 실패·빈 결과·지도 SDK 실패에도 목록과 재시도가 동작해야 합니다. 데모는 실제 장소를 검증하지 않으므로 운영에서는 카카오 상세 링크와 주소, 두 계정의 접근 권한도 별도로 확인합니다.
 
 브라우저 검증 재현(선택): Python Playwright와 Chromium·WebKit을 설치하고 저장소 루트에서 `python3 -m http.server 8766 --bind 127.0.0.1`을 실행한 뒤 `python3 tests/manual/place-recommendations-browser.py`, `python3 tests/manual/place-recommendations-states.py`를 실행합니다. 첫 스크립트는 네트워크 없는 데모 흐름을, 두 번째는 모의 서버 응답으로 320·375·768·1440px의 5개 후보, 키보드 선택, 지도 SDK 실패, 검색 실패·빈 결과·재시도를 검사합니다. 운영 API 품질 검증을 대신하지 않습니다.
+
+
+## AI 스몰토크 배포
+
+- `0023_small_talk_budget.sql`까지 마이그레이션을 적용하고 `supabase functions deploy suggest-small-talk`을 실행합니다. 기존 `OPENAI_API_KEY`를 재사용하며 브라우저에 추가할 비밀 키는 없습니다.
+- OpenAI Responses API의 `web_search`를 호출한 뒤, 검색 도구가 없는 구조화 응답 호출로 최근 대화에 맞는 질문을 만듭니다. 한 요청당 검색 1회·AI 최대 2회이며 기존 전역 AI 예산을 공유합니다. 각 단계는 18초로 제한합니다.
+- 공식 계약: [OpenAI 웹 검색·출처 문서](https://developers.openai.com/api/docs/guides/tools-web-search). 출처는 검색 응답의 실제 인용 URL과 대조하고 질문 카드에서 클릭 가능하게 표시합니다.
+- 모바일에서 `채팅방 → ＋ → AI 스몰토크 → 추천받기 → 출처 열기 → 이 질문으로 대화하기 → 직접 전송`을 확인합니다. 검색 실패 시 기본 질문 표시, 작성 중인 초안 보존, 방 이동과 재추천도 확인합니다.

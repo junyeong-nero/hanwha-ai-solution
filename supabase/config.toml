@@ -69,3 +69,6 @@ verify_jwt = true
 # reset-demo 는 사용자 JWT 대신 x-demo-reset-token 헤더로 자체 인증한다.
 [functions.reset-demo]
 verify_jwt = false
+
+[functions.suggest-small-talk]
+verify_jwt = true

@@ -136,6 +136,8 @@ function renderBanner(){
 }
 function renderMsgs(){
   const r=S.rooms[CUR], ms=r.msgs;
+  const topicInput=document.activeElement?.id==='talk-topic'?document.activeElement:null;
+  const topicSelection=topicInput?[topicInput.selectionStart,topicInput.selectionEnd,topicInput.selectionDirection]:null;
   const who=m=>(m.f==='sys'||m.f==='ai')?null:m.f;   // 묶음 기준 발신자 (시스템·AI 카드는 묶지 않는다)
   const lastAi=[...ms].reverse().find(m=>m.f==='ai');   // 최신 제안만 살아 있고, 대체된 카드는 회색으로 남긴다
   let lastDk=null;
@@ -156,9 +158,12 @@ function renderMsgs(){
     return div+'<div class="msg'+(cont?' cont':'')+'"><div class="mav">'+esc(p.av||'🌙')+'</div><div>'+(cont?'':'<div class="who">'+label(m.f,r)+'</div>')+'<div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
   }).join('');
   $('msgs').innerHTML+=placeRequestStatusHtml(r);
+  if(typeof smallTalkHtml==='function')$('msgs').innerHTML+=smallTalkHtml(r);
   mountPlanMaps();   // 새로 그려진 지도 컨테이너에 카카오맵을 붙인다 (placeholder 모드에서는 아무 일도 하지 않는다)
   renderOpeners();
   $('msgs').scrollTop=$('msgs').scrollHeight;
+  // 새 메시지가 와도 작성 중인 스몰토크 주제의 포커스와 선택 위치를 유지한다.
+  if(topicSelection&&r.talkVisible){$('talk-topic').focus({preventScroll:true});$('talk-topic').setSelectionRange(...topicSelection)}
 }
 async function sendMsg(){
   const v=$('cin').value.trim(); if(!v||!CUR)return;
@@ -189,6 +194,7 @@ function showTyping(pid,room,cb){
 
 /* + 메뉴 */
 function openPlus(){
+  $('smallTalkMenuIcon').innerHTML=ico('spark');
   $('placeMenuIcon').innerHTML=ico('spark');
   $('revealMenuIcon').innerHTML=ico('check');
   const r=S.rooms[CUR];
@@ -365,4 +371,3 @@ async function submitRating(){
   }catch(e){ $('rateerr').textContent='평가를 저장하지 못했어요 · 다시 시도해 주세요' }
   finally{btn.disabled=!RT.val;btn.textContent='평가 보내기'}
 }
-
