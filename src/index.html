@@ -261,6 +261,7 @@
     <div class="sheet">
       <div class="grip"></div>
       <div class="sbody">
+      <button class="psheet-item" onclick="openSmallTalk()"><i id="smallTalkMenuIcon" aria-hidden="true"></i><div>AI 스몰토크<small>최근 대화와 요즘 트렌드로 이야기 주제를 추천해요</small></div></button>
       <button class="psheet-item" id="plusAi" onclick="aiPlan()"><i id="placeMenuIcon"></i><div><span id="plusAiLbl">AI 장소 추천</span><small>대화에 맞는 후보와 추천 이유를 함께 살펴봐요 · 최근 대화 일부가 익명 처리되어 외부 AI에 전송돼요</small></div></button>
       <button class="psheet-item" onclick="hidePlus();openMembers()"><i>👥</i><div>채팅방 멤버 보기<small>누가 있는지 · 만남 완료 여부</small></div></button>
       <button class="psheet-item" id="plusReveal" onclick="doReveal()"><i id="revealMenuIcon"></i><div>만남 완료<small>실제로 만난 뒤 각자 눌러요 · 서로 완료하면 실명이 보여요</small></div></button>
@@ -436,6 +437,7 @@
 <script src="js/profile.js"></script>
 <script src="js/backend.js"></script>
 <script src="js/places.js"></script>
+<script src="js/small-talk.js"></script>
 <script src="js/boot.js"></script>
 </body>
 </html>

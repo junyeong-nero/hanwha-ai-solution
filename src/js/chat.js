@@ -156,6 +156,7 @@ function renderMsgs(){
     return div+'<div class="msg'+(cont?' cont':'')+'"><div class="mav">'+esc(p.av||'🌙')+'</div><div>'+(cont?'':'<div class="who">'+label(m.f,r)+'</div>')+'<div class="bub">'+esc(m.x)+'</div></div>'+tm+'</div>';
   }).join('');
   $('msgs').innerHTML+=placeRequestStatusHtml(r);
+  if(typeof smallTalkHtml==='function')$('msgs').innerHTML+=smallTalkHtml(r);
   mountPlanMaps();   // 새로 그려진 지도 컨테이너에 카카오맵을 붙인다 (placeholder 모드에서는 아무 일도 하지 않는다)
   renderOpeners();
   $('msgs').scrollTop=$('msgs').scrollHeight;
@@ -189,6 +190,7 @@ function showTyping(pid,room,cb){
 
 /* + 메뉴 */
 function openPlus(){
+  $('smallTalkMenuIcon').innerHTML=ico('spark');
   $('placeMenuIcon').innerHTML=ico('spark');
   $('revealMenuIcon').innerHTML=ico('check');
   const r=S.rooms[CUR];
