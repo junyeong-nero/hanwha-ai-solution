@@ -41,7 +41,9 @@ async def main():
                     await link.click()
                     assert await dialog.is_visible()
                     content = await dialog.inner_text()
-                    for text in ['한화시스템 해양사업부 SW1팀', '2026년 9월 한화 인재경영원', '4팀 3파트', '송준영, 이수민, 이정현, 윤민영, 정태홍, 조성민']:
+                    assert '만든이' not in content and '해양사업부' not in content
+                    assert content.index('조성민') < content.index('junyeong.song@hanwha.com')
+                    for text in ['2026년 9월 한화 인재경영원', '4팀 3파트', '송준영, 이수민, 이정현, 윤민영, 정태홍, 조성민']:
                         assert text in content
                     assert await page.locator('.credits-body').evaluate('e=>e.scrollWidth<=e.clientWidth && e.scrollHeight<=e.clientHeight')
                     email = dialog.get_by_role('link', name='junyeong.song@hanwha.com')
