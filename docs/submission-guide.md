@@ -80,11 +80,13 @@ MoonLight Hanwha는 현재 저장소의 문제 정의와 기능 범위상 05번 
 
 | 제출 항목 | 파일 | 내용 |
 | --- | --- | --- |
-| 과제 소개 영상 | [video.mp4](../assets/video.mp4) | 1분 54초 자막판 · 실제 모바일 데모 조작 · TTS 없음 |
+| 과제 소개 영상 | [video.mp4](../assets/video.mp4) | 3분 5초 Remotion 자막판 · AI 활용 사례 3가지·모바일 시연·기대효과 · 일러스트 5장 · 잔잔한 배경음·효과음 · TTS 없음 |
 | 만든 결과물 | [ppt.html](../assets/ppt.html) | 이미지와 폰트를 포함한 14장 발표 HTML |
 | 보고서·추가 자료 | [report.md](../assets/report.md) | 제출 화면의 필수·선택 항목과 상세 기록 전체 |
 
 대표 링크는 로그인 없이 시연 가능한 <https://junyeong-nero.github.io/hanwha-ai-solution/src/?demo=1>입니다. 발표 HTML은 코드 붙여넣기 편집기의 스크립트 차단을 피하도록 파일로 첨부합니다.
+
+영상은 [미리보기](../assets/video.html)에서 확인할 수 있습니다. [자막](../assets/video.srt), [대본과 근거](../video/대본.md), [Remotion 편집 원본](../video/README.md)도 함께 제공합니다. 시연은 샘플 데이터이며 실제 외부 AI·카카오 검색 호출 장면은 아닙니다. 이전 영상의 시간·장소 확정과 투표는 현재 기능에 맞춰 장소 후보 비교·의견 초안 전송으로 교체했습니다.
 
 팀·파트·팀원 이름은 실제 제출자가 확인해야 합니다. 팀 수정 PIN과 수업 제출코드는 저장소에 넣지 않고 제출 화면에 입력합니다. 로컬 영상 제작 원본은 `outputs/`에 보존하며 Git에서는 제외합니다.
 

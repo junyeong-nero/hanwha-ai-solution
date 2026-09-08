@@ -1,0 +1,212 @@
+[
+  {
+    "text": "취향에서 시작하는 사내 네트워킹, MoonLight Hanwha",
+    "startMs": 1000,
+    "endMs": 5000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "조사 기업의 신규 입사자 중 평균 16.1%가\n1년 안에 퇴사했습니다.",
+    "startMs": 6000,
+    "endMs": 13000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "기업 75.6%는 조기 퇴사 1인당 손실을\n2천만원 이상으로 답했습니다.",
+    "startMs": 13500,
+    "endMs": 20000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "배치 이후에도 이어지는 동기 교류로\n기존 멘토링과 온보딩을 보완하고자 했습니다.",
+    "startMs": 20500,
+    "endMs": 25000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "동료와의 관계와 소속감이\n초기 적응을 도울 수 있다고 보았습니다.",
+    "startMs": 25000,
+    "endMs": 30000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "첫째, GPT-5.4-mini API로\n나와 어울리는 모임을 추천합니다.",
+    "startMs": 30500,
+    "endMs": 38000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "둘째, 채팅 기록을 바탕으로\n함께 만날 장소를 추천합니다.",
+    "startMs": 38000,
+    "endMs": 46000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "셋째, 채팅 기록을 참고해\n다음 스몰토크 주제를 추천합니다.",
+    "startMs": 46000,
+    "endMs": 55000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "닉네임·선호 지역·관심사를 설정합니다.",
+    "startMs": 55500,
+    "endMs": 61000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "원하는 관계 방향을 고르고 저장합니다.",
+    "startMs": 61000,
+    "endMs": 67000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "선호 지역에서 참가할 모임을 살펴봅니다.",
+    "startMs": 67500,
+    "endMs": 74000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "모임 상세에서 추천 이유와\n멤버의 관심사를 확인할 수 있습니다.",
+    "startMs": 74000,
+    "endMs": 81000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "참가하면 내 채팅방이 생깁니다.",
+    "startMs": 81500,
+    "endMs": 86000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "처음 만나는 동료와는 닉네임으로 대화합니다.",
+    "startMs": 86000,
+    "endMs": 90000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "“산책 끝나고 닭발 먹을까요?”\n원하는 활동과 음식을 대화에 남깁니다.",
+    "startMs": 90500,
+    "endMs": 96000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "AI 장소 추천을 누르면\n비교할 수 있는 후보가 도착합니다.",
+    "startMs": 96000,
+    "endMs": 102000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "추천 이유를 열어\n우리 대화와 어떻게 맞는지 확인합니다.",
+    "startMs": 102500,
+    "endMs": 109000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "식당·카페·티룸 후보를 함께 비교합니다.",
+    "startMs": 109000,
+    "endMs": 114000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "마음에 드는 장소를 골라 제안합니다.",
+    "startMs": 114000,
+    "endMs": 118000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "“이곳 어때요?”를 누르면\n편집 가능한 의견 초안이 들어갑니다.",
+    "startMs": 118500,
+    "endMs": 123000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "내용을 확인한 뒤 직접 보내 대화를 이어갑니다.",
+    "startMs": 123000,
+    "endMs": 127000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "채팅 기록을 바탕으로\n다음 스몰토크 주제를 추천받습니다.",
+    "startMs": 127500,
+    "endMs": 135000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "이제 실제로 만났다고 가정하겠습니다.\n각자 “만남 완료”를 누릅니다.",
+    "startMs": 135500,
+    "endMs": 142000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "나와 상대가 모두 완료해야\n서로의 실명과 계열사가 보입니다.",
+    "startMs": 142000,
+    "endMs": 149000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "함께 만난 동료가 새로운 연결로 남습니다.",
+    "startMs": 149000,
+    "endMs": 153000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "연결된 동료는 2명에서 4명으로,\n빛나는 계열사는 2곳에서 3곳으로 늘었습니다.",
+    "startMs": 153000,
+    "endMs": 160000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "새로운 동료를 발견하고 첫 대화의 부담을 낮춰,\n계열사 간 교류가 일상으로 이어지길 기대합니다.",
+    "startMs": 160500,
+    "endMs": 166500,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "교육 동기부터 시범 운영하고,\n사용자 의견을 받아 개선하겠습니다.",
+    "startMs": 166500,
+    "endMs": 173000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "참가율·만남 완료율·새 연결 수와\n재참여·만족도를 측정하겠습니다.",
+    "startMs": 173000,
+    "endMs": 179000,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "오늘의 산책 친구가, 내일의 협업 동료로.\nMoonLight Hanwha",
+    "startMs": 179500,
+    "endMs": 184000,
+    "timestampMs": null,
+    "confidence": null
+  }
+]
