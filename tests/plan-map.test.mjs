@@ -81,13 +81,18 @@ test('후보 목록은 선택 상태·분류·상세 링크를 보여 주고 jav
   assert.ok(list.includes('class="cand on"'), '첫 후보가 선택된 상태로 시작한다');
   assert.ok(list.includes('이곳 어때요?'));
   assert.ok(!list.includes('이 장소로 정하기'));
-  assert.ok(list.includes('상세 ↗'));
+  assert.match(list, /aria-label="판교 화랑공원 상세 보기 \(새 탭\)"/);
+  assert.match(list, /aria-label="판교 화랑공원 이곳 어때요\? 의견 초안 작성"/);
+  for (const action of list.matchAll(/<(?:a|button) class="(?:detail|opinion) press"[^>]*>(.*?)<\/(?:a|button)>/g)) {
+    assert.ok(action[1].includes('<svg '), '액션은 SVG 아이콘으로 표시한다');
+    assert.equal(action[1].replace(/<[^>]*>/g, ''), '', '보이는 버튼 텍스트는 없다');
+  }
 
   // 확정된 약속에는 장소 선택 버튼을 내리고, 안전하지 않은 링크는 아예 그리지 않는다
   const done = evaluate("candListHtml('local-m1',[{name:'나쁜 링크',url:'javascript:alert(1)',why:'x'}],true)");
   assert.ok(!done.includes('이 장소로 정하기'));
   assert.ok(!done.includes('javascript:'));
-  assert.ok(!done.includes('상세 ↗'));
+  assert.ok(!done.includes('class="detail press"'));
 
   const unverified = evaluate("candListHtml('p',[{name:'확인 못한 곳',verified:false},{name:'같은 이름',ambiguous:true}],false)");
   assert.ok(unverified.includes('검색 미확인'));

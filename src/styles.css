@@ -747,8 +747,9 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .cand-reason-panel strong{display:block;font-size:11px;font-weight:600;color:var(--orange-soft);margin-bottom:3px}
 /* 내용 아래에 의견·상세 버튼의 터치 영역을 유지한다. */
 .cand-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;padding:0 8px 8px;gap:4px}
-.place-plan .cand-actions .opinion{display:inline-flex;align-items:center;justify-content:center;margin:0;padding:0 16px;height:auto;min-height:44px;flex:0 1 auto;width:auto;background:var(--orange-a18);color:var(--orange-soft);border:1px solid var(--orange-a30);border-radius:var(--r-xl);box-shadow:none;font-size:14px;font-weight:700;line-height:1.5}
-.place-plan .cand-actions .detail{justify-content:center;min-height:44px;padding:0 12px;border-radius:var(--r-xl);font-size:14px;font-weight:600;color:var(--tx2)}
+.place-plan .cand-actions .opinion{display:inline-flex;align-items:center;justify-content:center;margin:0;padding:0;height:44px;min-height:44px;flex:0 0 44px;width:44px;background:var(--orange-a18);color:var(--orange-soft);border:1px solid var(--orange-a30);border-radius:var(--r-xl);box-shadow:none;font-size:14px;font-weight:700;line-height:1.5}
+.place-plan .cand-actions .detail{justify-content:center;width:44px;height:44px;min-height:44px;padding:0;border-radius:var(--r-xl);font-size:14px;font-weight:600;color:var(--tx2)}
+.cand-actions .ic{width:20px;height:20px}
 .place-footnote{font-size:11px;line-height:1.65;color:var(--tx2);margin-top:12px}
 .previous-places summary{min-height:44px;padding:12px 0;cursor:pointer;color:var(--tx2);font-size:13px}
 .place-status{border:1px solid var(--line);border-radius:var(--r-m);background:var(--card);padding:16px;margin:14px 0;font-size:13px;color:var(--tx2);max-width:880px}
