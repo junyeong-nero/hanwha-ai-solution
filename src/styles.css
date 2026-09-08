@@ -722,18 +722,19 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .place-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--tx2)}
 .place-plan h4{font-size:16px;letter-spacing:-.2px;color:var(--tx);margin:8px 0 4px}
 .place-intro{font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:14px}
-.place-candidates{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
+.place-plan .planmap{height:280px;border-radius:var(--r-m)}
+.place-candidates{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:12px}
 .place-plan .cand{position:relative;display:flex;flex-direction:column;gap:0;min-width:0;margin:0;border:1px solid var(--line);border-radius:var(--r-m);background:var(--card)}
 .place-plan .cand.on{border-color:var(--orange-soft);background:var(--card)}
-.place-plan .cand .pick{padding:52px 16px 8px;gap:0;border-radius:var(--r-m);flex:1;overflow-wrap:anywhere}
-.place-plan .cand .no{position:absolute;top:16px;right:16px;margin:0;width:24px;height:24px;border-radius:var(--r-s)}
+.place-plan .cand .pick{padding:12px 12px 4px 48px;gap:0;border-radius:var(--r-m);flex:1;overflow-wrap:anywhere}
+.place-plan .cand .no{position:absolute;top:56px;left:12px;margin:0;width:24px;height:24px;border-radius:var(--r-s)}
 .place-plan .cand.on .no{background:var(--orange-a18);color:var(--orange-soft)}
-.place-plan .cand .txt b{font-size:16px;display:block;margin-bottom:8px;line-height:1.5}
-.place-plan .cand .cat{font-size:11px;margin:0 0 6px;padding:2px 6px;border-radius:var(--r-s);color:var(--tx2)}
+.place-plan .cand .txt b{font-size:14px;display:block;margin-bottom:4px;line-height:1.5}
+.place-plan .cand .cat{font-size:11px;margin:0 4px 4px 0;padding:0 6px;border-radius:var(--r-s);color:var(--tx2)}
 .place-plan .cand small{font-size:13px;color:var(--tx2);line-height:1.5}
 /* 추천 이유는 카드 위에 겹쳐 열려 목록 높이를 바꾸지 않는다. */
 .cand:has(.cand-reason[open]){z-index:1}
-.cand-reason summary{position:absolute;top:8px;left:8px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer;color:var(--tx2);border-radius:var(--r-s)}
+.cand-reason summary{position:absolute;top:4px;left:2px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer;color:var(--tx2);border-radius:var(--r-s)}
 .cand-reason summary::-webkit-details-marker{display:none}
 .cand-reason summary .ic{width:18px;height:18px}
 .cand-reason[open] summary{color:var(--orange-soft);background:var(--orange-a12)}
@@ -741,7 +742,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 .cand-reason-panel{position:absolute;top:56px;left:8px;right:8px;padding:12px;background:var(--card2);border:1px solid var(--orange-a30);border-radius:var(--r-s);box-shadow:var(--sh-2);font-size:13px;line-height:1.65;color:var(--tx);overflow-wrap:anywhere;max-height:220px;overflow-y:auto}
 .cand-reason-panel strong{display:block;font-size:11px;font-weight:600;color:var(--orange-soft);margin-bottom:3px}
 /* Material 카드처럼 내용과 액션을 나누고, 주요 동작은 고유한 버튼 표면으로 표시한다. */
-.cand-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;padding:8px 16px 16px;gap:8px}
+.cand-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;padding:4px 8px 8px;gap:4px}
 .place-plan .cand-actions .opinion{display:inline-flex;align-items:center;justify-content:center;margin:0;padding:0 16px;height:auto;min-height:44px;flex:0 1 auto;width:auto;background:var(--orange-a18);color:var(--orange-soft);border:1px solid var(--orange-a30);border-radius:var(--r-xl);box-shadow:none;font-size:14px;font-weight:700;line-height:1.5}
 .place-plan .cand-actions .detail{justify-content:center;min-height:44px;padding:0 12px;border-radius:var(--r-xl);font-size:14px;font-weight:600;color:var(--tx2)}
 .place-footnote{font-size:11px;line-height:1.65;color:var(--tx2);margin-top:12px}
@@ -754,7 +755,7 @@ nav#nav button.on svg.f{display:block;transform:scale(1.04)}
 @media(min-width:768px){
   .place-candidates{grid-template-columns:repeat(2,minmax(0,1fr))}
   .place-plan.plan{padding:14px!important}
-  .place-plan .planmap{height:180px}
+  .place-plan .planmap{height:340px}
   #msgs{padding:20px 28px}
 }
 
