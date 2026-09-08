@@ -79,8 +79,9 @@ function candListHtml(planId,cands,disabled){
       +(c.ambiguous?'<span class="cat warn">같은 이름 여러 곳</span>':'')
       +(c.address?'<small>'+esc(c.address)+'</small>':'')
       +'</span></button>'
-      +'<div class="cand-actions"><button class="opinion press" onclick="draftPlaceOpinion(\''+esc(planId)+'\','+i+')">이곳 어때요?</button>'
-      +(url!=='#'?'<a class="detail" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc(c.name||'')+' 상세 보기">상세 ↗</a>':'')
+      +'<div class="cand-actions">'
+      +(url!=='#'?'<a class="detail press" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc(c.name||'')+' 상세 보기">상세 ↗</a>':'')
+      +'<button class="opinion press" onclick="draftPlaceOpinion(\''+esc(planId)+'\','+i+')">이곳 어때요?</button>'
       +'</div></div>';
   }).join('');
 }
