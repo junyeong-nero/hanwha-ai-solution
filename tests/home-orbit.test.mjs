@@ -7,8 +7,8 @@ import { loadApp, parsePlanets, minPlanetGap } from './helpers/app-context.mjs';
 
 const TOUCH = 44;           // 터치 타겟 한 변
 const WIDTH = 320;          // 375×812 화면에서의 #space 폭
-const SUN_R = 23;           // #sun 지름 46px 의 반지름
-const DOT_R = 9.5;          // 가장 큰 행성 점(내 계열사 19px)의 반지름
+const SUN_R = 25;           // #sun 지름 50px 의 반지름
+const DOT_R = 12;          // 번호가 표시된 행성(24px)의 반지름
 
 const render = (app, width = WIDTH) => {
   app.evaluate('renderHome()');
@@ -162,7 +162,7 @@ test('궤도 회전은 시작 각도를 CSS 변수로 받고, prefers-reduced-mo
   assert.match(html, /@keyframes orb\{from\{transform:rotate\(var\(--a,0deg\)\)\}to\{transform:rotate\(calc\(var\(--a,0deg\) \+ 360deg\)\)\}\}/);
   assert.match(html, /\.planet\.new\{animation:pop/);
   // 회전이 멈춰도 기본 transform 이 시작 각도를 지켜, 행성이 한곳에 겹치지 않는다
-  assert.match(html, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.holder\{animation:none\}/);
+  assert.match(html, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.holder\{animation:none!important\}/);
   assert.match(html, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.planet\.new,\.orbit\.new\{animation:none/);
 });
 
@@ -187,4 +187,30 @@ test('다음 행동은 미완료 첫 단계만 안내하고 전체 단계는 접
   }
   app.evaluate('S.placeRecommendationTried=true;renderHome()');
   assert.equal(app.el('nextcard').innerHTML, '');
+});
+
+test('행성 번호는 계열사 범례와 일치하고 새 합류·재렌더에도 유지된다', () => {
+  const app = loadApp();
+  const numbers = () => Object.fromEntries([...app.el('space').innerHTML.matchAll(/data-co="([^"]+)"[^>]*><span class="dot" aria-hidden="true">(\d+)<\/span>/g)].map(m => [m[1], m[2]]));
+  render(app);
+  const before = numbers();
+  assert.equal(Object.keys(before).length, 2);
+  meetEveryone(app);
+  render(app);
+  const after = numbers();
+  assert.equal(Object.keys(after).length, app.evaluate('COMPANIES.length'));
+  assert.equal(new Set(Object.values(after)).size, Object.keys(after).length);
+  for (const [id, number] of Object.entries(before)) assert.equal(after[id], number);
+  for (const [id, number] of Object.entries(after)) {
+    const row = app.el('colist').innerHTML.match(new RegExp('data-co="'+id+'">([\\s\\S]*?)</button>'))[1];
+    assert.ok(row.includes('aria-hidden="true">'+number+'</span>'));
+  }
+  render(app);
+  assert.deepEqual(numbers(), after);
+
+  app.evaluate('S.met={}');
+  render(app);
+  assert.deepEqual(Object.keys(numbers()), ['inv']);
+  const inactive = app.el('colist').innerHTML.match(/data-co="sol">([\s\S]*?)<\/button>/)[1];
+  assert.ok(inactive.includes('aria-hidden="true"></span>'), '은하계 밖 계열사는 번호가 없다');
 });
